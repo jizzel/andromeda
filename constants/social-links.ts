@@ -1,8 +1,8 @@
 export const socialLinks = {
-  github: "https://github.com/josephattakorah",
-  linkedin: "https://linkedin.com/in/josephattakorah",
+  github: "github.com/jizzel",
+  linkedin: "https://www.linkedin.com/in/jaa24",
   email: "mailto:joseph@attakorah.com",
-  calendly: "https://calendly.com/josephattakorah", // Update with actual Calendly URL
+  calendly: "https://calendly.com/juxluvjoe", // Update with actual Calendly URL
 };
 
 export const profile = {
