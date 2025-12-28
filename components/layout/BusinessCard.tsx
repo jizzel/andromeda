@@ -8,6 +8,7 @@ import { useBusinessCard } from "./BusinessCardContext";
 import { useEffect } from "react";
 import { profile, socialLinks } from "@/constants/profile";
 import { useAnalytics } from "@/lib/hooks/useAnalytics";
+import { blurPlaceholders, getImageSizes } from "@/lib/utils/image";
 
 export function BusinessCard() {
   const { isOpen, closeBusinessCard } = useBusinessCard();
@@ -81,6 +82,10 @@ export function BusinessCard() {
                       height={96}
                       className="object-cover"
                       priority
+                      placeholder="blur"
+                      blurDataURL={blurPlaceholders.profile}
+                      sizes={getImageSizes("profile")}
+                      quality={85}
                     />
                   </div>
                 </div>

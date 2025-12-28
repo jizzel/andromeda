@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Github, Linkedin, Mail } from "lucide-react";
 import Image from "next/image";
 import { profile, socialLinks } from "@/constants/profile";
+import { blurPlaceholders, getImageSizes } from "@/lib/utils/image";
 
 interface BusinessCardPreviewProps {
   isVisible: boolean;
@@ -39,6 +40,10 @@ export function BusinessCardPreview({ isVisible }: BusinessCardPreviewProps) {
                   height={80}
                   className="object-cover"
                   priority
+                  placeholder="blur"
+                  blurDataURL={blurPlaceholders.profile}
+                  sizes={getImageSizes("profile")}
+                  quality={85}
                 />
               </div>
             </div>
