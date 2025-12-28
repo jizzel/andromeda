@@ -5,6 +5,9 @@ import { getPostBySlug, getAllPosts, getRelatedPosts } from "@/lib/content";
 import { PostWrapper } from "@/components/writing/PostWrapper";
 import { MDXContent } from "@/components/writing/MDXContent";
 import { ScrollReveal } from "@/components/animations/ScrollReveal";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
+import { ReadingProgress } from "@/components/writing/ReadingProgress";
+import { BlogPostingStructuredData } from "@/components/writing/BlogPostingStructuredData";
 import type { Metadata } from "next";
 
 interface PostPageProps {
@@ -65,6 +68,8 @@ export default async function PostPage({ params }: PostPageProps) {
 
   return (
     <PostWrapper slug={post.slug} category={post.category} readTime={post.readTime}>
+      <BlogPostingStructuredData post={post} />
+      <ReadingProgress />
       <main className="relative w-full min-h-screen bg-[var(--andromeda-primary)] pt-24 pb-24 px-6">
         {/* Back Button */}
         <div className="max-w-3xl mx-auto mb-8">
@@ -78,6 +83,15 @@ export default async function PostPage({ params }: PostPageProps) {
         </div>
 
         <article className="max-w-3xl mx-auto">
+          {/* Breadcrumb */}
+          <Breadcrumb
+            items={[
+              { label: "Home", href: "/" },
+              { label: "Writing", href: "/writing" },
+              { label: post.title },
+            ]}
+          />
+
           {/* Header */}
           <ScrollReveal>
             <header className="mb-12">

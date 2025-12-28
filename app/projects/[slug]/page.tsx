@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { projectsDetail } from "@/constants/projects-detail";
 import { ProjectDetailContent } from "@/components/projects/ProjectDetailContent";
 import { ScrollReveal } from "@/components/animations/ScrollReveal";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import type { Metadata } from "next";
 
 interface ProjectPageProps {
@@ -65,6 +66,15 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
 
       {/* Project Header */}
       <div className="max-w-6xl mx-auto mb-12">
+        {/* Breadcrumb */}
+        <Breadcrumb
+          items={[
+            { label: "Home", href: "/" },
+            { label: "Projects", href: "/#projects" },
+            { label: project.name },
+          ]}
+        />
+
         <ScrollReveal>
           <div className="mb-6">
             <span
