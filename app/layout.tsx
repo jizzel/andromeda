@@ -3,6 +3,10 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { profile } from "@/constants/profile";
 import { StructuredData } from "@/components/layout/StructuredData";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { BusinessCardProvider } from "@/components/layout/BusinessCardContext";
+import { ClientLayout } from "@/components/layout/ClientLayout";
+import { Analytics } from "@vercel/analytics/react";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -75,14 +79,33 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <StructuredData />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                const theme = localStorage.getItem('theme');
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                const shouldUseDark = theme === 'dark' || (!theme && prefersDark);
+                if (!shouldUseDark) {
+                  document.documentElement.classList.add('light');
+                }
+              })();
+            `,
+          }}
+        />
       </head>
-      <body
-        className={`${inter.variable} font-sans antialiased`}
-      >
-        {children}
+      <body className={`${inter.variable} font-sans antialiased`}>
+        <ThemeProvider>
+          <BusinessCardProvider>
+            <ClientLayout>
+              {children}
+            </ClientLayout>
+            <Analytics />
+          </BusinessCardProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

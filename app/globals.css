@@ -116,15 +116,19 @@
 
 @layer base {
   :root {
-    /* Andromeda Custom Design Tokens */
-    --andromeda-primary-dark: #0F111A;
-    --andromeda-secondary-dark: #1B1E2B;
+    /* Andromeda Custom Design Tokens - Dark Theme (Default) */
+    --andromeda-primary: #0F111A;
+    --andromeda-secondary: #1B1E2B;
     --andromeda-accent-beige: #F5EBDD;
     --andromeda-highlight: #4A90E2;
     --andromeda-text-primary: #E5E5E5;
     --andromeda-text-secondary: #A0A0A0;
     --andromeda-error: #FF4C4C;
     --andromeda-success: #4CAF50;
+
+    /* Maintain legacy variable names for backward compatibility */
+    --andromeda-primary-dark: #0F111A;
+    --andromeda-secondary-dark: #1B1E2B;
 
     /* Typography Scale */
     --text-h1: 3rem;        /* 48px */
@@ -149,6 +153,24 @@
     --ease-out-cubic: cubic-bezier(0.33, 1, 0.68, 1);
   }
 
+  /* Light Theme Variables */
+  html.light {
+    --andromeda-primary: #FAFAFA;
+    --andromeda-secondary: #F0F0F0;
+    --andromeda-accent-beige: #8B7355;
+    --andromeda-accent-beige-light: #8B7355;
+    --andromeda-highlight: #2E6BA8;
+    --andromeda-text-primary: #1A1A1A;
+    --andromeda-text-secondary: #666666;
+    --andromeda-error: #D32F2F;
+    --andromeda-success: #388E3C;
+
+    /* Light theme shadows */
+    --shadow-1: 0 4px 12px rgba(0, 0, 0, 0.08);
+    --shadow-2: 0 8px 24px rgba(0, 0, 0, 0.12);
+    --shadow-3: 0 12px 36px rgba(0, 0, 0, 0.15);
+  }
+
   * {
     @apply border-border outline-ring/50;
   }
@@ -160,8 +182,10 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-inter), sans-serif;
-    background: var(--andromeda-primary-dark);
+    background: var(--andromeda-primary);
     color: var(--andromeda-text-primary);
+    transition: background-color var(--duration-normal) var(--ease-out-cubic),
+                color var(--duration-normal) var(--ease-out-cubic);
   }
 
   /* Focus visible styles for accessibility */

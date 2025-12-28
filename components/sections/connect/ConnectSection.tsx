@@ -5,11 +5,17 @@ import { Calendar, Mail, Github } from "lucide-react";
 import { socialLinks, profile } from "@/constants/profile";
 import { ScrollReveal } from "@/components/animations/ScrollReveal";
 import { Button } from "@/components/ui/button";
+import { useAnalytics } from "@/lib/hooks/useAnalytics";
 
 export function ConnectSection() {
+  const { trackCTAClicked } = useAnalytics();
+
+  const handleCTAClick = (type: "calendly" | "email" | "github") => {
+    trackCTAClicked({ type, location: "connect_section" });
+  };
   return (
     <section
-      className="relative w-full py-32 px-6 bg-[var(--andromeda-primary-dark)]"
+      className="relative w-full py-32 px-6 bg-[var(--andromeda-primary)]"
       aria-labelledby="connect-heading"
     >
       <div className="max-w-4xl mx-auto text-center">
@@ -36,6 +42,7 @@ export function ConnectSection() {
               href={socialLinks.calendly}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => handleCTAClick("calendly")}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               transition={{ duration: 0.15 }}
@@ -56,6 +63,7 @@ export function ConnectSection() {
             {/* Secondary CTA - Email */}
             <motion.a
               href={socialLinks.email}
+              onClick={() => handleCTAClick("email")}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               transition={{ duration: 0.15 }}
@@ -63,7 +71,7 @@ export function ConnectSection() {
               <Button
                 size="lg"
                 variant="outline"
-                className="border-white/20 text-[var(--andromeda-text-primary)] hover:bg-white/5 hover:border-[var(--andromeda-accent-beige)]/30 px-8 py-6 text-base font-medium rounded"
+                className="border-[var(--andromeda-text-secondary)]/30 text-[var(--andromeda-text-primary)] hover:bg-[var(--andromeda-secondary)] hover:border-[var(--andromeda-accent-beige)]/50 px-8 py-6 text-base font-medium rounded transition-all duration-200"
               >
                 <Mail size={20} className="mr-2" />
                 Email Me
@@ -75,6 +83,7 @@ export function ConnectSection() {
               href={socialLinks.github}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => handleCTAClick("github")}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               transition={{ duration: 0.15 }}
@@ -82,7 +91,7 @@ export function ConnectSection() {
               <Button
                 size="lg"
                 variant="outline"
-                className="border-white/20 text-[var(--andromeda-text-primary)] hover:bg-white/5 hover:border-[var(--andromeda-accent-beige)]/30 px-8 py-6 text-base font-medium rounded"
+                className="border-[var(--andromeda-text-secondary)]/30 text-[var(--andromeda-text-primary)] hover:bg-[var(--andromeda-secondary)] hover:border-[var(--andromeda-accent-beige)]/50 px-8 py-6 text-base font-medium rounded transition-all duration-200"
               >
                 <Github size={20} className="mr-2" />
                 View GitHub

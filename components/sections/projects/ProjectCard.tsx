@@ -6,6 +6,7 @@ import { Project } from "@/constants/projects";
 import { ProjectExpansion } from "./ProjectExpansion";
 import { Badge } from "@/components/ui/badge";
 import { useKeyboardNav } from "@/lib/hooks/useKeyboardNav";
+import { useAnalytics } from "@/lib/hooks/useAnalytics";
 
 interface ProjectCardProps {
   project: Project;
@@ -13,8 +14,20 @@ interface ProjectCardProps {
 
 export function ProjectCard({ project }: ProjectCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const { trackProjectExpanded } = useAnalytics();
 
-  const toggleExpanded = () => setIsExpanded((prev) => !prev);
+  const toggleExpanded = () => {
+    const newExpandedState = !isExpanded;
+    setIsExpanded(newExpandedState);
+
+    if (newExpandedState) {
+      trackProjectExpanded({
+        project_id: project.id,
+        project_name: project.name,
+        is_expansion_layer: project.isExpansionLayer,
+      });
+    }
+  };
 
   // Keyboard navigation
   useKeyboardNav({
@@ -48,7 +61,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
       }}
     >
       <div
-        className="bg-[var(--andromeda-secondary-dark)] rounded-lg p-6 border border-white/10"
+        className="bg-[var(--andromeda-secondary)] rounded-lg p-6 border border-white/10 dark:border-white/10 light:border-black/10"
         style={{
           boxShadow: isExpanded
             ? "var(--shadow-2)"

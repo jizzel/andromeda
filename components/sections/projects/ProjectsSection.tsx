@@ -19,7 +19,7 @@ export function ProjectsSection() {
 
   return (
     <section
-      className="relative w-full py-24 px-6 bg-[var(--andromeda-primary-dark)]"
+      className="relative w-full py-24 px-6 bg-[var(--andromeda-primary)]"
       aria-labelledby="projects-heading"
     >
       <div className="max-w-4xl mx-auto">
@@ -56,7 +56,7 @@ export function ProjectsSection() {
             <div className="flex justify-center mt-16">
               <motion.button
                 onClick={() => setShowExpansionLayer(true)}
-                className="px-6 py-3 text-base font-medium text-[var(--andromeda-text-primary)] border border-white/20 rounded hover:bg-white/5 hover:border-[var(--andromeda-accent-beige)]/30 transition-all focus:outline-none focus:ring-2 focus:ring-[var(--andromeda-accent-beige)]"
+                className="px-6 py-3 text-base font-medium text-[var(--andromeda-text-primary)] border border-[var(--andromeda-text-secondary)]/30 rounded hover:bg-[var(--andromeda-secondary)] hover:border-[var(--andromeda-accent-beige)]/50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--andromeda-accent-beige)]"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 transition={{ duration: 0.15 }}

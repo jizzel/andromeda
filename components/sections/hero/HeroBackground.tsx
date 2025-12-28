@@ -7,11 +7,23 @@ import { useIsMobile } from "@/lib/hooks/useMediaQuery";
 
 function Particles() {
   const particlesRef = useRef<THREE.Points>(null);
+  const materialRef = useRef<THREE.PointsMaterial>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const isMobile = useIsMobile();
 
   // Particle count based on device
   const particleCount = isMobile ? 50 : 250;
+
+  // Update particle color based on theme changes
+  useEffect(() => {
+    if (materialRef.current) {
+      const isLight = document.documentElement.classList.contains('light');
+      const color = isLight ? "#8B7355" : "#F5EBDD";
+      const opacity = isLight ? 0.4 : 0.6;
+      materialRef.current.color.set(color);
+      materialRef.current.opacity = opacity;
+    }
+  });
 
   useEffect(() => {
     const handleMouseMove = (event: MouseEvent) => {
@@ -65,8 +77,9 @@ function Particles() {
   return (
     <points ref={particlesRef} geometry={particles.current}>
       <pointsMaterial
+        ref={materialRef}
         size={0.05}
-        color="#F5EBDD" // Beige accent
+        color="#F5EBDD"
         transparent
         opacity={0.6}
         sizeAttenuation
@@ -77,15 +90,32 @@ function Particles() {
 
 export function HeroBackground() {
   const isMobile = useIsMobile();
+  const [bgColor, setBgColor] = useState("#0F111A");
 
-  // Mobile fallback: CSS gradient instead of Three.js
+  useEffect(() => {
+    const updateColors = () => {
+      const isLight = document.documentElement.classList.contains('light');
+      setBgColor(isLight ? "#FAFAFA" : "#0F111A");
+    };
+
+    // Set initial colors
+    updateColors();
+
+    // Watch for theme changes
+    const observer = new MutationObserver(updateColors);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  // Mobile fallback: CSS gradient using CSS variables
   if (isMobile) {
     return (
       <div
-        className="absolute inset-0 -z-10"
-        style={{
-          background: "linear-gradient(180deg, #0F111A 0%, #1B1E2B 100%)",
-        }}
+        className="absolute inset-0 -z-10 bg-gradient-to-b from-[var(--andromeda-primary)] to-[var(--andromeda-secondary)]"
       />
     );
   }
@@ -94,7 +124,7 @@ export function HeroBackground() {
     <div className="absolute inset-0 -z-10">
       <Canvas
         camera={{ position: [0, 0, 15], fov: 75 }}
-        style={{ background: "#0F111A" }}
+        style={{ background: bgColor }}
       >
         <ambientLight intensity={0.5} />
         <Particles />

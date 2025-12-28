@@ -7,14 +7,18 @@ import { FocusTrap } from "./FocusTrap";
 import { useBusinessCard } from "./BusinessCardContext";
 import { useEffect } from "react";
 import { profile, socialLinks } from "@/constants/profile";
+import { useAnalytics } from "@/lib/hooks/useAnalytics";
 
 export function BusinessCard() {
   const { isOpen, closeBusinessCard } = useBusinessCard();
+  const { trackBusinessCardOpened } = useAnalytics();
 
-  // Disable body scroll when card is open
+  // Disable body scroll when card is open and track opening
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
+      // Track business card opened - source will be determined by context
+      trackBusinessCardOpened({ source: "hero" });
     } else {
       document.body.style.overflow = "unset";
     }
@@ -22,7 +26,7 @@ export function BusinessCard() {
     return () => {
       document.body.style.overflow = "unset";
     };
-  }, [isOpen]);
+  }, [isOpen, trackBusinessCardOpened]);
 
   return (
     <AnimatePresence>
@@ -52,7 +56,7 @@ export function BusinessCard() {
               aria-describedby="business-card-description"
             >
               <div
-                className="relative bg-[var(--andromeda-secondary-dark)] rounded-lg p-6 border border-white/10"
+                className="relative bg-[var(--andromeda-secondary)] rounded-lg p-6 border border-white/10 dark:border-white/10 light:border-black/10"
                 style={{
                   boxShadow: "var(--shadow-2)",
                   backdropFilter: "blur(12px)",
@@ -69,7 +73,7 @@ export function BusinessCard() {
 
                 {/* Profile Image */}
                 <div className="flex justify-center mb-6">
-                  <div className="w-24 h-24 rounded-full overflow-hidden bg-[var(--andromeda-primary-dark)] border-2 border-[var(--andromeda-accent-beige)]/20">
+                  <div className="w-24 h-24 rounded-full overflow-hidden bg-[var(--andromeda-primary)] border-2 border-[var(--andromeda-accent-beige)]/20">
                     <Image
                       src={profile.profileImage}
                       alt={profile.name}
