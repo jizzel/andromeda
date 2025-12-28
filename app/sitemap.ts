@@ -1,6 +1,7 @@
 import { MetadataRoute } from "next";
 import { profile } from "@/constants/profile";
 import { getAllPosts } from "@/lib/content";
+import { projectsDetail } from "@/constants/projects-detail";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const posts = getAllPosts();
@@ -10,6 +11,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
     lastModified: new Date(post.publishedAt),
     changeFrequency: "monthly" as const,
     priority: 0.8,
+  }));
+
+  const projectEntries: MetadataRoute.Sitemap = projectsDetail.map((project) => ({
+    url: `${profile.siteUrl}/projects/${project.slug}`,
+    lastModified: new Date(),
+    changeFrequency: "monthly" as const,
+    priority: 0.7,
   }));
 
   return [
@@ -26,5 +34,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.9,
     },
     ...postEntries,
+    ...projectEntries,
   ];
 }

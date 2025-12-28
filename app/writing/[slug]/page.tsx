@@ -123,7 +123,7 @@ export default async function PostPage({ params }: PostPageProps) {
 
           {/* Content */}
           <ScrollReveal delay={0.1}>
-            <div className="prose prose-invert max-w-none">
+            <div className="max-w-none">
               {post.content && <MDXContent content={post.content} />}
             </div>
           </ScrollReveal>
