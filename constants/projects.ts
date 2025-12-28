@@ -3,7 +3,7 @@ export interface Project {
   name: string;
   contextLine: string; // Collapsed state
   outcomeLine: string; // Collapsed state
-  status: "Production" | "Research" | "Deployed";
+  status: "Production" | "Research" | "Deployed" | "Development";
   context: string;
   problem: string;
   approach: string;
@@ -29,24 +29,6 @@ export const projects: Project[] = [
     outcome:
       "Replaced manual tracking and reporting with a reliable, auditable system that improved operational visibility and significantly reduced turnaround time for compliance reporting.",
     techStack: ["Next.js", "NestJS", "PostgreSQL", "WebSockets"],
-    isExpansionLayer: false,
-  },
-  {
-    id: "legal-intelligence",
-    name: "Legal Intelligence Platform",
-    contextLine: "AI-powered legal research platform for Ghanaian court rulings",
-    outcomeLine:
-      "Reduced research time while establishing foundation for legal intelligence products",
-    status: "Deployed",
-    context:
-      "Legal research across decades of Ghanaian court rulings required extensive manual effort and fragmented sources.",
-    problem:
-      "Unstructured legal texts made retrieval slow, inconsistent, and dependent on individual researcher experience rather than systemized access.",
-    approach:
-      "Built an AI-powered research platform using structured ingestion pipelines and agentic workflows to transform historical rulings into searchable, semantically indexed data. Designed the system to support extensibility beyond research into commercial legal tooling.",
-    outcome:
-      "Reduced legal research time dramatically while establishing a foundation for scalable legal intelligence products in emerging markets.",
-    techStack: ["Python", "LangChain", "Vector DB", "FastAPI"],
     isExpansionLayer: false,
   },
   {
@@ -84,6 +66,24 @@ export const projects: Project[] = [
     outcome:
       "Expanded the language's usability and contributed to published academic work on language design and interoperability.",
     techStack: ["Java", "Eolang", "Maven", "JUnit"],
+    isExpansionLayer: false,
+  },
+  {
+    id: "legal-intelligence",
+    name: "Legal Intelligence Platform",
+    contextLine: "AI-powered legal research platform for Ghanaian court rulings",
+    outcomeLine:
+        "Reduced research time while establishing foundation for legal intelligence products",
+    status: "Development",
+    context:
+        "Legal research across decades of Ghanaian court rulings required extensive manual effort and fragmented sources.",
+    problem:
+        "Unstructured legal texts made retrieval slow, inconsistent, and dependent on individual researcher experience rather than systemized access.",
+    approach:
+        "Built an AI-powered research platform using structured ingestion pipelines and agentic workflows to transform historical rulings into searchable, semantically indexed data. Designed the system to support extensibility beyond research into commercial legal tooling.",
+    outcome:
+        "Reduced legal research time dramatically while establishing a foundation for scalable legal intelligence products in emerging markets.",
+    techStack: ["Python", "LangChain", "Vector DB", "FastAPI"],
     isExpansionLayer: true,
   },
   {
@@ -93,7 +93,7 @@ export const projects: Project[] = [
       "Distributed system with AI-powered design generation and task automation",
     outcomeLine:
       "Reduced operational costs while improving fulfillment efficiency and scalability",
-    status: "Deployed",
+    status: "Development",
     context:
       "A large-scale marketplace aimed to connect thousands of users while automating design generation and operational workflows using AI.",
     problem:
