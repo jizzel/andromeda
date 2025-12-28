@@ -2,6 +2,8 @@ import { HeroSection } from "@/components/sections/hero/HeroSection";
 import { BusinessCard } from "@/components/layout/BusinessCard";
 import { BusinessCardProvider } from "@/components/layout/BusinessCardContext";
 import { ProjectsSection } from "@/components/sections/projects/ProjectsSection";
+import { CapabilitiesSection } from "@/components/sections/capabilities/CapabilitiesSection";
+import { ConnectSection } from "@/components/sections/connect/ConnectSection";
 
 export default function Home() {
   return (
@@ -10,13 +12,8 @@ export default function Home() {
         <HeroSection />
         <BusinessCard />
         <ProjectsSection />
-
-        {/* Placeholder for future sections */}
-        <section className="min-h-screen bg-[var(--andromeda-secondary-dark)] flex items-center justify-center">
-          <p className="text-[var(--andromeda-text-secondary)]">
-            Capabilities & Connect Sections (Coming in Phase 3)
-          </p>
-        </section>
+        <CapabilitiesSection />
+        <ConnectSection />
       </main>
     </BusinessCardProvider>
   );
