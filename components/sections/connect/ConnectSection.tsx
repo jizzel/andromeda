@@ -6,12 +6,51 @@ import { socialLinks, profile } from "@/constants/profile";
 import { ScrollReveal } from "@/components/animations/ScrollReveal";
 import { Button } from "@/components/ui/button";
 import { useAnalytics } from "@/lib/hooks/useAnalytics";
+import { useState, useEffect } from "react";
 
 export function ConnectSection() {
   const { trackCTAClicked } = useAnalytics();
+  const [emailHovered, setEmailHovered] = useState(false);
+  const [githubHovered, setGithubHovered] = useState(false);
+  const [isLightTheme, setIsLightTheme] = useState(false);
+
+  useEffect(() => {
+    // Check theme from DOM instead of context to avoid SSR issues
+    const updateTheme = () => {
+      setIsLightTheme(document.documentElement.classList.contains('light'));
+    };
+
+    updateTheme();
+
+    // Watch for theme changes
+    const observer = new MutationObserver(updateTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   const handleCTAClick = (type: "calendly" | "email" | "github") => {
     trackCTAClicked({ type, location: "connect_section" });
+  };
+
+  // Theme-aware button styles
+  const getButtonStyles = (isHovered: boolean) => {
+    if (isLightTheme) {
+      return {
+        color: "#1A1A1A", // Dark text for light mode
+        borderColor: isHovered ? "rgba(139, 115, 85, 0.5)" : "rgba(102, 102, 102, 0.3)",
+        backgroundColor: isHovered ? "rgba(0, 0, 0, 0.05)" : "transparent",
+      };
+    } else {
+      return {
+        color: "#FFFFFF", // White text for dark mode
+        borderColor: isHovered ? "rgba(245, 235, 221, 0.5)" : "rgba(255, 255, 255, 0.2)",
+        backgroundColor: isHovered ? "rgba(255, 255, 255, 0.1)" : "transparent",
+      };
+    }
   };
   return (
     <section
@@ -71,7 +110,10 @@ export function ConnectSection() {
               <Button
                 size="lg"
                 variant="outline"
-                className="border-[var(--andromeda-text-secondary)]/30 text-[var(--andromeda-text-primary)] hover:bg-[var(--andromeda-secondary)] hover:border-[var(--andromeda-accent-beige)]/50 px-8 py-6 text-base font-medium rounded transition-all duration-200"
+                className="px-8 py-6 text-base font-medium rounded transition-all duration-200"
+                style={getButtonStyles(emailHovered)}
+                onMouseEnter={() => setEmailHovered(true)}
+                onMouseLeave={() => setEmailHovered(false)}
               >
                 <Mail size={20} className="mr-2" />
                 Email Me
@@ -91,7 +133,10 @@ export function ConnectSection() {
               <Button
                 size="lg"
                 variant="outline"
-                className="border-[var(--andromeda-text-secondary)]/30 text-[var(--andromeda-text-primary)] hover:bg-[var(--andromeda-secondary)] hover:border-[var(--andromeda-accent-beige)]/50 px-8 py-6 text-base font-medium rounded transition-all duration-200"
+                className="px-8 py-6 text-base font-medium rounded transition-all duration-200"
+                style={getButtonStyles(githubHovered)}
+                onMouseEnter={() => setGithubHovered(true)}
+                onMouseLeave={() => setGithubHovered(false)}
               >
                 <Github size={20} className="mr-2" />
                 View GitHub

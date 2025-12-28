@@ -18,7 +18,7 @@ import { track } from "@vercel/analytics";
  */
 
 interface BusinessCardOpenedEvent {
-  source: "hero" | "floating_button";
+  source: "hero" | "floating_button" | "identity_anchor";
 }
 
 interface ProjectExpandedEvent {
