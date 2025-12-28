@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Calendar, Mail, Github } from "lucide-react";
-import { socialLinks, profile } from "@/constants/social-links";
+import { socialLinks, profile } from "@/constants/profile";
 import { ScrollReveal } from "@/components/animations/ScrollReveal";
 import { Button } from "@/components/ui/button";
 

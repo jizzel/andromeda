@@ -6,6 +6,7 @@ import Image from "next/image";
 import { FocusTrap } from "./FocusTrap";
 import { useBusinessCard } from "./BusinessCardContext";
 import { useEffect } from "react";
+import { profile, socialLinks } from "@/constants/profile";
 
 export function BusinessCard() {
   const { isOpen, closeBusinessCard } = useBusinessCard();
@@ -70,8 +71,8 @@ export function BusinessCard() {
                 <div className="flex justify-center mb-6">
                   <div className="w-24 h-24 rounded-full overflow-hidden bg-[var(--andromeda-primary-dark)] border-2 border-[var(--andromeda-accent-beige)]/20">
                     <Image
-                      src="/images/profile.jpg"
-                      alt="Joseph Afriyie Attakorah"
+                      src={profile.profileImage}
+                      alt={profile.name}
                       width={96}
                       height={96}
                       className="object-cover"
@@ -85,22 +86,22 @@ export function BusinessCard() {
                   id="business-card-title"
                   className="text-2xl font-bold text-center mb-2 text-[var(--andromeda-text-primary)]"
                 >
-                  Joseph Afriyie Attakorah
+                  {profile.name}
                 </h2>
 
                 {/* Title */}
                 <p className="text-center text-[var(--andromeda-text-secondary)] mb-1">
-                  Software Engineer
+                  {profile.title}
                 </p>
 
                 {/* Focus */}
                 <p className="text-center text-sm text-[var(--andromeda-text-secondary)] mb-2">
-                  Systems • Monitoring • Operations
+                  {profile.focus}
                 </p>
 
                 {/* Location */}
                 <p className="text-center text-sm text-[var(--andromeda-text-secondary)] mb-6">
-                  Accra, Ghana
+                  {profile.location}
                 </p>
 
                 {/* Divider */}
@@ -111,13 +112,13 @@ export function BusinessCard() {
                   id="business-card-description"
                   className="text-center text-sm text-[var(--andromeda-text-primary)] mb-6 leading-relaxed"
                 >
-                  Building systems that turn operational complexity into clarity.
+                  {profile.tagline}
                 </p>
 
                 {/* Social Links */}
                 <div className="flex justify-center items-center gap-6">
                   <a
-                    href="https://github.com/josephattakorah"
+                    href={socialLinks.github}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="p-2 rounded hover:bg-white/10 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--andromeda-accent-beige)]"
@@ -126,7 +127,7 @@ export function BusinessCard() {
                     <Github size={20} className="text-[var(--andromeda-text-primary)]" />
                   </a>
                   <a
-                    href="https://linkedin.com/in/josephattakorah"
+                    href={socialLinks.linkedin}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="p-2 rounded hover:bg-white/10 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--andromeda-accent-beige)]"
@@ -135,7 +136,7 @@ export function BusinessCard() {
                     <Linkedin size={20} className="text-[var(--andromeda-text-primary)]" />
                   </a>
                   <a
-                    href="mailto:joseph@attakorah.com"
+                    href={socialLinks.email}
                     className="p-2 rounded hover:bg-white/10 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--andromeda-accent-beige)]"
                     aria-label="Email Joseph"
                   >
