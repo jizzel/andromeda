@@ -28,7 +28,7 @@ export function ThemeToggle() {
   return (
     <motion.button
       onClick={handleToggle}
-      className="fixed top-6 right-6 z-40 p-3 rounded-full bg-andromeda-secondary hover:bg-opacity-80 transition-colors duration-200"
+      className="fixed top-6 right-6 z-40 p-3 rounded-full bg-[var(--andromeda-secondary)] border border-white/10 dark:border-white/10 light:border-black/10 hover:opacity-80 transition-all duration-200"
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
@@ -49,7 +49,7 @@ export function ThemeToggle() {
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="text-andromeda-accent-beige"
+            className="text-[var(--andromeda-accent-beige)]"
           >
             <circle cx="12" cy="12" r="5" />
             <line x1="12" y1="1" x2="12" y2="3" />
@@ -72,7 +72,7 @@ export function ThemeToggle() {
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="text-andromeda-accent-beige-light"
+            className="text-[var(--andromeda-accent-beige)]"
           >
             <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
           </svg>
