@@ -131,6 +131,28 @@ export const projectsDetail: ProjectDetail[] = [
         description: "Measured over 12 months in production",
       },
     ],
+    screenshots: [
+      {
+        src: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1200&q=80",
+        alt: "Real-time monitoring dashboard showing container temperature data",
+        caption: "Live dashboard displaying real-time temperature monitoring across multiple terminals"
+      },
+      {
+        src: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&q=80",
+        alt: "Analytics view with charts and graphs",
+        caption: "Historical trend analysis and compliance reporting interface"
+      },
+      {
+        src: "https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?w=1200&q=80",
+        alt: "Alert notification system interface",
+        caption: "Real-time alert system for temperature excursions with actionable notifications"
+      },
+      {
+        src: "https://images.unsplash.com/photo-1566576721346-d4a3b4eaeb55?w=1200&q=80",
+        alt: "Port terminal logistics operations",
+        caption: "Container yard overview showing monitored reefer containers"
+      }
+    ],
     lastModified: "2024-06-15",
   },
   {
@@ -227,6 +249,28 @@ export const projectsDetail: ProjectDetail[] = [
         description: "SLA compliance maintained under peak load",
       },
     ],
+    screenshots: [
+      {
+        src: "https://images.unsplash.com/photo-1642790106117-e829e14a795f?w=1200&q=80",
+        alt: "Cryptocurrency trading charts and data visualization",
+        caption: "Real-time market data aggregation and analysis dashboard"
+      },
+      {
+        src: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=1200&q=80",
+        alt: "Trading analytics and performance metrics",
+        caption: "Portfolio analytics showing trading signals and performance metrics"
+      },
+      {
+        src: "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=1200&q=80",
+        alt: "System monitoring and infrastructure metrics",
+        caption: "Backend performance monitoring with Grafana dashboards"
+      },
+      {
+        src: "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=1200&q=80",
+        alt: "API architecture and microservices",
+        caption: "Microservices architecture handling high-throughput trading data"
+      }
+    ],
     lastModified: "2024-08-20",
   },
   {
@@ -287,6 +331,28 @@ export const projectsDetail: ProjectDetail[] = [
         impact:
           "Validated approach rigorously and contributed to published research.",
       },
+    ],
+    screenshots: [
+      {
+        src: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&q=80",
+        alt: "Code editor showing programming language development",
+        caption: "Eolang source code with Java interoperability layer implementation"
+      },
+      {
+        src: "https://images.unsplash.com/photo-1542831371-29b0f74f9713?w=1200&q=80",
+        alt: "Software development and code structure",
+        caption: "Type system mapping between Eolang and Java runtime"
+      },
+      {
+        src: "https://images.unsplash.com/photo-1587620962725-abab7fe55159?w=1200&q=80",
+        alt: "Programming and software architecture",
+        caption: "Reflection-based wrapper generation system architecture"
+      },
+      {
+        src: "https://images.unsplash.com/photo-1605379399642-870262d3d051?w=1200&q=80",
+        alt: "Testing and validation framework",
+        caption: "Comprehensive test suite validating cross-language integration"
+      }
     ],
     repositoryUrl: "https://github.com/objectionary/eo",
     lastModified: "2024-03-10",
@@ -351,6 +417,28 @@ export const projectsDetail: ProjectDetail[] = [
           "Automated multi-step research workflows previously requiring manual coordination.",
       },
     ],
+    screenshots: [
+      {
+        src: "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=1200&q=80",
+        alt: "Legal documents and research materials",
+        caption: "Semantic search interface for legal document discovery"
+      },
+      {
+        src: "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=1200&q=80",
+        alt: "Data visualization and analytics dashboard",
+        caption: "Case law analytics showing citation networks and precedent relationships"
+      },
+      {
+        src: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=1200&q=80",
+        alt: "AI-powered research assistant interface",
+        caption: "Agentic research workflow generating structured legal summaries"
+      },
+      {
+        src: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1200&q=80",
+        alt: "Document processing and indexing system",
+        caption: "Vector database indexing pipeline for legal corpus"
+      }
+    ],
     lastModified: "2024-09-05",
   },
   {
@@ -412,6 +500,28 @@ export const projectsDetail: ProjectDetail[] = [
         impact:
           "Enabled independent scaling and deployment of high-load components.",
       },
+    ],
+    screenshots: [
+      {
+        src: "https://images.unsplash.com/photo-1558655146-9f40138edfeb?w=1200&q=80",
+        alt: "AI-generated creative designs and artwork",
+        caption: "AI-powered design generation system creating custom artworks"
+      },
+      {
+        src: "https://images.unsplash.com/photo-1551434678-e076c223a692?w=1200&q=80",
+        alt: "Team collaboration and project management",
+        caption: "Task allocation and crowdsourcing platform for design validation"
+      },
+      {
+        src: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&q=80",
+        alt: "System architecture and microservices",
+        caption: "Microservices architecture handling distributed AI workloads"
+      },
+      {
+        src: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1200&q=80",
+        alt: "Quality metrics and performance monitoring",
+        caption: "Automated quality validation pipeline with AI-driven scoring"
+      }
     ],
     lastModified: "2024-11-12",
   },
