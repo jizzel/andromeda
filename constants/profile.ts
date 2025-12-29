@@ -29,5 +29,5 @@ export const profile = {
     "Ghana",
     "Accra",
   ],
-  siteUrl: "https://josephattakorah.com", // Update with actual domain
+  siteUrl: "https://attakorah.com",
 };
