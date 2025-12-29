@@ -48,13 +48,13 @@ export function ScreenshotGallery({ screenshots, projectSlug }: ScreenshotGaller
 
       switch (e.key) {
         case "Escape":
-          closeLightbox();
+          setLightboxIndex(null);
           break;
         case "ArrowLeft":
-          prevImage();
+          setLightboxIndex((lightboxIndex - 1 + screenshots.length) % screenshots.length);
           break;
         case "ArrowRight":
-          nextImage();
+          setLightboxIndex((lightboxIndex + 1) % screenshots.length);
           break;
       }
     };
