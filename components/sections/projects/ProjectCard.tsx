@@ -61,7 +61,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
       }}
     >
       <div
-        className="bg-[var(--andromeda-secondary)] rounded-lg p-6 border border-white/10 dark:border-white/10 light:border-black/10"
+        className="bg-[var(--andromeda-secondary)] rounded-lg p-6 border border-white/10 light:border-black/10"
         style={{
           boxShadow: isExpanded
             ? "var(--shadow-2)"

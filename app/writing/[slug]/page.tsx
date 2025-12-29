@@ -145,7 +145,7 @@ export default async function PostPage({ params }: PostPageProps) {
           {/* Related Posts */}
           {relatedPosts.length > 0 && (
             <ScrollReveal delay={0.2}>
-              <div className="mt-16 pt-8 border-t border-white/10 dark:border-white/10 light:border-black/10">
+              <div className="mt-16 pt-8 border-t border-white/10 light:border-black/10">
                 <h2 className="text-2xl font-bold mb-6 text-[var(--andromeda-text-primary)]">
                   Related Posts
                 </h2>
@@ -156,7 +156,7 @@ export default async function PostPage({ params }: PostPageProps) {
                       href={`/writing/${relatedPost.slug}`}
                       className="block group"
                     >
-                      <div className="bg-[var(--andromeda-secondary)] rounded-lg p-4 border border-white/10 dark:border-white/10 light:border-black/10 transition-all duration-200 hover:translate-x-1">
+                      <div className="bg-[var(--andromeda-secondary)] rounded-lg p-4 border border-white/10 light:border-black/10 transition-all duration-200 hover:translate-x-1">
                         <div className="flex items-start justify-between gap-4">
                           <div>
                             <h3 className="font-semibold text-[var(--andromeda-text-primary)] group-hover:text-[var(--andromeda-highlight)] transition-colors mb-1">

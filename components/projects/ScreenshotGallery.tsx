@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
@@ -41,6 +41,30 @@ export function ScreenshotGallery({ screenshots, projectSlug }: ScreenshotGaller
     }
   };
 
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (lightboxIndex === null) return;
+
+      switch (e.key) {
+        case "Escape":
+          closeLightbox();
+          break;
+        case "ArrowLeft":
+          prevImage();
+          break;
+        case "ArrowRight":
+          nextImage();
+          break;
+      }
+    };
+
+    if (lightboxIndex !== null) {
+      window.addEventListener("keydown", handleKeyDown);
+      return () => window.removeEventListener("keydown", handleKeyDown);
+    }
+  }, [lightboxIndex, screenshots.length]);
+
   return (
     <>
       {/* Gallery Grid */}
@@ -49,7 +73,7 @@ export function ScreenshotGallery({ screenshots, projectSlug }: ScreenshotGaller
           <motion.button
             key={index}
             onClick={() => openLightbox(index)}
-            className="relative aspect-video rounded-lg overflow-hidden bg-[var(--andromeda-secondary)] border border-white/10 dark:border-white/10 light:border-black/10 cursor-pointer group"
+            className="relative aspect-video rounded-lg overflow-hidden bg-[var(--andromeda-secondary)] border border-white/10 light:border-black/10 cursor-pointer group"
             whileHover={{ scale: 1.02 }}
             transition={{ duration: 0.2 }}
           >

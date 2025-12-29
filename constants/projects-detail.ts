@@ -33,6 +33,7 @@ export interface ProjectDetail extends Project {
   videoUrl?: string;
   caseStudyUrl?: string; // External case study link
   repositoryUrl?: string; // GitHub repo (if public)
+  lastModified: string; // ISO date string for SEO sitemap
 }
 
 export const projectsDetail: ProjectDetail[] = [
@@ -130,6 +131,7 @@ export const projectsDetail: ProjectDetail[] = [
         description: "Measured over 12 months in production",
       },
     ],
+    lastModified: "2024-06-15",
   },
   {
     id: "crypto-trading",
@@ -225,6 +227,7 @@ export const projectsDetail: ProjectDetail[] = [
         description: "SLA compliance maintained under peak load",
       },
     ],
+    lastModified: "2024-08-20",
   },
   {
     id: "eolang-java",
@@ -286,6 +289,7 @@ export const projectsDetail: ProjectDetail[] = [
       },
     ],
     repositoryUrl: "https://github.com/objectionary/eo",
+    lastModified: "2024-03-10",
   },
   {
     id: "legal-intelligence",
@@ -347,6 +351,7 @@ export const projectsDetail: ProjectDetail[] = [
           "Automated multi-step research workflows previously requiring manual coordination.",
       },
     ],
+    lastModified: "2024-09-05",
   },
   {
     id: "ai-marketplace",
@@ -408,5 +413,6 @@ export const projectsDetail: ProjectDetail[] = [
           "Enabled independent scaling and deployment of high-load components.",
       },
     ],
+    lastModified: "2024-11-12",
   },
 ];

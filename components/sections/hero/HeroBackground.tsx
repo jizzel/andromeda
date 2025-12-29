@@ -16,14 +16,28 @@ function Particles() {
 
   // Update particle color based on theme changes
   useEffect(() => {
-    if (materialRef.current) {
-      const isLight = document.documentElement.classList.contains('light');
-      const color = isLight ? "#8B7355" : "#F5EBDD";
-      const opacity = isLight ? 0.4 : 0.6;
-      materialRef.current.color.set(color);
-      materialRef.current.opacity = opacity;
-    }
-  });
+    const updateMaterial = () => {
+      if (materialRef.current) {
+        const isLight = document.documentElement.classList.contains('light');
+        const color = isLight ? "#8B7355" : "#F5EBDD";
+        const opacity = isLight ? 0.4 : 0.6;
+        materialRef.current.color.set(color);
+        materialRef.current.opacity = opacity;
+      }
+    };
+
+    // Set initial colors
+    updateMaterial();
+
+    // Watch for theme changes
+    const observer = new MutationObserver(updateMaterial);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const handleMouseMove = (event: MouseEvent) => {

@@ -20,22 +20,27 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     // Check localStorage first, then system preference
     const stored = localStorage.getItem("theme") as Theme | null;
+    let initialTheme: Theme;
     if (stored) {
-      setTheme(stored);
-      document.documentElement.classList.toggle("light", stored === "light");
+      initialTheme = stored;
     } else {
       const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      const systemTheme = prefersDark ? "dark" : "light";
-      setTheme(systemTheme);
-      document.documentElement.classList.toggle("light", systemTheme === "light");
+      initialTheme = prefersDark ? "dark" : "light";
     }
+    setTheme(initialTheme);
+    document.documentElement.classList.add(initialTheme);
   }, []);
 
+  useEffect(() => {
+    if (mounted) {
+      document.documentElement.classList.remove("light", "dark");
+      document.documentElement.classList.add(theme);
+      localStorage.setItem("theme", theme);
+    }
+  }, [theme, mounted]);
+
   const toggleTheme = () => {
-    const newTheme = theme === "dark" ? "light" : "dark";
-    setTheme(newTheme);
-    localStorage.setItem("theme", newTheme);
-    document.documentElement.classList.toggle("light", newTheme === "light");
+    setTheme(prevTheme => prevTheme === "dark" ? "light" : "dark");
   };
 
   // Prevent flash of wrong theme

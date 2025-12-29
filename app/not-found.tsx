@@ -37,7 +37,7 @@ export default function NotFound() {
 
             <button
               onClick={() => window.history.back()}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded bg-[var(--andromeda-secondary)] text-[var(--andromeda-text-primary)] border border-white/10 dark:border-white/10 light:border-black/10 hover:bg-[var(--andromeda-secondary)]/80 transition-colors"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded bg-[var(--andromeda-secondary)] text-[var(--andromeda-text-primary)] border border-white/10 light:border-black/10 hover:bg-[var(--andromeda-secondary)]/80 transition-colors"
             >
               <ArrowLeft size={20} />
               <span>Go Back</span>
@@ -45,7 +45,7 @@ export default function NotFound() {
           </div>
 
           {/* Helpful Links */}
-          <div className="mt-16 pt-8 border-t border-white/10 dark:border-white/10 light:border-black/10">
+          <div className="mt-16 pt-8 border-t border-white/10 light:border-black/10">
             <p className="text-sm text-[var(--andromeda-text-secondary)] mb-4">
               You might be looking for:
             </p>

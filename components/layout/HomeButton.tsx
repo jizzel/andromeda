@@ -24,7 +24,7 @@ export function HomeButton() {
     >
       <Link
         href="/"
-        className="inline-flex items-center gap-2 px-4 py-2 rounded bg-[var(--andromeda-secondary)] text-[var(--andromeda-text-primary)] border border-white/10 dark:border-white/10 light:border-black/10 hover:bg-[var(--andromeda-secondary)]/80 transition-colors text-sm"
+        className="inline-flex items-center gap-2 px-4 py-2 rounded bg-[var(--andromeda-secondary)] text-[var(--andromeda-text-primary)] border border-white/10 light:border-black/10 hover:bg-[var(--andromeda-secondary)]/80 transition-colors text-sm"
         aria-label="Go to homepage"
       >
         <Home size={16} />

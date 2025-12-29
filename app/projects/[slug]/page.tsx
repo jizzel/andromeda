@@ -78,13 +78,12 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
         <ScrollReveal>
           <div className="mb-6">
             <span
-              className={`inline-block px-3 py-1 rounded text-sm font-medium ${
-                project.status === "Production"
-                  ? "bg-green-500/20 text-green-400"
-                  : project.status === "Development"
-                  ? "bg-blue-500/20 text-blue-400"
-                  : "bg-purple-500/20 text-purple-400"
-              }`}
+              className={`inline-block px-3 py-1 rounded text-sm font-medium ${{
+                "Production": "bg-green-500/20 text-green-400",
+                "Deployed": "bg-green-500/20 text-green-400",
+                "Development": "bg-blue-500/20 text-blue-400",
+                "Research": "bg-purple-500/20 text-purple-400"
+              }[project.status] || "bg-gray-500/20 text-gray-400"}`}
             >
               {project.status}
             </span>
@@ -103,7 +102,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
             {project.techStack.map((tech) => (
               <span
                 key={tech}
-                className="px-3 py-1 rounded text-sm bg-[var(--andromeda-secondary)] text-[var(--andromeda-text-secondary)] border border-white/10 dark:border-white/10 light:border-black/10"
+                className="px-3 py-1 rounded text-sm bg-[var(--andromeda-secondary)] text-[var(--andromeda-text-secondary)] border border-white/10 light:border-black/10"
               >
                 {tech}
               </span>

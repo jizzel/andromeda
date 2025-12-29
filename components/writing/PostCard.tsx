@@ -29,7 +29,7 @@ export function PostCard({ post, index }: PostCardProps) {
     >
       <Link href={`/writing/${post.slug}`} className="block group">
         <motion.div
-          className="bg-[var(--andromeda-secondary)] rounded-lg p-6 border border-white/10 dark:border-white/10 light:border-black/10 h-full transition-all duration-200"
+          className="bg-[var(--andromeda-secondary)] rounded-lg p-6 border border-white/10 light:border-black/10 h-full transition-all duration-200"
           style={{
             boxShadow: "var(--shadow-1)",
           }}
@@ -70,7 +70,7 @@ export function PostCard({ post, index }: PostCardProps) {
 
           {/* Tags */}
           {post.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-white/10 dark:border-white/10 light:border-black/10">
+            <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-white/10 light:border-black/10">
               {post.tags.slice(0, 3).map((tag) => (
                 <span
                   key={tag}

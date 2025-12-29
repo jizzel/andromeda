@@ -71,7 +71,7 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
 
     // Code blocks
     pre: ({ children }) => (
-      <pre className="bg-[var(--andromeda-secondary)] rounded-lg p-4 mb-6 overflow-x-auto border border-white/10 dark:border-white/10 light:border-black/10">
+      <pre className="bg-[var(--andromeda-secondary)] rounded-lg p-4 mb-6 overflow-x-auto border border-white/10 light:border-black/10">
         {children}
       </pre>
     ),
@@ -100,13 +100,13 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
 
     // Horizontal rule
     hr: () => (
-      <hr className="border-t border-white/10 dark:border-white/10 light:border-black/10 my-8" />
+      <hr className="border-t border-white/10 light:border-black/10 my-8" />
     ),
 
     // Tables
     table: ({ children }) => (
       <div className="overflow-x-auto mb-6">
-        <table className="min-w-full divide-y divide-white/10 dark:divide-white/10 light:divide-black/10">
+        <table className="min-w-full divide-y divide-white/10 light:divide-black/10">
           {children}
         </table>
       </div>
@@ -115,7 +115,7 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
       <thead className="bg-[var(--andromeda-secondary)]">{children}</thead>
     ),
     tbody: ({ children }) => (
-      <tbody className="divide-y divide-white/10 dark:divide-white/10 light:divide-black/10">
+      <tbody className="divide-y divide-white/10 light:divide-black/10">
         {children}
       </tbody>
     ),

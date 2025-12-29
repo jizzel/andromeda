@@ -27,7 +27,7 @@ export function FloatingBusinessCardButton() {
   return (
     <motion.button
       onClick={handleClick}
-      className="fixed bottom-6 right-6 z-30 p-3 rounded-full bg-[var(--andromeda-secondary)] border border-white/10 dark:border-white/10 light:border-black/10 hover:bg-opacity-80 transition-colors duration-200"
+      className="fixed bottom-6 right-6 z-30 p-3 rounded-full bg-[var(--andromeda-secondary)] border border-white/10 light:border-black/10 hover:bg-opacity-80 transition-colors duration-200"
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       style={{ boxShadow: "var(--shadow-2)" }}

@@ -57,7 +57,7 @@ export function BusinessCard() {
               aria-describedby="business-card-description"
             >
               <div
-                className="relative bg-[var(--andromeda-secondary)] rounded-lg p-6 border border-white/10 dark:border-white/10 light:border-black/10"
+                className="relative bg-[var(--andromeda-secondary)] rounded-lg p-6 border border-white/10 light:border-black/10"
                 style={{
                   boxShadow: "var(--shadow-2)",
                   backdropFilter: "blur(12px)",

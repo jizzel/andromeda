@@ -58,7 +58,7 @@ export function CapabilityCard({ capability }: CapabilityCardProps) {
       }}
     >
       <div
-        className="bg-[var(--andromeda-primary)] rounded-lg p-6 border border-white/10 dark:border-white/10 light:border-black/10 h-full"
+        className="bg-[var(--andromeda-primary)] rounded-lg p-6 border border-white/10 light:border-black/10 h-full"
         style={{
           boxShadow: isExpanded ? "var(--shadow-2)" : "var(--shadow-1)",
         }}

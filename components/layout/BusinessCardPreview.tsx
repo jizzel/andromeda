@@ -24,7 +24,7 @@ export function BusinessCardPreview({ isVisible }: BusinessCardPreviewProps) {
           aria-label="Business card preview"
         >
           <div
-            className="relative bg-[var(--andromeda-secondary)] rounded-lg p-5 border border-white/10 dark:border-white/10 light:border-black/10"
+            className="relative bg-[var(--andromeda-secondary)] rounded-lg p-5 border border-white/10 light:border-black/10"
             style={{
               boxShadow: "var(--shadow-2)",
               backdropFilter: "blur(12px)",

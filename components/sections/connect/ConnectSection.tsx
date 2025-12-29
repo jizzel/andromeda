@@ -15,7 +15,7 @@ export function ConnectSection() {
   const [isLightTheme, setIsLightTheme] = useState(false);
 
   useEffect(() => {
-    // Check theme from DOM instead of context to avoid SSR issues
+    // Use MutationObserver to detect theme changes without SSR issues
     const updateTheme = () => {
       setIsLightTheme(document.documentElement.classList.contains('light'));
     };

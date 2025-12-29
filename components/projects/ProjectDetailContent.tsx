@@ -38,7 +38,7 @@ export function ProjectDetailContent({ project }: ProjectDetailContentProps) {
       {/* Context → Problem → Approach → Outcome */}
       <ScrollReveal delay={0.15}>
         <section className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="bg-[var(--andromeda-secondary)] rounded-lg p-6 border border-white/10 dark:border-white/10 light:border-black/10">
+          <div className="bg-[var(--andromeda-secondary)] rounded-lg p-6 border border-white/10 light:border-black/10">
             <h3 className="text-xl font-semibold mb-3 text-[var(--andromeda-text-primary)]">
               Context
             </h3>
@@ -47,7 +47,7 @@ export function ProjectDetailContent({ project }: ProjectDetailContentProps) {
             </p>
           </div>
 
-          <div className="bg-[var(--andromeda-secondary)] rounded-lg p-6 border border-white/10 dark:border-white/10 light:border-black/10">
+          <div className="bg-[var(--andromeda-secondary)] rounded-lg p-6 border border-white/10 light:border-black/10">
             <h3 className="text-xl font-semibold mb-3 text-[var(--andromeda-text-primary)]">
               Problem
             </h3>
@@ -56,7 +56,7 @@ export function ProjectDetailContent({ project }: ProjectDetailContentProps) {
             </p>
           </div>
 
-          <div className="bg-[var(--andromeda-secondary)] rounded-lg p-6 border border-white/10 dark:border-white/10 light:border-black/10">
+          <div className="bg-[var(--andromeda-secondary)] rounded-lg p-6 border border-white/10 light:border-black/10">
             <h3 className="text-xl font-semibold mb-3 text-[var(--andromeda-text-primary)]">
               Approach
             </h3>
@@ -65,7 +65,7 @@ export function ProjectDetailContent({ project }: ProjectDetailContentProps) {
             </p>
           </div>
 
-          <div className="bg-[var(--andromeda-secondary)] rounded-lg p-6 border border-white/10 dark:border-white/10 light:border-black/10">
+          <div className="bg-[var(--andromeda-secondary)] rounded-lg p-6 border border-white/10 light:border-black/10">
             <h3 className="text-xl font-semibold mb-3 text-[var(--andromeda-text-primary)]">
               Outcome
             </h3>
@@ -87,7 +87,7 @@ export function ProjectDetailContent({ project }: ProjectDetailContentProps) {
               {project.challenges.map((challenge, index) => (
                 <div
                   key={index}
-                  className="bg-[var(--andromeda-secondary)] rounded-lg p-6 border border-white/10 dark:border-white/10 light:border-black/10"
+                  className="bg-[var(--andromeda-secondary)] rounded-lg p-6 border border-white/10 light:border-black/10"
                 >
                   <h3 className="text-lg font-semibold mb-2 text-[var(--andromeda-text-primary)]">
                     {challenge.title}
@@ -113,7 +113,7 @@ export function ProjectDetailContent({ project }: ProjectDetailContentProps) {
               {project.solutions.map((solution, index) => (
                 <div
                   key={index}
-                  className="bg-[var(--andromeda-secondary)] rounded-lg p-6 border border-white/10 dark:border-white/10 light:border-black/10"
+                  className="bg-[var(--andromeda-secondary)] rounded-lg p-6 border border-white/10 light:border-black/10"
                 >
                   <h3 className="text-xl font-semibold mb-3 text-[var(--andromeda-text-primary)]">
                     {solution.title}
@@ -122,7 +122,7 @@ export function ProjectDetailContent({ project }: ProjectDetailContentProps) {
                     {solution.description}
                   </p>
                   {solution.impact && (
-                    <div className="pt-3 border-t border-white/10 dark:border-white/10 light:border-black/10">
+                    <div className="pt-3 border-t border-white/10 light:border-black/10">
                       <p className="text-sm text-[var(--andromeda-accent-beige)] font-medium">
                         Impact: {solution.impact}
                       </p>
@@ -146,7 +146,7 @@ export function ProjectDetailContent({ project }: ProjectDetailContentProps) {
               {project.metrics.map((metric, index) => (
                 <div
                   key={index}
-                  className="bg-[var(--andromeda-secondary)] rounded-lg p-6 border border-white/10 dark:border-white/10 light:border-black/10 text-center"
+                  className="bg-[var(--andromeda-secondary)] rounded-lg p-6 border border-white/10 light:border-black/10 text-center"
                 >
                   <div className="text-4xl font-bold mb-2 text-[var(--andromeda-highlight)]">
                     {metric.value}
@@ -179,14 +179,14 @@ export function ProjectDetailContent({ project }: ProjectDetailContentProps) {
       {/* External Links */}
       {(project.repositoryUrl || project.caseStudyUrl) && (
         <ScrollReveal delay={0.4}>
-          <section className="pt-8 border-t border-white/10 dark:border-white/10 light:border-black/10">
+          <section className="pt-8 border-t border-white/10 light:border-black/10">
             <div className="flex flex-wrap gap-4">
               {project.repositoryUrl && (
                 <a
                   href={project.repositoryUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded bg-[var(--andromeda-secondary)] text-[var(--andromeda-text-primary)] border border-white/10 dark:border-white/10 light:border-black/10 hover:bg-[var(--andromeda-highlight)] hover:text-white transition-colors"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded bg-[var(--andromeda-secondary)] text-[var(--andromeda-text-primary)] border border-white/10 light:border-black/10 hover:bg-[var(--andromeda-highlight)] hover:text-white transition-colors"
                 >
                   <Github size={20} />
                   <span>View Repository</span>
@@ -197,7 +197,7 @@ export function ProjectDetailContent({ project }: ProjectDetailContentProps) {
                   href={project.caseStudyUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded bg-[var(--andromeda-secondary)] text-[var(--andromeda-text-primary)] border border-white/10 dark:border-white/10 light:border-black/10 hover:bg-[var(--andromeda-highlight)] hover:text-white transition-colors"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded bg-[var(--andromeda-secondary)] text-[var(--andromeda-text-primary)] border border-white/10 light:border-black/10 hover:bg-[var(--andromeda-highlight)] hover:text-white transition-colors"
                 >
                   <ExternalLink size={20} />
                   <span>Read Full Case Study</span>
