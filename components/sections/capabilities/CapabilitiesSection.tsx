@@ -7,7 +7,7 @@ import { ScrollReveal } from "@/components/animations/ScrollReveal";
 export function CapabilitiesSection() {
   return (
     <section
-      className="relative w-full py-24 px-6 bg-[var(--andromeda-secondary-dark)]"
+      className="relative w-full py-24 px-6 bg-[var(--andromeda-secondary)]"
       aria-labelledby="capabilities-heading"
     >
       <div className="max-w-6xl mx-auto">

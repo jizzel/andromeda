@@ -1,0 +1,496 @@
+---
+title: "Investigating Memory Leaks: A Systematic Approach"
+excerpt: "A practical guide to finding and fixing memory leaks in production systems using profiling tools, heap dumps, and strategic instrumentation."
+publishedAt: "2024-10-05"
+category: "Research"
+tags: ["debugging", "performance", "memory", "profiling"]
+---
+
+Memory leaks are insidious. Your application runs fine for hours, then suddenly crashes. Restart it, and the cycle repeats.
+
+This is a walkthrough of how to find and fix memory leaks when they happen in production.
+
+## Recognizing the Pattern
+
+### Symptoms
+
+1. **Sawtooth Memory Pattern**: Memory grows linearly, drops on restart
+2. **Increasing GC Frequency**: Garbage collector runs more often over time
+3. **OOM Crashes**: Eventually, the process runs out of memory
+4. **Degrading Performance**: Slowdown that correlates with uptime
+
+### Early Detection
+
+Monitor these metrics:
+
+```typescript
+// Heap usage over time
+process.memoryUsage().heapUsed
+
+// GC pause time
+// (requires --expose-gc flag)
+global.gc();
+const before = process.memoryUsage().heapUsed;
+// ... do work ...
+const after = process.memoryUsage().heapUsed;
+const released = before - after;
+```
+
+If `heapUsed` increases monotonically over hours/days, you likely have a leak.
+
+## The Investigation Process
+
+### Phase 1: Confirm the Leak
+
+Don't assume. Confirm with data.
+
+**Capture Baseline Metrics:**
+
+```bash
+# Take heap snapshot immediately after startup
+curl http://localhost:9229/json/list
+# Note the heap size
+
+# Wait 24 hours, take another snapshot
+# Compare sizes
+```
+
+**Expected Behavior:**
+- Memory stabilizes after warmup period (10-30 minutes)
+- Minor fluctuations around stable baseline
+
+**Leak Behavior:**
+- Memory grows linearly
+- No stabilization point
+- Growth rate correlates with request volume
+
+### Phase 2: Generate Heap Dumps
+
+Heap dumps show you what objects are consuming memory.
+
+**Node.js:**
+
+```javascript
+const v8 = require('v8');
+const fs = require('fs');
+
+function takeHeapSnapshot(filename) {
+  const snapshot = v8.writeHeapSnapshot(filename);
+  console.log(`Heap snapshot written to ${snapshot}`);
+}
+
+// Take snapshots at intervals
+setInterval(() => {
+  const timestamp = Date.now();
+  takeHeapSnapshot(`heap-${timestamp}.heapsnapshot`);
+}, 60 * 60 * 1000); // Every hour
+```
+
+**Java:**
+
+```bash
+# Trigger heap dump on OOM
+java -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/dumps/
+
+# Manual heap dump
+jmap -dump:live,format=b,file=heap.bin <pid>
+```
+
+### Phase 3: Analyze Heap Dumps
+
+Use Chrome DevTools for Node.js heap snapshots.
+
+**Load Snapshot:**
+1. Open Chrome DevTools
+2. Navigate to Memory tab
+3. Load `.heapsnapshot` file
+
+**Find the Leak:**
+
+Compare two snapshots (baseline vs. after leak):
+
+```
+Summary View:
+  Constructor    | Objects | Shallow Size | Retained Size
+  Array          | +50000  | +4.2 MB      | +18.5 MB
+  Closure        | +12000  | +960 KB      | +5.2 MB
+  Object         | +8000   | +640 KB      | +2.1 MB
+```
+
+Look for:
+- Object types that grow significantly
+- Large retained sizes (memory held transitively)
+- Constructor names that match your application code
+
+**Drill Down:**
+
+Click on a suspicious constructor, then:
+1. View Retainers (what's keeping this alive?)
+2. Trace back to root (global variables, closures, event listeners)
+
+## Common Leak Patterns
+
+### Pattern 1: Event Listener Accumulation
+
+**The Problem:**
+
+```javascript
+class DataProcessor {
+  constructor(eventBus) {
+    // Leak: listener never removed
+    eventBus.on('data', (data) => this.process(data));
+  }
+
+  process(data) {
+    // Process data
+  }
+}
+
+// Every instance adds a listener, never removes it
+for (let i = 0; i < 1000; i++) {
+  new DataProcessor(eventBus);
+}
+```
+
+**The Fix:**
+
+```javascript
+class DataProcessor {
+  constructor(eventBus) {
+    this.eventBus = eventBus;
+    this.handler = (data) => this.process(data);
+    this.eventBus.on('data', this.handler);
+  }
+
+  destroy() {
+    this.eventBus.off('data', this.handler);
+  }
+
+  process(data) {
+    // Process data
+  }
+}
+```
+
+**Detection:**
+
+```javascript
+// Check listener count
+console.log(eventBus.listenerCount('data'));
+// Should be stable, not growing
+```
+
+### Pattern 2: Cache Without Eviction
+
+**The Problem:**
+
+```javascript
+class UserCache {
+  constructor() {
+    this.cache = new Map();
+  }
+
+  set(userId, user) {
+    // Leak: cache grows unbounded
+    this.cache.set(userId, user);
+  }
+
+  get(userId) {
+    return this.cache.get(userId);
+  }
+}
+```
+
+**The Fix:**
+
+```javascript
+class UserCache {
+  constructor(maxSize = 10000) {
+    this.cache = new Map();
+    this.maxSize = maxSize;
+  }
+
+  set(userId, user) {
+    // LRU eviction
+    if (this.cache.size >= this.maxSize) {
+      const firstKey = this.cache.keys().next().value;
+      this.cache.delete(firstKey);
+    }
+    this.cache.set(userId, user);
+  }
+
+  get(userId) {
+    return this.cache.get(userId);
+  }
+}
+```
+
+**Better: Use an LRU Library**
+
+```javascript
+const LRU = require('lru-cache');
+
+const cache = new LRU({
+  max: 10000,
+  maxAge: 1000 * 60 * 60, // 1 hour
+});
+```
+
+### Pattern 3: Closures Capturing Large Contexts
+
+**The Problem:**
+
+```javascript
+function createHandler(largeObject) {
+  // Entire largeObject is retained by closure
+  return function handler(req, res) {
+    // Only uses one property
+    res.send(largeObject.id);
+  };
+}
+
+const handlers = [];
+for (let i = 0; i < 10000; i++) {
+  const large = loadLargeObject(i); // 1 MB each
+  handlers.push(createHandler(large));
+}
+// Total memory: 10 GB retained
+```
+
+**The Fix:**
+
+```javascript
+function createHandler(largeObject) {
+  // Extract only what you need
+  const id = largeObject.id;
+  return function handler(req, res) {
+    res.send(id);
+  };
+  // largeObject can now be garbage collected
+}
+```
+
+### Pattern 4: Detached DOM Nodes (Browser)
+
+**The Problem:**
+
+```javascript
+const elements = [];
+
+function addElement() {
+  const div = document.createElement('div');
+  document.body.appendChild(div);
+  elements.push(div); // Reference stored
+
+  // Later, remove from DOM
+  document.body.removeChild(div);
+  // But elements[] still holds reference - leak!
+}
+```
+
+**The Fix:**
+
+```javascript
+const elements = new WeakMap();
+
+function addElement() {
+  const div = document.createElement('div');
+  document.body.appendChild(div);
+  elements.set(div, { metadata: 'some data' });
+
+  // Later, remove from DOM
+  document.body.removeChild(div);
+  // WeakMap allows GC if no other references exist
+}
+```
+
+## Advanced Techniques
+
+### Differential Heap Analysis
+
+Take three snapshots:
+1. Baseline (after warmup)
+2. After reproducing leak
+3. After forcing garbage collection
+
+Compare 2 vs. 3 to eliminate temporary objects.
+
+### Allocation Profiling
+
+Track where objects are being allocated.
+
+**Node.js:**
+
+```javascript
+const inspector = require('inspector');
+const session = new inspector.Session();
+session.connect();
+
+// Start allocation tracking
+session.post('HeapProfiler.startSampling');
+
+// ... reproduce leak ...
+
+// Stop and retrieve profile
+session.post('HeapProfiler.stopSampling', (err, { profile }) => {
+  console.log(JSON.stringify(profile, null, 2));
+});
+```
+
+### Memory Instrumentation
+
+Add custom tracking to your code:
+
+```javascript
+class MemoryTracker {
+  constructor() {
+    this.allocations = new Map();
+  }
+
+  track(type, size) {
+    const current = this.allocations.get(type) || 0;
+    this.allocations.set(type, current + size);
+  }
+
+  report() {
+    console.table(Array.from(this.allocations.entries()));
+  }
+}
+
+const tracker = new MemoryTracker();
+
+class DataBuffer {
+  constructor(size) {
+    this.buffer = Buffer.allocUnsafe(size);
+    tracker.track('DataBuffer', size);
+  }
+}
+
+// Periodic reporting
+setInterval(() => tracker.report(), 60000);
+```
+
+## Prevention Strategies
+
+### 1. Lifecycle Management
+
+Every resource needs cleanup:
+
+```typescript
+interface Disposable {
+  dispose(): void;
+}
+
+class ResourceManager implements Disposable {
+  private resources: Disposable[] = [];
+
+  register(resource: Disposable) {
+    this.resources.push(resource);
+  }
+
+  dispose() {
+    for (const resource of this.resources) {
+      resource.dispose();
+    }
+    this.resources = [];
+  }
+}
+```
+
+### 2. Bounded Data Structures
+
+Always limit growth:
+
+```javascript
+// Bounded array
+class BoundedArray {
+  constructor(maxSize) {
+    this.items = [];
+    this.maxSize = maxSize;
+  }
+
+  push(item) {
+    if (this.items.length >= this.maxSize) {
+      this.items.shift(); // Remove oldest
+    }
+    this.items.push(item);
+  }
+}
+```
+
+### 3. Memory Budgets
+
+Set explicit limits:
+
+```javascript
+const memoryBudget = 512 * 1024 * 1024; // 512 MB
+
+function checkMemoryUsage() {
+  const usage = process.memoryUsage().heapUsed;
+  if (usage > memoryBudget) {
+    console.error('Memory budget exceeded');
+    // Clear caches, throttle requests, etc.
+  }
+}
+
+setInterval(checkMemoryUsage, 5000);
+```
+
+## Production Incident: Case Study
+
+**Symptom**: Node.js service restarting every 6 hours with OOM errors.
+
+**Investigation:**
+
+1. Enabled heap snapshots on SIGUSR2 signal
+2. Captured snapshots at 1h, 3h, 5h after restart
+3. Loaded into Chrome DevTools
+4. Found 500,000+ instances of `Timer` objects
+
+**Root Cause:**
+
+```javascript
+// Leaky code
+function scheduleRetry(task) {
+  setTimeout(() => {
+    task.retry();
+  }, 60000);
+  // If task never completes, timer never fires, never gets GC'd
+}
+```
+
+**Fix:**
+
+```javascript
+// Fixed code
+function scheduleRetry(task) {
+  const timerId = setTimeout(() => {
+    task.retry();
+    task.timerId = null;
+  }, 60000);
+  task.timerId = timerId;
+}
+
+function cancelRetry(task) {
+  if (task.timerId) {
+    clearTimeout(task.timerId);
+    task.timerId = null;
+  }
+}
+```
+
+**Result**: Memory usage stabilized at 180 MB, no more restarts.
+
+## Conclusion
+
+Memory leaks are solvable with systematic investigation:
+
+1. **Confirm** the leak with metrics
+2. **Capture** heap dumps at intervals
+3. **Compare** snapshots to find growing objects
+4. **Trace** retainers back to root cause
+5. **Fix** and verify with monitoring
+
+The tools exist. The process works. What matters is discipline: take the time to investigate properly instead of just restarting the service.
+
+Your future on-call self will thank you.

@@ -1,0 +1,296 @@
+---
+title: "Effective Alerting: Less Noise, More Signal"
+excerpt: "How to design alert systems that wake you up for the right reasons and stay silent for the wrong ones."
+publishedAt: "2024-11-20"
+category: "Monitoring"
+tags: ["alerting", "oncall", "observability", "sre"]
+---
+
+The worst kind of alert is the one you've learned to ignore. If your team treats pages like background noise, your alerting system has failed.
+
+## The Alert Fatigue Problem
+
+Alert fatigue happens when:
+- Too many alerts fire
+- Alerts fire for non-critical issues
+- The same alerts fire repeatedly without resolution
+- Alerts lack actionable information
+
+The result? Engineers ignore pages. Real incidents get missed.
+
+## Principles of Good Alerting
+
+### 1. Alert on Symptoms, Not Causes
+
+**Bad Alert:**
+```
+Database connection pool at 80% capacity
+```
+
+**Good Alert:**
+```
+API response time P95 > 2s for 5 minutes
+User-facing impact detected
+```
+
+The first is a potential cause. The second is a user-impacting symptom.
+
+### Why This Matters
+
+Causes are implementation details. You might have ten different causes for slow API responses. But there's only one symptom: users are experiencing degraded service.
+
+Alert on the symptom. Investigate causes during the incident.
+
+### 2. Make Alerts Actionable
+
+Every alert must answer three questions:
+1. What is broken?
+2. Why does it matter?
+3. What should I do about it?
+
+**Example Alert Message:**
+
+```
+CRITICAL: API Service Degraded
+
+Impact: Users experiencing 2-5s delays on checkout
+Affected: 15% of requests (EU region)
+Duration: 7 minutes
+
+Runbook: https://wiki/runbooks/api-degradation
+Dashboard: https://grafana/api-overview
+Logs: https://kibana/api-errors?time=now-15m
+
+Likely causes:
+- Database connection pool exhaustion
+- Downstream service timeout
+- Traffic spike
+```
+
+This tells you everything you need to know before you even open your laptop.
+
+### 3. Use Alert Thresholds Wisely
+
+Thresholds should be based on:
+- Historical data (what's normal?)
+- Business impact (when do users notice?)
+- Trend analysis (is it getting worse?)
+
+**Single Threshold (Too Simple):**
+```yaml
+alert: HighErrorRate
+expr: error_rate > 5%
+```
+
+**Better: Multiple Thresholds**
+```yaml
+# Warning: Something's off
+- alert: ErrorRateElevated
+  expr: error_rate > 1%
+  duration: 5m
+  severity: warning
+
+# Critical: Users are impacted
+- alert: ErrorRateCritical
+  expr: error_rate > 5%
+  duration: 2m
+  severity: critical
+```
+
+### 4. Implement Alert Suppression
+
+Not every warning needs to wake someone up at 3am.
+
+**Severity Levels:**
+
+- **Critical**: Page immediately (user-impacting, revenue-affecting)
+- **Warning**: Ticket creation, investigate during business hours
+- **Info**: Logged, no action required
+
+**Time-Based Suppression:**
+
+```yaml
+# Only page for critical alerts outside business hours
+routes:
+  - match:
+      severity: warning
+    continue: true
+    routes:
+      - match_re:
+          time: "^(09|10|11|12|13|14|15|16|17):.*$"
+        receiver: slack
+      - match_re:
+          time: "^(00|01|02|03|04|05|06|07|08|18|19|20|21|22|23):.*$"
+        receiver: ticket_system
+```
+
+## Alert Design Patterns
+
+### Pattern 1: Rate of Change
+
+Often more useful than absolute values.
+
+```promql
+# Alert on sudden traffic drop (potential outage)
+rate(requests_total[5m]) < 0.5 * rate(requests_total[5m] offset 1h)
+```
+
+### Pattern 2: Error Budget Burn Rate
+
+SLO-based alerting catches issues before they violate SLAs.
+
+```promql
+# Fast burn: consuming 5% error budget in 1 hour
+(
+  1 - (sum(rate(requests_success[1h])) / sum(rate(requests_total[1h])))
+) > (5 * 0.001)  # 0.1% SLO, 5x burn rate
+```
+
+### Pattern 3: Predictive Alerts
+
+Alert before the problem becomes critical.
+
+```promql
+# Disk will be full in 4 hours at current rate
+predict_linear(disk_usage[1h], 4*3600) > 0.95
+```
+
+## Alert Tuning Process
+
+### Step 1: Collect Data
+
+For two weeks, track:
+- All alerts that fired
+- Whether they required action
+- Time to resolve
+- False positive rate
+
+### Step 2: Categorize
+
+**Actionable alerts**: Real issues that required intervention
+**Non-actionable alerts**: Fired but no action taken
+**False positives**: Fired incorrectly
+
+### Step 3: Tune
+
+- **High false positive rate (>20%)**: Increase threshold or duration
+- **Missed incidents**: Decrease threshold or add new alert
+- **Noisy but important**: Add suppression rules, don't delete
+
+### Step 4: Document
+
+Every alert needs a runbook. Template:
+
+```markdown
+# Alert: [Name]
+
+## Meaning
+What this alert indicates in plain English.
+
+## Impact
+What happens if this alert is ignored.
+
+## Investigation Steps
+1. Check dashboard X
+2. Review logs for Y
+3. Verify Z is responding
+
+## Resolution
+- If cause A: do B
+- If cause C: do D
+- If unknown: escalate to team E
+```
+
+## Common Alerting Mistakes
+
+### Mistake 1: Alerting on Everything
+
+You don't need an alert for every metric. Focus on:
+- User-facing symptoms
+- Capacity/resource exhaustion
+- Security events
+
+### Mistake 2: Stateless Alerts
+
+Alerts should be stateful. If an issue auto-resolves, the alert should auto-clear.
+
+**Bad:**
+```yaml
+alert: DiskAlmostFull
+expr: disk_usage > 0.8
+# Alert fires continuously until disk drops below 80%
+```
+
+**Good:**
+```yaml
+alert: DiskAlmostFull
+expr: disk_usage > 0.8
+for: 5m
+# Only alerts after 5 minutes, resolves when condition clears
+```
+
+### Mistake 3: Alert Flooding
+
+When one component fails, dozens of alerts fire.
+
+**Solution: Alert Dependencies**
+
+```yaml
+# Only alert on root cause
+routes:
+  - match:
+      service: database
+      severity: critical
+    group_wait: 30s
+    group_interval: 5m
+    # Suppress downstream alerts
+```
+
+## Alert Testing
+
+Alerts are code. Test them.
+
+### Unit Tests
+
+```yaml
+# Test alert fires correctly
+rule_files:
+  - rules.yml
+
+evaluation_interval: 1m
+
+tests:
+  - interval: 1m
+    input_series:
+      - series: 'error_rate{service="api"}'
+        values: '0 0 0 10 10 10'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: HighErrorRate
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              service: api
+```
+
+### Chaos Testing
+
+Periodically trigger alerts intentionally:
+- Verify alert fires
+- Verify runbook is accurate
+- Verify escalation path works
+- Verify resolution procedures
+
+## Conclusion
+
+Good alerting is hard. It requires:
+- Understanding what actually matters to users
+- Balancing sensitivity with noise
+- Continuous tuning based on feedback
+- Clear documentation
+
+But when done right, alerts become trusted signals instead of background noise.
+
+You respond quickly because you trust that every page matters.
+
+That's the goal.
