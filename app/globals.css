@@ -229,6 +229,29 @@
   button {
     @apply hover:cursor-pointer;
   }
+
+  /* MDX Content Styles - Theme-aware */
+  .mdx-heading {
+    color: var(--andromeda-text-primary);
+  }
+
+  .mdx-text {
+    color: var(--andromeda-text-primary);
+  }
+
+  .mdx-link {
+    color: var(--andromeda-highlight);
+  }
+
+  .mdx-inline-code {
+    background-color: var(--andromeda-secondary);
+    color: var(--andromeda-accent-beige);
+  }
+
+  .mdx-blockquote {
+    border-color: var(--andromeda-accent-beige);
+    color: var(--andromeda-text-secondary);
+  }
 }
 
 /* ========================================

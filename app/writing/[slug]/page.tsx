@@ -136,11 +136,9 @@ export default async function PostPage({ params }: PostPageProps) {
           </ScrollReveal>
 
           {/* Content */}
-          <ScrollReveal delay={0.1}>
-            <div className="max-w-none">
-              {post.content && <MDXContent content={post.content} />}
-            </div>
-          </ScrollReveal>
+          <div className="max-w-none">
+            {post.content && await MDXContent({ content: post.content })}
+          </div>
 
           {/* Related Posts */}
           {relatedPosts.length > 0 && (

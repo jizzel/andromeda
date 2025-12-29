@@ -10,29 +10,29 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
   return {
     // Headings
     h1: ({ children }) => (
-      <h1 className="text-4xl font-bold mb-6 text-[var(--andromeda-text-primary)] mt-8 first:mt-0">
+      <h1 className="mdx-heading text-4xl font-bold mb-6 mt-8 first:mt-0">
         {children}
       </h1>
     ),
     h2: ({ children }) => (
-      <h2 className="text-3xl font-bold mb-4 text-[var(--andromeda-text-primary)] mt-12 first:mt-0 scroll-mt-20">
+      <h2 className="mdx-heading text-3xl font-bold mb-4 mt-12 first:mt-0 scroll-mt-20">
         {children}
       </h2>
     ),
     h3: ({ children }) => (
-      <h3 className="text-2xl font-semibold mb-3 text-[var(--andromeda-text-primary)] mt-8 scroll-mt-20">
+      <h3 className="mdx-heading text-2xl font-semibold mb-3 mt-8 scroll-mt-20">
         {children}
       </h3>
     ),
     h4: ({ children }) => (
-      <h4 className="text-xl font-semibold mb-2 text-[var(--andromeda-text-primary)] mt-6">
+      <h4 className="mdx-heading text-xl font-semibold mb-2 mt-6">
         {children}
       </h4>
     ),
 
     // Paragraphs and text
     p: ({ children }) => (
-      <p className="text-base leading-relaxed mb-6 text-[var(--andromeda-text-primary)]">
+      <p className="mdx-text text-base leading-relaxed mb-6">
         {children}
       </p>
     ),
@@ -43,7 +43,7 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
       return (
         <Link
           href={href || "#"}
-          className="text-[var(--andromeda-highlight)] hover:underline transition-colors"
+          className="mdx-link hover:underline transition-colors"
           {...(isExternal && {
             target: "_blank",
             rel: "noopener noreferrer",
@@ -56,17 +56,17 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
 
     // Lists
     ul: ({ children }) => (
-      <ul className="list-disc list-inside mb-6 space-y-2 text-[var(--andromeda-text-primary)]">
+      <ul className="mdx-text list-disc list-inside mb-6 space-y-2">
         {children}
       </ul>
     ),
     ol: ({ children }) => (
-      <ol className="list-decimal list-inside mb-6 space-y-2 text-[var(--andromeda-text-primary)]">
+      <ol className="mdx-text list-decimal list-inside mb-6 space-y-2">
         {children}
       </ol>
     ),
     li: ({ children }) => (
-      <li className="text-base leading-relaxed">{children}</li>
+      <li className="mdx-text text-base leading-relaxed">{children}</li>
     ),
 
     // Code blocks
@@ -79,7 +79,7 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
       const isInline = !className;
       if (isInline) {
         return (
-          <code className="bg-[var(--andromeda-secondary)] text-[var(--andromeda-accent-beige)] px-1.5 py-0.5 rounded text-sm font-mono">
+          <code className="mdx-inline-code px-1.5 py-0.5 rounded text-sm font-mono">
             {children}
           </code>
         );
@@ -93,7 +93,7 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
 
     // Blockquotes
     blockquote: ({ children }) => (
-      <blockquote className="border-l-4 border-[var(--andromeda-accent-beige)] pl-4 py-2 mb-6 italic text-[var(--andromeda-text-secondary)]">
+      <blockquote className="mdx-blockquote border-l-4 pl-4 py-2 mb-6 italic">
         {children}
       </blockquote>
     ),
@@ -121,12 +121,12 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     ),
     tr: ({ children }) => <tr>{children}</tr>,
     th: ({ children }) => (
-      <th className="px-4 py-3 text-left text-sm font-semibold text-[var(--andromeda-text-primary)]">
+      <th className="mdx-heading px-4 py-3 text-left text-sm font-semibold">
         {children}
       </th>
     ),
     td: ({ children }) => (
-      <td className="px-4 py-3 text-sm text-[var(--andromeda-text-primary)]">
+      <td className="mdx-text px-4 py-3 text-sm">
         {children}
       </td>
     ),
@@ -152,7 +152,7 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
 
       return (
         <div className={`${styles[type]} border rounded-lg p-4 mb-6`}>
-          <div className="text-[var(--andromeda-text-primary)]">{children}</div>
+          <div className="mdx-text">{children}</div>
         </div>
       );
     },
