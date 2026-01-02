@@ -60,94 +60,94 @@ export const projectsDetail: ProjectDetail[] = [
     id: "rcmonsys",
     slug: "rcmonsys",
     name: "RCMONSYS",
-    contextLine: "Cold-chain monitoring system for port terminal operations",
+    contextLine: "Cloud-based monitoring system for refrigerated container operations",
     outcomeLine:
-      "Replaced manual tracking with reliable, auditable operational visibility",
+      "Eliminated paper-based workflows and automated reporting for port terminals",
     status: "Production",
     context:
-      "Cold-chain operators across multiple port terminals relied on manual temperature logging and fragmented spreadsheets to monitor reefer containers.",
+      "Logistics teams across multiple port terminals recorded reefer container temperatures on paper, manually re-entered data into Excel spreadsheets, and converted them to PDF reports for shipping lines.",
     problem:
-      "Manual workflows created blind spots, delayed incident response, and made compliance reporting slow and error-prone at scale.",
+      "Manual paper-to-Excel-to-PDF workflows were slow, error-prone, and difficult to scale as container volumes and reporting frequency increased across multiple terminals.",
     approach:
-      "Designed and delivered a centralized monitoring system that ingests temperature data in near real time, validates readings, and automates reporting across container lifecycles. Modeled operational workflows directly into system modules to reduce human intervention and failure points.",
+      "Built a cloud-based web application that enables mobile-friendly field data capture, centralizes container tracking across terminals, and generates Excel and PDF reports on-demand. Designed for multi-terminal and multi-user access with role-based permissions.",
     outcome:
-      "Replaced manual tracking and reporting with a reliable, auditable system that improved operational visibility and significantly reduced turnaround time for compliance reporting.",
-    techStack: ["Next.js", "NestJS", "PostgreSQL", "WebSockets"],
+      "Eliminated paper-based recording and manual data re-entry, providing live container visibility, traceable history, and automated report generation for terminal operators and shipping line clients.",
+    techStack: ["Next.js", "NestJS", "PostgreSQL", "Excel/PDF Generation"],
     isExpansionLayer: false,
     fullDescription:
-      "RCMONSYS is a production monitoring system deployed across multiple port terminals to track and validate reefer container temperatures throughout the cold-chain logistics cycle. The system ingests sensor data in near real-time, validates readings against operational thresholds, generates compliance reports, and provides operational dashboards for terminal supervisors and logistics coordinators.",
+      "RCMONSYS is a cloud-based logistics monitoring system designed to digitize and streamline the recording, tracking, and reporting of refrigerated container (reefer) conditions across multiple port terminals. The system replaces manual paper-based workflows with a centralized web application, enabling real-time data capture from field officers, structured container tracking by container number, and on-demand report generation for shipping lines and terminal management.",
     challenges: [
       {
-        title: "Manual Data Entry at Scale",
+        title: "Paper-Based Recording Workflow",
         description:
-          "Terminal operators manually logged temperature readings for hundreds of containers daily across multiple sites. This created data entry errors, delays in incident detection, and incomplete audit trails.",
+          "Field officers recorded container temperatures on paper forms during morning and evening checks. This created illegible entries, lost records, and no real-time visibility into container health.",
       },
       {
-        title: "Fragmented Reporting Systems",
+        title: "Manual Excel Re-Entry and PDF Conversion",
         description:
-          "Compliance reports were generated from disconnected spreadsheets, requiring hours of manual aggregation and validation before submission to regulatory bodies.",
+          "Office staff manually re-typed paper readings into Excel spreadsheets, then converted them to PDF reports for shipping lines. This process was time-consuming, error-prone, and difficult to scale.",
       },
       {
-        title: "Delayed Incident Response",
+        title: "Container Lifecycle Tracking Across Days",
         description:
-          "Temperature excursions (out-of-range readings) were only detected during manual review cycles, often hours after the incident occurred, increasing cargo loss risk.",
+          "Containers remained in yards for multiple days, got evacuated, or returned later. Manual tracking made it difficult to maintain continuous history and avoid duplicate entries for the same container.",
       },
       {
-        title: "No Historical Trend Analysis",
+        title: "Client Access and Report Delivery Delays",
         description:
-          "Operators had no systematic way to identify recurring issues, predict equipment failures, or optimize container placement strategies based on historical performance data.",
+          "Shipping lines depended on emailed excel/PDF reports, creating delays and lack of transparency. Clients had no independent access to view container status or download reports on-demand.",
       },
     ],
     solutions: [
       {
-        title: "Real-Time Data Ingestion Pipeline",
+        title: "Mobile-Friendly Field Data Capture",
         description:
-          "Built an ingestion layer that receives temperature sensor data via WebSocket connections, validates readings against configured thresholds, and stores timestamped records in PostgreSQL with millisecond precision.",
+          "Built a responsive web interface accessible from desktop, tablet, or mobile devices. Field officers can record container readings directly from the terminal, capturing set point temperature, return air, ventilation, humidity, and remarks for morning and evening checks.",
         impact:
-          "Reduced data entry workload by 95% and eliminated manual logging errors.",
+          "Eliminated paper-based recording and manual data re-entry, reducing data entry workload by 95%.",
       },
       {
-        title: "Automated Alert System",
+        title: "Container Lifecycle Tracking by Number",
         description:
-          "Implemented threshold-based alerting that detects temperature excursions immediately and notifies operators via dashboard alerts and email notifications with container-specific context.",
+          "Implemented unique container tracking by container number with historical records preserved across days, evacuations, and re-entries. Prevents duplicate entries and improves data continuity throughout the container lifecycle.",
         impact:
-          "Reduced incident response time from hours to minutes, preventing cargo loss.",
+          "Reduced duplicate entries and provided complete traceable history for each container.",
       },
       {
-        title: "Compliance Reporting Automation",
+        title: "On-Demand Excel and PDF Report Generation",
         description:
-          "Created a report generation module that aggregates temperature logs, calculates compliance metrics, and generates PDF reports formatted to regulatory standards on-demand or on schedule.",
+          "Created automated report generation using live data, producing Excel and PDF formats aligned with operational and client reporting standards. Reports are generated on-demand without manual compilation or reformatting.",
         impact:
           "Reduced report preparation time from 4+ hours to under 2 minutes.",
       },
       {
-        title: "Operational Dashboards",
+        title: "Multi-Terminal Support with Client Access Portal",
         description:
-          "Built real-time dashboards showing live container status, alert history, and trend analysis. Supervisors can filter by terminal, container type, and time range to identify operational patterns.",
+          "Designed for multi-terminal (GPHA, MPS) and multi-user access with role-based permissions for field officers, office staff, and shipping line clients. Shipping lines can log in to view container status and download reports at any time.",
         impact:
-          "Improved operational visibility and enabled data-driven container placement decisions.",
+          "Improved visibility and trust through near real-time client access, eliminating reliance on emailed reports.",
       },
     ],
     metrics: [
       {
-        label: "Data Entry Reduction",
+        label: "Manual Work Eliminated",
         value: "95%",
-        description: "Eliminated manual temperature logging across all terminals",
+        description: "Removed paper recording and Excel re-entry workflows",
       },
       {
-        label: "Incident Response Time",
-        value: "< 5 min",
-        description: "From temperature excursion to operator notification",
-      },
-      {
-        label: "Report Generation",
+        label: "Report Generation Time",
         value: "< 2 min",
         description: "Down from 4+ hours of manual preparation",
       },
       {
-        label: "System Uptime",
-        value: "99.8%",
-        description: "Measured over 12 months in production",
+        label: "Multi-Terminal Coverage",
+        value: "100%",
+        description: "Deployed across all port terminals (GPHA, MPS)",
+      },
+      {
+        label: "Client Self-Service Access",
+        value: "24/7",
+        description: "Shipping lines can view and download reports anytime",
       },
     ],
     screenshots: [
@@ -176,7 +176,7 @@ export const projectsDetail: ProjectDetail[] = [
       "Led backend architecture improvements focused on data optimization, concurrency handling, and observability. Introduced monitoring and alerting to proactively detect and resolve performance issues in production.",
     outcome:
       "Improved system performance substantially while maintaining high availability under sustained concurrent usage.",
-    techStack: ["Node.js", "Redis", "PostgreSQL", "Grafana"],
+    techStack: ["Node.js", "Redis", "MongoDB", "Grafana", "Sentry", "Prometheus", "Python", "React/Vue", "Telegram Bot"],
     isExpansionLayer: false,
     fullDescription:
       "Backend performance optimization project for a crypto trading analytics platform serving real-time market data, portfolio tracking, and algorithmic trading signals to thousands of concurrent users. The work focused on identifying and eliminating performance bottlenecks, optimizing database queries, implementing caching strategies, and establishing comprehensive monitoring to maintain SLA compliance under peak load conditions.",
@@ -211,22 +211,9 @@ export const projectsDetail: ProjectDetail[] = [
           "Reduced P95 query latency by 70% and eliminated timeout errors.",
       },
       {
-        title: "Redis Caching Layer",
-        description:
-          "Implemented multi-tier caching with Redis for frequently accessed market data, user portfolios, and computed analytics. Used time-based TTLs and pub/sub for cache invalidation.",
-        impact:
-          "Reduced database load by 60% and improved API response times by 50%.",
-      },
-      {
-        title: "Connection Pool Tuning",
-        description:
-          "Right-sized connection pools based on load testing results, implemented connection pooling best practices, and added pool exhaustion alerts.",
-        impact: "Eliminated connection timeout errors under peak load.",
-      },
-      {
         title: "Comprehensive Monitoring",
         description:
-          "Built Grafana dashboards tracking API latency, error rates, database performance, cache hit rates, and system resources. Configured alerting for SLA violations and capacity thresholds.",
+          "Implemented and integrated observability tooling, including self-hosted Sentry and Grafana dashboards, to monitor API latency, error rates, database performance, and system resource utilization. Configured proactive alerts for SLA breaches and capacity thresholds.",
         impact:
           "Enabled proactive issue detection and resolution before user impact.",
       },
