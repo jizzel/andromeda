@@ -63,13 +63,13 @@ export function ConnectSection() {
             id="connect-heading"
             className="text-4xl md:text-5xl font-bold mb-6 text-[var(--andromeda-text-primary)]"
           >
-            Let's Build Something
+            Book a Strategic Consultation
           </h2>
         </ScrollReveal>
 
         <ScrollReveal delay={0.1}>
           <p className="text-lg md:text-xl text-[var(--andromeda-text-secondary)] mb-12 max-w-2xl mx-auto">
-            If you need a dependable system or technical guidance, let's talk.
+            For teams that need reliable software to automate and scale their operations, let's talk.
           </p>
         </ScrollReveal>
 
@@ -116,7 +116,7 @@ export function ConnectSection() {
                 onMouseLeave={() => setEmailHovered(false)}
               >
                 <Mail size={20} className="mr-2" />
-                Email Me
+                Discuss and Start a Project
               </Button>
             </motion.a>
 

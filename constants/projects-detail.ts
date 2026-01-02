@@ -158,6 +158,7 @@ export const projectsDetail: ProjectDetail[] = [
       },
     ],
     lastModified: "2024-06-15",
+    location: "Tema, Ghana",
   },
   {
     id: "crypto-trading",
@@ -274,6 +275,7 @@ export const projectsDetail: ProjectDetail[] = [
       }
     ],
     lastModified: "2024-08-20",
+    location: "Tallinn, Estonia",
   },
   {
     id: "eolang-java",
@@ -389,6 +391,7 @@ export const projectsDetail: ProjectDetail[] = [
     ],
     repositoryUrl: "https://github.com/objectionary/eo",
     lastModified: "2024-03-10",
+    location: "Moscow, Russia",
   },
   {
     id: "legal-intelligence",
@@ -473,6 +476,7 @@ export const projectsDetail: ProjectDetail[] = [
       }
     ],
     lastModified: "2024-09-05",
+    location: "Accra, Ghana",
   },
   {
     id: "ai-marketplace",
@@ -557,5 +561,6 @@ export const projectsDetail: ProjectDetail[] = [
       }
     ],
     lastModified: "2024-11-12",
+    location: "Tema, Ghana",
   },
 ];

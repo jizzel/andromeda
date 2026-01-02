@@ -10,6 +10,7 @@ export interface Project {
   outcome: string;
   techStack: string[];
   isExpansionLayer: boolean;
+  location: string;
 }
 
 export const projects: Project[] = [
@@ -30,6 +31,7 @@ export const projects: Project[] = [
       "Eliminated paper-based recording and manual data re-entry, providing live container visibility, traceable history, and automated report generation for terminal operators and shipping line clients.",
     techStack: ["Next.js", "NestJS", "PostgreSQL", "Excel/PDF Generation"],
     isExpansionLayer: false,
+    location: "Tema, Ghana"
   },
   {
     id: "crypto-trading",
@@ -49,6 +51,7 @@ export const projects: Project[] = [
       "Improved system performance substantially while maintaining high availability under sustained concurrent usage.",
     techStack: ["Node.js", "Redis", "MongoDB", "Grafana", "Prometheus", "Python", "Telegram Bot"],
     isExpansionLayer: false,
+    location: "Tallinn, Estonia"
   },
   {
     id: "eolang-java",
@@ -67,6 +70,7 @@ export const projects: Project[] = [
       "Expanded the language's usability and contributed to published academic work on language design and interoperability.",
     techStack: ["Java", "Eolang", "Maven", "JUnit"],
     isExpansionLayer: false,
+    location: "Moscow, Russia"
   },
   {
     id: "legal-intelligence",
@@ -85,6 +89,7 @@ export const projects: Project[] = [
         "Reduced legal research time dramatically while establishing a foundation for scalable legal intelligence products in emerging markets.",
     techStack: ["Python", "LangChain", "Vector DB", "FastAPI"],
     isExpansionLayer: true,
+    location: "Accra, Ghana"
   },
   {
     id: "ai-marketplace",
@@ -104,5 +109,6 @@ export const projects: Project[] = [
       "Reduced operational costs while improving fulfillment efficiency and scalability across a growing user base.",
     techStack: ["Python", "AWS", "OpenAI API", "Microservices"],
     isExpansionLayer: true,
+    location: "Tema, Ghana"
   },
 ];

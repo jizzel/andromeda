@@ -57,8 +57,6 @@ export function StatsBar() {
         >
           <span>Software Engineer</span>
           <span className="text-[var(--andromeda-accent-beige)]">•</span>
-          <span>System Design</span>
-          <span className="text-[var(--andromeda-accent-beige)]">•</span>
           <span>Based in Accra</span>
 
           <motion.span
