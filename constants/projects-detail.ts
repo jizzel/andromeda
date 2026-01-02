@@ -353,22 +353,22 @@ export const projectsDetail: ProjectDetail[] = [
     ],
     screenshots: [
       {
-        src: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&q=80",
+        src: "https://res.cloudinary.com/attakorah/image/upload/v1767358230/andromeda/eolang_code_snippet.png",
         alt: "Code editor showing programming language development",
-        caption: "Eolang source code with Java interoperability layer implementation"
+        caption: "Eolang sample code snippet"
       },
       {
-        src: "https://images.unsplash.com/photo-1542831371-29b0f74f9713?w=1200&q=80",
+        src: "https://res.cloudinary.com/attakorah/image/upload/v1767358040/andromeda/type_system.png",
         alt: "Software development and code structure",
         caption: "Type system mapping between Eolang and Java runtime"
       },
       {
-        src: "https://images.unsplash.com/photo-1587620962725-abab7fe55159?w=1200&q=80",
+        src: "https://res.cloudinary.com/attakorah/image/upload/v1767356363/andromeda/eo_reflections.png",
         alt: "Programming and software architecture",
         caption: "Reflection-based wrapper generation system architecture"
       },
       {
-        src: "https://images.unsplash.com/photo-1605379399642-870262d3d051?w=1200&q=80",
+        src: "https://res.cloudinary.com/attakorah/image/upload/v1767354738/andromeda/eolang_metrics.png",
         alt: "Testing and validation framework",
         caption: "Comprehensive test suite validating cross-language integration"
       }
