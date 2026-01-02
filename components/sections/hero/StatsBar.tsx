@@ -46,7 +46,7 @@ export function StatsBar() {
     >
       <div className="max-w-4xl mx-auto px-6">
         <motion.div
-          className="flex flex-wrap items-center gap-2 md:gap-4 text-sm md:text-base text-[var(--andromeda-text-secondary)] font-medium"
+          className="flex flex-wrap items-center gap-2 md:gap-4 text-xs md:text-base text-[var(--andromeda-text-secondary)] font-medium"
           animate={{
             height: "auto",
           }}
