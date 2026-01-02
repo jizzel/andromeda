@@ -7,6 +7,7 @@ export const socialLinks = {
 
 export const profile = {
   name: "Joseph Afriyie Attakorah",
+  surname: "Attakorah",
   title: "Software Engineer",
   focus: "Systems • Monitoring • Operations",
   location: "Accra, Ghana",
