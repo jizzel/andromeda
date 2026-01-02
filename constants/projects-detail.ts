@@ -152,25 +152,10 @@ export const projectsDetail: ProjectDetail[] = [
     ],
     screenshots: [
       {
-        src: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1200&q=80",
+        src: "https://res.cloudinary.com/attakorah/image/upload/v1767362535/andromeda/rcmonsys_dashboard.png",
         alt: "Real-time monitoring dashboard showing container temperature data",
         caption: "Live dashboard displaying real-time temperature monitoring across multiple terminals"
       },
-      {
-        src: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&q=80",
-        alt: "Analytics view with charts and graphs",
-        caption: "Historical trend analysis and compliance reporting interface"
-      },
-      {
-        src: "https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?w=1200&q=80",
-        alt: "Alert notification system interface",
-        caption: "Real-time alert system for temperature excursions with actionable notifications"
-      },
-      {
-        src: "https://images.unsplash.com/photo-1566576721346-d4a3b4eaeb55?w=1200&q=80",
-        alt: "Port terminal logistics operations",
-        caption: "Container yard overview showing monitored reefer containers"
-      }
     ],
     lastModified: "2024-06-15",
   },
