@@ -187,9 +187,9 @@ export const projectsDetail: ProjectDetail[] = [
           "Complex analytical queries against large datasets caused response times to exceed acceptable thresholds during market volatility when query volume spiked.",
       },
       {
-        title: "Connection Pool Exhaustion",
+        title: "User Engagement and Mobile Accessibility",
         description:
-          "Database connection pools were undersized for concurrent load, causing request queuing and timeout errors during peak trading hours.",
+          "Traders needed instant access to portfolio updates, market alerts, and trading signals beyond the web platform. Mobile-first accessibility was critical for time-sensitive trading decisions.",
       },
       {
         title: "Lack of Observability",
@@ -197,9 +197,9 @@ export const projectsDetail: ProjectDetail[] = [
           "No structured performance monitoring existed. Issues were discovered reactively through user complaints rather than proactive alerts.",
       },
       {
-        title: "Cache Invalidation Complexity",
+        title: "Manual Reporting and Data Aggregation",
         description:
-          "Market data required frequent updates, but naive cache invalidation strategies either served stale data or negated cache benefits entirely.",
+          "Daily PnL reports and performance analytics required manual data collection from exchange APIs and spreadsheet compilation, consuming hours of operational overhead.",
       },
     ],
     solutions: [
@@ -211,9 +211,30 @@ export const projectsDetail: ProjectDetail[] = [
           "Reduced P95 query latency by 70% and eliminated timeout errors.",
       },
       {
-        title: "Comprehensive Monitoring",
+        title: "Real-Time Telegram Bot Integration",
         description:
-          "Implemented and integrated observability tooling, including self-hosted Sentry and Grafana dashboards, to monitor API latency, error rates, database performance, and system resource utilization. Configured proactive alerts for SLA breaches and capacity thresholds.",
+          "Designed and built a Python-based Telegram bot providing traders with instant access to portfolio analytics, market alerts, index performance tracking, and trading signals. Users receive real-time notifications for price movements, position updates, and PnL changes directly in Telegram.",
+        impact:
+          "Increased daily active users by 30% through mobile-first accessibility and instant notifications.",
+      },
+      {
+        title: "Automated Analytics and Reporting Pipeline",
+        description:
+          "Engineered a periodic data pipeline that pulls market data from Binance API every 55 minutes, processes trading metrics, stores structured data in MongoDB, and automatically generates daily PnL reports in Google Sheets. Designed for near real-time insights without manual intervention.",
+        impact:
+          "Eliminated manual reporting overhead and enabled automated daily performance tracking.",
+      },
+      {
+        title: "Feature Development and Critical Bug Resolution",
+        description:
+          "Implemented new features and resolved critical bugs across the full stack (Node.js backend, React/Vue frontend, MongoDB database). Contributions included enhancing portfolio tracking accuracy, improving index calculation logic, and fixing data synchronization issues affecting user experience.",
+        impact:
+          "Contributed to 10% increase in customer satisfaction scores through improved platform reliability and feature richness.",
+      },
+      {
+        title: "Comprehensive Monitoring and Observability",
+        description:
+          "Implemented and integrated observability tooling, including self-hosted Sentry for error tracking and Grafana dashboards with Prometheus metrics, to monitor API latency, error rates, database performance, and system resource utilization. Configured proactive alerts for SLA breaches and capacity thresholds.",
         impact:
           "Enabled proactive issue detection and resolution before user impact.",
       },
@@ -225,14 +246,14 @@ export const projectsDetail: ProjectDetail[] = [
         description: "Reduction in 95th percentile query response time",
       },
       {
-        label: "Cache Hit Rate",
-        value: "85%",
-        description: "Percentage of requests served from cache",
+        label: "Daily Active Users",
+        value: "+30%",
+        description: "Growth from Telegram bot mobile-first accessibility",
       },
       {
-        label: "Database Load",
-        value: "-60%",
-        description: "Reduction in database query volume",
+        label: "Customer Satisfaction",
+        value: "+10%",
+        description: "Improvement through enhanced features and stability",
       },
       {
         label: "System Uptime",
@@ -242,24 +263,14 @@ export const projectsDetail: ProjectDetail[] = [
     ],
     screenshots: [
       {
-        src: "https://images.unsplash.com/photo-1642790106117-e829e14a795f?w=1200&q=80",
+        src: "https://res.cloudinary.com/attakorah/image/upload/v1767373284/andromeda/tl_analytics_a.png",
         alt: "Cryptocurrency trading charts and data visualization",
         caption: "Real-time market data aggregation and analysis dashboard"
       },
       {
-        src: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=1200&q=80",
+        src: "https://res.cloudinary.com/attakorah/image/upload/v1767373283/andromeda/tl_analytics_b.png",
         alt: "Trading analytics and performance metrics",
         caption: "Portfolio analytics showing trading signals and performance metrics"
-      },
-      {
-        src: "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=1200&q=80",
-        alt: "System monitoring and infrastructure metrics",
-        caption: "Backend performance monitoring with Grafana dashboards"
-      },
-      {
-        src: "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=1200&q=80",
-        alt: "API architecture and microservices",
-        caption: "Microservices architecture handling high-throughput trading data"
       }
     ],
     lastModified: "2024-08-20",
