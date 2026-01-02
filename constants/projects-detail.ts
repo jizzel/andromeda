@@ -23,6 +23,23 @@ export interface Screenshot {
   caption?: string;
 }
 
+export interface Publication {
+  title: string;
+  authors: string[];
+  venue: string;
+  year: string;
+  doi: string;
+  url: string;
+  abstract: string;
+}
+
+export interface AcademicResource {
+  label: string;
+  url: string;
+  type: 'book' | 'organization' | 'repository';
+  description?: string;
+}
+
 export interface ProjectDetail extends Project {
   slug: string;
   fullDescription: string;
@@ -33,6 +50,8 @@ export interface ProjectDetail extends Project {
   videoUrl?: string;
   caseStudyUrl?: string; // External case study link
   repositoryUrl?: string; // GitHub repo (if public)
+  publications?: Publication[]; // Academic publications
+  academicResources?: AcademicResource[]; // Books, research groups, etc.
   lastModified: string; // ISO date string for SEO sitemap
 }
 
@@ -41,119 +60,105 @@ export const projectsDetail: ProjectDetail[] = [
     id: "rcmonsys",
     slug: "rcmonsys",
     name: "RCMONSYS",
-    contextLine: "Cold-chain monitoring system for port terminal operations",
+    contextLine: "Cloud-based monitoring system for refrigerated container operations",
     outcomeLine:
-      "Replaced manual tracking with reliable, auditable operational visibility",
+      "Eliminated paper-based workflows and automated reporting for port terminals",
     status: "Production",
     context:
-      "Cold-chain operators across multiple port terminals relied on manual temperature logging and fragmented spreadsheets to monitor reefer containers.",
+      "Logistics teams across multiple port terminals recorded reefer container temperatures on paper, manually re-entered data into Excel spreadsheets, and converted them to PDF reports for shipping lines.",
     problem:
-      "Manual workflows created blind spots, delayed incident response, and made compliance reporting slow and error-prone at scale.",
+      "Manual paper-to-Excel-to-PDF workflows were slow, error-prone, and difficult to scale as container volumes and reporting frequency increased across multiple terminals.",
     approach:
-      "Designed and delivered a centralized monitoring system that ingests temperature data in near real time, validates readings, and automates reporting across container lifecycles. Modeled operational workflows directly into system modules to reduce human intervention and failure points.",
+      "Built a cloud-based web application that enables mobile-friendly field data capture, centralizes container tracking across terminals, and generates Excel and PDF reports on-demand. Designed for multi-terminal and multi-user access with role-based permissions.",
     outcome:
-      "Replaced manual tracking and reporting with a reliable, auditable system that improved operational visibility and significantly reduced turnaround time for compliance reporting.",
-    techStack: ["Next.js", "NestJS", "PostgreSQL", "WebSockets"],
+      "Eliminated paper-based recording and manual data re-entry, providing live container visibility, traceable history, and automated report generation for terminal operators and shipping line clients.",
+    techStack: ["Next.js", "NestJS", "PostgreSQL", "Excel/PDF Generation"],
     isExpansionLayer: false,
     fullDescription:
-      "RCMONSYS is a production monitoring system deployed across multiple port terminals to track and validate reefer container temperatures throughout the cold-chain logistics cycle. The system ingests sensor data in near real-time, validates readings against operational thresholds, generates compliance reports, and provides operational dashboards for terminal supervisors and logistics coordinators.",
+      "RCMONSYS is a cloud-based logistics monitoring system designed to digitize and streamline the recording, tracking, and reporting of refrigerated container (reefer) conditions across multiple port terminals. The system replaces manual paper-based workflows with a centralized web application, enabling real-time data capture from field officers, structured container tracking by container number, and on-demand report generation for shipping lines and terminal management.",
     challenges: [
       {
-        title: "Manual Data Entry at Scale",
+        title: "Paper-Based Recording Workflow",
         description:
-          "Terminal operators manually logged temperature readings for hundreds of containers daily across multiple sites. This created data entry errors, delays in incident detection, and incomplete audit trails.",
+          "Field officers recorded container temperatures on paper forms during morning and evening checks. This created illegible entries, lost records, and no real-time visibility into container health.",
       },
       {
-        title: "Fragmented Reporting Systems",
+        title: "Manual Excel Re-Entry and PDF Conversion",
         description:
-          "Compliance reports were generated from disconnected spreadsheets, requiring hours of manual aggregation and validation before submission to regulatory bodies.",
+          "Office staff manually re-typed paper readings into Excel spreadsheets, then converted them to PDF reports for shipping lines. This process was time-consuming, error-prone, and difficult to scale.",
       },
       {
-        title: "Delayed Incident Response",
+        title: "Container Lifecycle Tracking Across Days",
         description:
-          "Temperature excursions (out-of-range readings) were only detected during manual review cycles, often hours after the incident occurred, increasing cargo loss risk.",
+          "Containers remained in yards for multiple days, got evacuated, or returned later. Manual tracking made it difficult to maintain continuous history and avoid duplicate entries for the same container.",
       },
       {
-        title: "No Historical Trend Analysis",
+        title: "Client Access and Report Delivery Delays",
         description:
-          "Operators had no systematic way to identify recurring issues, predict equipment failures, or optimize container placement strategies based on historical performance data.",
+          "Shipping lines depended on emailed excel/PDF reports, creating delays and lack of transparency. Clients had no independent access to view container status or download reports on-demand.",
       },
     ],
     solutions: [
       {
-        title: "Real-Time Data Ingestion Pipeline",
+        title: "Mobile-Friendly Field Data Capture",
         description:
-          "Built an ingestion layer that receives temperature sensor data via WebSocket connections, validates readings against configured thresholds, and stores timestamped records in PostgreSQL with millisecond precision.",
+          "Built a responsive web interface accessible from desktop, tablet, or mobile devices. Field officers can record container readings directly from the terminal, capturing set point temperature, return air, ventilation, humidity, and remarks for morning and evening checks.",
         impact:
-          "Reduced data entry workload by 95% and eliminated manual logging errors.",
+          "Eliminated paper-based recording and manual data re-entry, reducing data entry workload by 95%.",
       },
       {
-        title: "Automated Alert System",
+        title: "Container Lifecycle Tracking by Number",
         description:
-          "Implemented threshold-based alerting that detects temperature excursions immediately and notifies operators via dashboard alerts and email notifications with container-specific context.",
+          "Implemented unique container tracking by container number with historical records preserved across days, evacuations, and re-entries. Prevents duplicate entries and improves data continuity throughout the container lifecycle.",
         impact:
-          "Reduced incident response time from hours to minutes, preventing cargo loss.",
+          "Reduced duplicate entries and provided complete traceable history for each container.",
       },
       {
-        title: "Compliance Reporting Automation",
+        title: "On-Demand Excel and PDF Report Generation",
         description:
-          "Created a report generation module that aggregates temperature logs, calculates compliance metrics, and generates PDF reports formatted to regulatory standards on-demand or on schedule.",
+          "Created automated report generation using live data, producing Excel and PDF formats aligned with operational and client reporting standards. Reports are generated on-demand without manual compilation or reformatting.",
         impact:
           "Reduced report preparation time from 4+ hours to under 2 minutes.",
       },
       {
-        title: "Operational Dashboards",
+        title: "Multi-Terminal Support with Client Access Portal",
         description:
-          "Built real-time dashboards showing live container status, alert history, and trend analysis. Supervisors can filter by terminal, container type, and time range to identify operational patterns.",
+          "Designed for multi-terminal (GPHA, MPS) and multi-user access with role-based permissions for field officers, office staff, and shipping line clients. Shipping lines can log in to view container status and download reports at any time.",
         impact:
-          "Improved operational visibility and enabled data-driven container placement decisions.",
+          "Improved visibility and trust through near real-time client access, eliminating reliance on emailed reports.",
       },
     ],
     metrics: [
       {
-        label: "Data Entry Reduction",
+        label: "Manual Work Eliminated",
         value: "95%",
-        description: "Eliminated manual temperature logging across all terminals",
+        description: "Removed paper recording and Excel re-entry workflows",
       },
       {
-        label: "Incident Response Time",
-        value: "< 5 min",
-        description: "From temperature excursion to operator notification",
-      },
-      {
-        label: "Report Generation",
+        label: "Report Generation Time",
         value: "< 2 min",
         description: "Down from 4+ hours of manual preparation",
       },
       {
-        label: "System Uptime",
-        value: "99.8%",
-        description: "Measured over 12 months in production",
+        label: "Multi-Terminal Coverage",
+        value: "100%",
+        description: "Deployed across all port terminals (GPHA, MPS)",
+      },
+      {
+        label: "Client Self-Service Access",
+        value: "24/7",
+        description: "Shipping lines can view and download reports anytime",
       },
     ],
     screenshots: [
       {
-        src: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1200&q=80",
+        src: "https://res.cloudinary.com/attakorah/image/upload/v1767362535/andromeda/rcmonsys_dashboard.png",
         alt: "Real-time monitoring dashboard showing container temperature data",
         caption: "Live dashboard displaying real-time temperature monitoring across multiple terminals"
       },
-      {
-        src: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&q=80",
-        alt: "Analytics view with charts and graphs",
-        caption: "Historical trend analysis and compliance reporting interface"
-      },
-      {
-        src: "https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?w=1200&q=80",
-        alt: "Alert notification system interface",
-        caption: "Real-time alert system for temperature excursions with actionable notifications"
-      },
-      {
-        src: "https://images.unsplash.com/photo-1566576721346-d4a3b4eaeb55?w=1200&q=80",
-        alt: "Port terminal logistics operations",
-        caption: "Container yard overview showing monitored reefer containers"
-      }
     ],
     lastModified: "2024-06-15",
+    location: "Tema, Ghana",
   },
   {
     id: "crypto-trading",
@@ -172,7 +177,7 @@ export const projectsDetail: ProjectDetail[] = [
       "Led backend architecture improvements focused on data optimization, concurrency handling, and observability. Introduced monitoring and alerting to proactively detect and resolve performance issues in production.",
     outcome:
       "Improved system performance substantially while maintaining high availability under sustained concurrent usage.",
-    techStack: ["Node.js", "Redis", "PostgreSQL", "Grafana"],
+    techStack: ["Node.js", "Redis", "MongoDB", "Grafana", "Sentry", "Prometheus", "Python", "React/Vue", "Telegram Bot"],
     isExpansionLayer: false,
     fullDescription:
       "Backend performance optimization project for a crypto trading analytics platform serving real-time market data, portfolio tracking, and algorithmic trading signals to thousands of concurrent users. The work focused on identifying and eliminating performance bottlenecks, optimizing database queries, implementing caching strategies, and establishing comprehensive monitoring to maintain SLA compliance under peak load conditions.",
@@ -183,9 +188,9 @@ export const projectsDetail: ProjectDetail[] = [
           "Complex analytical queries against large datasets caused response times to exceed acceptable thresholds during market volatility when query volume spiked.",
       },
       {
-        title: "Connection Pool Exhaustion",
+        title: "User Engagement and Mobile Accessibility",
         description:
-          "Database connection pools were undersized for concurrent load, causing request queuing and timeout errors during peak trading hours.",
+          "Traders needed instant access to portfolio updates, market alerts, and trading signals beyond the web platform. Mobile-first accessibility was critical for time-sensitive trading decisions.",
       },
       {
         title: "Lack of Observability",
@@ -193,9 +198,9 @@ export const projectsDetail: ProjectDetail[] = [
           "No structured performance monitoring existed. Issues were discovered reactively through user complaints rather than proactive alerts.",
       },
       {
-        title: "Cache Invalidation Complexity",
+        title: "Manual Reporting and Data Aggregation",
         description:
-          "Market data required frequent updates, but naive cache invalidation strategies either served stale data or negated cache benefits entirely.",
+          "Daily PnL reports and performance analytics required manual data collection from exchange APIs and spreadsheet compilation, consuming hours of operational overhead.",
       },
     ],
     solutions: [
@@ -207,22 +212,30 @@ export const projectsDetail: ProjectDetail[] = [
           "Reduced P95 query latency by 70% and eliminated timeout errors.",
       },
       {
-        title: "Redis Caching Layer",
+        title: "Real-Time Telegram Bot Integration",
         description:
-          "Implemented multi-tier caching with Redis for frequently accessed market data, user portfolios, and computed analytics. Used time-based TTLs and pub/sub for cache invalidation.",
+          "Designed and built a Python-based Telegram bot providing traders with instant access to portfolio analytics, market alerts, index performance tracking, and trading signals. Users receive real-time notifications for price movements, position updates, and PnL changes directly in Telegram.",
         impact:
-          "Reduced database load by 60% and improved API response times by 50%.",
+          "Increased daily active users by 30% through mobile-first accessibility and instant notifications.",
       },
       {
-        title: "Connection Pool Tuning",
+        title: "Automated Analytics and Reporting Pipeline",
         description:
-          "Right-sized connection pools based on load testing results, implemented connection pooling best practices, and added pool exhaustion alerts.",
-        impact: "Eliminated connection timeout errors under peak load.",
+          "Engineered a periodic data pipeline that pulls market data from Binance API every 55 minutes, processes trading metrics, stores structured data in MongoDB, and automatically generates daily PnL reports in Google Sheets. Designed for near real-time insights without manual intervention.",
+        impact:
+          "Eliminated manual reporting overhead and enabled automated daily performance tracking.",
       },
       {
-        title: "Comprehensive Monitoring",
+        title: "Feature Development and Critical Bug Resolution",
         description:
-          "Built Grafana dashboards tracking API latency, error rates, database performance, cache hit rates, and system resources. Configured alerting for SLA violations and capacity thresholds.",
+          "Implemented new features and resolved critical bugs across the full stack (Node.js backend, React/Vue frontend, MongoDB database). Contributions included enhancing portfolio tracking accuracy, improving index calculation logic, and fixing data synchronization issues affecting user experience.",
+        impact:
+          "Contributed to 10% increase in customer satisfaction scores through improved platform reliability and feature richness.",
+      },
+      {
+        title: "Comprehensive Monitoring and Observability",
+        description:
+          "Implemented and integrated observability tooling, including self-hosted Sentry for error tracking and Grafana dashboards with Prometheus metrics, to monitor API latency, error rates, database performance, and system resource utilization. Configured proactive alerts for SLA breaches and capacity thresholds.",
         impact:
           "Enabled proactive issue detection and resolution before user impact.",
       },
@@ -234,14 +247,14 @@ export const projectsDetail: ProjectDetail[] = [
         description: "Reduction in 95th percentile query response time",
       },
       {
-        label: "Cache Hit Rate",
-        value: "85%",
-        description: "Percentage of requests served from cache",
+        label: "Daily Active Users",
+        value: "+30%",
+        description: "Growth from Telegram bot mobile-first accessibility",
       },
       {
-        label: "Database Load",
-        value: "-60%",
-        description: "Reduction in database query volume",
+        label: "Customer Satisfaction",
+        value: "+10%",
+        description: "Improvement through enhanced features and stability",
       },
       {
         label: "System Uptime",
@@ -251,27 +264,18 @@ export const projectsDetail: ProjectDetail[] = [
     ],
     screenshots: [
       {
-        src: "https://images.unsplash.com/photo-1642790106117-e829e14a795f?w=1200&q=80",
+        src: "https://res.cloudinary.com/attakorah/image/upload/v1767373284/andromeda/tl_analytics_a.png",
         alt: "Cryptocurrency trading charts and data visualization",
         caption: "Real-time market data aggregation and analysis dashboard"
       },
       {
-        src: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=1200&q=80",
+        src: "https://res.cloudinary.com/attakorah/image/upload/v1767373283/andromeda/tl_analytics_b.png",
         alt: "Trading analytics and performance metrics",
         caption: "Portfolio analytics showing trading signals and performance metrics"
-      },
-      {
-        src: "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=1200&q=80",
-        alt: "System monitoring and infrastructure metrics",
-        caption: "Backend performance monitoring with Grafana dashboards"
-      },
-      {
-        src: "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=1200&q=80",
-        alt: "API architecture and microservices",
-        caption: "Microservices architecture handling high-throughput trading data"
       }
     ],
     lastModified: "2024-08-20",
+    location: "Tallinn, Estonia",
   },
   {
     id: "eolang-java",
@@ -334,28 +338,60 @@ export const projectsDetail: ProjectDetail[] = [
     ],
     screenshots: [
       {
-        src: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&q=80",
+        src: "https://res.cloudinary.com/attakorah/image/upload/v1767358230/andromeda/eolang_code_snippet.png",
         alt: "Code editor showing programming language development",
-        caption: "Eolang source code with Java interoperability layer implementation"
+        caption: "Eolang sample code snippet"
       },
       {
-        src: "https://images.unsplash.com/photo-1542831371-29b0f74f9713?w=1200&q=80",
+        src: "https://res.cloudinary.com/attakorah/image/upload/v1767358040/andromeda/type_system.png",
         alt: "Software development and code structure",
         caption: "Type system mapping between Eolang and Java runtime"
       },
       {
-        src: "https://images.unsplash.com/photo-1587620962725-abab7fe55159?w=1200&q=80",
+        src: "https://res.cloudinary.com/attakorah/image/upload/v1767356363/andromeda/eo_reflections.png",
         alt: "Programming and software architecture",
         caption: "Reflection-based wrapper generation system architecture"
       },
       {
-        src: "https://images.unsplash.com/photo-1605379399642-870262d3d051?w=1200&q=80",
+        src: "https://res.cloudinary.com/attakorah/image/upload/v1767354738/andromeda/eolang_metrics.png",
         alt: "Testing and validation framework",
         caption: "Comprehensive test suite validating cross-language integration"
       }
     ],
+    publications: [
+      {
+        title: "Exploring the Eolang-Java Integration and Interoperability",
+        authors: ["Joseph Afriyie Attakorah", "Co-authors"],
+        venue: "Procedia Computer Science",
+        year: "2021",
+        doi: "10.1016/j.procs.2021.09.234",
+        url: "https://doi.org/10.1016/j.procs.2021.09.234",
+        abstract: "In recent times, the subject of interoperability has become very popular. In large-scale software applications development, it is a common practice to combine multiple languages in solving peculiar problems and developing robust solutions. The ability to combine multiple languages allows an easy migration of an existing project from one language to another or use existing libraries in another language. This makes interoperability a force to be reckoned with when developing new programming languages. The Eolang programming language is a new research and development initiative aimed at achieving true Object-Oriented Programming by having all components of the program as objects. As such, the construct and syntax of Eolang is vastly different from that of Java. This makes integration and interoperability between these two languages a challenging issue related to method/object naming conventions, keywords and operators, etc. In this paper we explore the potential of Eolang interoperability with Java by looking at the interoperability mechanisms of some other languages with Java, describe ways to overcome these challenges with Eolang and develop the solution. Specifically, we focus on the possibility to call Java code from Eolang while the semantics of both languages remain preserved. Our solution allows Java code to be called in Eolang through wrappers that turn Java classes and methods into Eolang Objects."
+      }
+    ],
+    academicResources: [
+      {
+        label: "Co-authored Book: Elegant Objects",
+        url: "https://www.objectionary.com/eo-book/book.pdf",
+        type: "book",
+        description: "Comprehensive guide to the Eolang programming language and its object-oriented principles"
+      },
+      {
+        label: "HSE Eolang Research Group",
+        url: "https://github.com/HSE-Eolang",
+        type: "organization",
+        description: "Academic research organization advancing Eolang language development"
+      },
+      {
+        label: "Main Eolang Repository",
+        url: "https://github.com/objectionary/eo",
+        type: "repository",
+        description: "Official Eolang compiler and runtime implementation"
+      }
+    ],
     repositoryUrl: "https://github.com/objectionary/eo",
     lastModified: "2024-03-10",
+    location: "Moscow, Russia",
   },
   {
     id: "legal-intelligence",
@@ -440,6 +476,7 @@ export const projectsDetail: ProjectDetail[] = [
       }
     ],
     lastModified: "2024-09-05",
+    location: "Accra, Ghana",
   },
   {
     id: "ai-marketplace",
@@ -524,5 +561,6 @@ export const projectsDetail: ProjectDetail[] = [
       }
     ],
     lastModified: "2024-11-12",
+    location: "Tema, Ghana",
   },
 ];

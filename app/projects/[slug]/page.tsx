@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, MapPin } from "lucide-react";
 import { projectsDetail } from "@/constants/projects-detail";
 import { ProjectDetailContent } from "@/components/projects/ProjectDetailContent";
 import { ScrollReveal } from "@/components/animations/ScrollReveal";
@@ -76,7 +76,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
         />
 
         <ScrollReveal>
-          <div className="mb-6">
+          <div className="mb-6 flex items-center gap-3 flex-wrap">
             <span
               className={`inline-block px-3 py-1 rounded text-sm font-medium ${{
                 "Production": "bg-green-500/20 text-green-400",
@@ -87,6 +87,15 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
             >
               {project.status}
             </span>
+            {project.location && (
+              <>
+                <span className="text-[var(--andromeda-text-secondary)]/30">•</span>
+                <div className="flex items-center gap-1.5 text-sm text-[var(--andromeda-text-secondary)]/70">
+                  <MapPin size={14} className="opacity-50" />
+                  <span>{project.location}</span>
+                </div>
+              </>
+            )}
           </div>
 
           <h1 className="text-4xl md:text-5xl font-bold mb-4 text-[var(--andromeda-text-primary)]">

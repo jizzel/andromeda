@@ -10,26 +10,28 @@ export interface Project {
   outcome: string;
   techStack: string[];
   isExpansionLayer: boolean;
+  location: string;
 }
 
 export const projects: Project[] = [
   {
     id: "rcmonsys",
     name: "RCMONSYS",
-    contextLine: "Cold-chain monitoring system for port terminal operations",
+    contextLine: "Cloud-based monitoring system for refrigerated container operations",
     outcomeLine:
-      "Replaced manual tracking with reliable, auditable operational visibility",
+      "Eliminated paper-based workflows and automated reporting for port terminals",
     status: "Production",
     context:
-      "Cold-chain operators across multiple port terminals relied on manual temperature logging and fragmented spreadsheets to monitor reefer containers.",
+      "Logistics teams across multiple port terminals recorded reefer container temperatures on paper, manually re-entered data into Excel spreadsheets, and converted them to PDF reports for shipping lines.",
     problem:
-      "Manual workflows created blind spots, delayed incident response, and made compliance reporting slow and error-prone at scale.",
+      "Manual paper-to-Excel-to-PDF workflows were slow, error-prone, and difficult to scale as container volumes and reporting frequency increased across multiple terminals.",
     approach:
-      "Designed and delivered a centralized monitoring system that ingests temperature data in near real time, validates readings, and automates reporting across container lifecycles. Modeled operational workflows directly into system modules to reduce human intervention and failure points.",
+      "Built a cloud-based web application that enables mobile-friendly field data capture, centralizes container tracking across terminals, and generates Excel and PDF reports on-demand. Designed for multi-terminal and multi-user access with role-based permissions.",
     outcome:
-      "Replaced manual tracking and reporting with a reliable, auditable system that improved operational visibility and significantly reduced turnaround time for compliance reporting.",
-    techStack: ["Next.js", "NestJS", "PostgreSQL", "WebSockets"],
+      "Eliminated paper-based recording and manual data re-entry, providing live container visibility, traceable history, and automated report generation for terminal operators and shipping line clients.",
+    techStack: ["Next.js", "NestJS", "PostgreSQL", "Excel/PDF Generation"],
     isExpansionLayer: false,
+    location: "Tema, Ghana"
   },
   {
     id: "crypto-trading",
@@ -47,8 +49,9 @@ export const projects: Project[] = [
       "Led backend architecture improvements focused on data optimization, concurrency handling, and observability. Introduced monitoring and alerting to proactively detect and resolve performance issues in production.",
     outcome:
       "Improved system performance substantially while maintaining high availability under sustained concurrent usage.",
-    techStack: ["Node.js", "Redis", "PostgreSQL", "Grafana"],
+    techStack: ["Node.js", "Redis", "MongoDB", "Grafana", "Prometheus", "Python", "Telegram Bot"],
     isExpansionLayer: false,
+    location: "Tallinn, Estonia"
   },
   {
     id: "eolang-java",
@@ -67,6 +70,7 @@ export const projects: Project[] = [
       "Expanded the language's usability and contributed to published academic work on language design and interoperability.",
     techStack: ["Java", "Eolang", "Maven", "JUnit"],
     isExpansionLayer: false,
+    location: "Moscow, Russia"
   },
   {
     id: "legal-intelligence",
@@ -85,6 +89,7 @@ export const projects: Project[] = [
         "Reduced legal research time dramatically while establishing a foundation for scalable legal intelligence products in emerging markets.",
     techStack: ["Python", "LangChain", "Vector DB", "FastAPI"],
     isExpansionLayer: true,
+    location: "Accra, Ghana"
   },
   {
     id: "ai-marketplace",
@@ -104,5 +109,6 @@ export const projects: Project[] = [
       "Reduced operational costs while improving fulfillment efficiency and scalability across a growing user base.",
     techStack: ["Python", "AWS", "OpenAI API", "Microservices"],
     isExpansionLayer: true,
+    location: "Tema, Ghana"
   },
 ];

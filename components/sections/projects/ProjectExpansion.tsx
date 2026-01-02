@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, MapPin } from "lucide-react";
 import { Project } from "@/constants/projects";
 import { projectsDetail } from "@/constants/projects-detail";
 
@@ -63,6 +63,14 @@ export function ProjectExpansion({ project }: ProjectExpansionProps) {
           {project.techStack.join(" · ")}
         </p>
       </div>
+
+      {/* Location */}
+      {project.location && (
+        <div className="flex items-center gap-1.5 text-xs text-[var(--andromeda-text-secondary)]/60 pt-1">
+          <MapPin size={12} className="opacity-40" />
+          <span>{project.location}</span>
+        </div>
+      )}
 
       {/* View Full Case Study Link */}
       {projectDetail && (

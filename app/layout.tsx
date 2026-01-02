@@ -18,8 +18,8 @@ const inter = Inter({
 export const metadata: Metadata = {
   metadataBase: new URL(profile.siteUrl),
   title: {
-    default: `${profile.name} - ${profile.title}`,
-    template: `%s | ${profile.name}`,
+    default: `${profile.surname} - ${profile.title}`,
+    template: `%s | ${profile.surname}`,
   },
   description: profile.description,
   keywords: profile.keywords,
@@ -32,9 +32,9 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: profile.siteUrl,
-    title: `${profile.name} - ${profile.title}`,
+    title: `${profile.surname} - ${profile.title}`,
     description: profile.description,
-    siteName: profile.name,
+    siteName: profile.surname,
     images: [
       {
         url: `${profile.siteUrl}/images/og-image.jpg`,
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
   // Twitter Card
   twitter: {
     card: "summary_large_image",
-    title: `${profile.name} - ${profile.title}`,
+    title: `${profile.surname} - ${profile.title}`,
     description: profile.description,
     images: [`${profile.siteUrl}/images/og-image.jpg`],
     creator: "@jizzel", // Update with actual Twitter handle

@@ -16,7 +16,7 @@ export function WritingSection() {
           <div className="flex flex-col items-start gap-6 max-w-2xl">
             {/* Framing sentence - not a header */}
             <p className="text-lg md:text-xl text-[var(--andromeda-text-secondary)]">
-              Occasional essays on systems design, monitoring, and building reliable software.
+              Articles on software engineering, system design, and the practical realities of building reliable software that holds up in production and scales correctly.
             </p>
 
             {/* Minimal link to writing page */}

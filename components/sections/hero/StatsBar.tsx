@@ -1,20 +1,48 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useTransform } from "framer-motion";
 import { useScrollPosition } from "@/lib/hooks/useScrollPosition";
+import { useEffect, useState } from "react";
 
 export function StatsBar() {
   const scrollPosition = useScrollPosition();
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile screen size
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   // Expand when scrolled 20vh (roughly 200px on most screens)
   const isExpanded = scrollPosition > 200;
 
+  // Calculate dynamic bottom position and opacity based on scroll
+  // On mobile: Move up and fade out as user scrolls to prevent overlap
+  // On desktop: Keep static position
+  const bottomPosition = isMobile
+    ? Math.max(8, 32 - (scrollPosition / 300) * 24) // 32px -> 8px (2rem -> 0.5rem)
+    : 32; // 2rem fixed on desktop
+
+  const opacity = isMobile
+    ? Math.max(0.3, 1 - (scrollPosition / 400)) // Fade to 30% on mobile
+    : 1; // Full opacity on desktop
+
   return (
     <motion.div
-      className="absolute bottom-8 left-0 right-0 z-20"
+      className="absolute left-0 right-0 z-20 pointer-events-none"
+      style={{
+        bottom: `${bottomPosition}px`,
+      }}
       initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ delay: 0.5, duration: 0.3 }}
+      animate={{ opacity: opacity }}
+      transition={{
+        delay: 0.5,
+        duration: 0.3,
+        ease: [0.33, 1, 0.68, 1]
+      }}
     >
       <div className="max-w-4xl mx-auto px-6">
         <motion.div
@@ -28,8 +56,6 @@ export function StatsBar() {
           }}
         >
           <span>Software Engineer</span>
-          <span className="text-[var(--andromeda-accent-beige)]">•</span>
-          <span>Systems & Monitoring</span>
           <span className="text-[var(--andromeda-accent-beige)]">•</span>
           <span>Based in Accra</span>
 
