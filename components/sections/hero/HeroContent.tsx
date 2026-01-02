@@ -11,7 +11,7 @@ export function HeroContent() {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: [0.33, 1, 0.68, 1] }}
-      className="relative z-10 flex flex-col items-start justify-center h-full max-w-4xl mx-auto px-6"
+      className="relative z-10 flex flex-col items-start justify-center h-full max-w-4xl mx-auto px-6 pb-24 md:pb-16"
     >
       <h1 className="mb-6 leading-tight">
         Building Software That{" "}
