@@ -23,6 +23,23 @@ export interface Screenshot {
   caption?: string;
 }
 
+export interface Publication {
+  title: string;
+  authors: string[];
+  venue: string;
+  year: string;
+  doi: string;
+  url: string;
+  abstract: string;
+}
+
+export interface AcademicResource {
+  label: string;
+  url: string;
+  type: 'book' | 'organization' | 'repository';
+  description?: string;
+}
+
 export interface ProjectDetail extends Project {
   slug: string;
   fullDescription: string;
@@ -33,6 +50,8 @@ export interface ProjectDetail extends Project {
   videoUrl?: string;
   caseStudyUrl?: string; // External case study link
   repositoryUrl?: string; // GitHub repo (if public)
+  publications?: Publication[]; // Academic publications
+  academicResources?: AcademicResource[]; // Books, research groups, etc.
   lastModified: string; // ISO date string for SEO sitemap
 }
 
@@ -352,6 +371,37 @@ export const projectsDetail: ProjectDetail[] = [
         src: "https://images.unsplash.com/photo-1605379399642-870262d3d051?w=1200&q=80",
         alt: "Testing and validation framework",
         caption: "Comprehensive test suite validating cross-language integration"
+      }
+    ],
+    publications: [
+      {
+        title: "Exploring the Eolang-Java Integration and Interoperability",
+        authors: ["Joseph Afriyie Attakorah", "Co-authors"],
+        venue: "Procedia Computer Science",
+        year: "2021",
+        doi: "10.1016/j.procs.2021.09.234",
+        url: "https://doi.org/10.1016/j.procs.2021.09.234",
+        abstract: "In recent times, the subject of interoperability has become very popular. In large-scale software applications development, it is a common practice to combine multiple languages in solving peculiar problems and developing robust solutions. The ability to combine multiple languages allows an easy migration of an existing project from one language to another or use existing libraries in another language. This makes interoperability a force to be reckoned with when developing new programming languages. The Eolang programming language is a new research and development initiative aimed at achieving true Object-Oriented Programming by having all components of the program as objects. As such, the construct and syntax of Eolang is vastly different from that of Java. This makes integration and interoperability between these two languages a challenging issue related to method/object naming conventions, keywords and operators, etc. In this paper we explore the potential of Eolang interoperability with Java by looking at the interoperability mechanisms of some other languages with Java, describe ways to overcome these challenges with Eolang and develop the solution. Specifically, we focus on the possibility to call Java code from Eolang while the semantics of both languages remain preserved. Our solution allows Java code to be called in Eolang through wrappers that turn Java classes and methods into Eolang Objects."
+      }
+    ],
+    academicResources: [
+      {
+        label: "Co-authored Book: Elegant Objects",
+        url: "https://www.objectionary.com/eo-book/book.pdf",
+        type: "book",
+        description: "Comprehensive guide to the Eolang programming language and its object-oriented principles"
+      },
+      {
+        label: "HSE Eolang Research Group",
+        url: "https://github.com/HSE-Eolang",
+        type: "organization",
+        description: "Academic research organization advancing Eolang language development"
+      },
+      {
+        label: "Main Eolang Repository",
+        url: "https://github.com/objectionary/eo",
+        type: "repository",
+        description: "Official Eolang compiler and runtime implementation"
       }
     ],
     repositoryUrl: "https://github.com/objectionary/eo",
