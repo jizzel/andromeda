@@ -2,6 +2,7 @@
 
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { FloatingBusinessCardButton } from "@/components/layout/FloatingBusinessCardButton";
+import { FloatingContactButton } from "@/components/ui/FloatingContactButton";
 import { IdentityAnchor } from "@/components/layout/IdentityAnchor";
 import { HomeButton } from "@/components/layout/HomeButton";
 import { BusinessCard } from "@/components/layout/BusinessCard";
@@ -22,6 +23,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
           <HomeButton />
           <ThemeToggle />
           <FloatingBusinessCardButton />
+          <FloatingContactButton />
           <BusinessCard />
         </>
       )}
