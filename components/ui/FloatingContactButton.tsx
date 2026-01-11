@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Phone } from "lucide-react";
 
 export function FloatingContactButton() {
   const [isVisible, setIsVisible] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     // Delay initial appearance for smooth entrance
@@ -23,24 +25,30 @@ export function FloatingContactButton() {
       }
     }
 
-    const handleScroll = () => {
-      const contactSection = document.getElementById("contact");
-      if (contactSection) {
-        const rect = contactSection.getBoundingClientRect();
-        const windowHeight = window.innerHeight;
+    // Query DOM once and cache reference for performance
+    const contactSection = document.getElementById("contact");
 
-        // Hide button when contact section is in view (with buffer)
-        const isContactVisible = rect.top < windowHeight * 0.7 && rect.bottom > 0;
-        setIsVisible(!isContactVisible);
-      }
+    const handleScroll = () => {
+      if (!contactSection) return;
+
+      const rect = contactSection.getBoundingClientRect();
+      const windowHeight = window.innerHeight;
+
+      // Hide button when contact section is in view (with buffer)
+      const isContactVisible = rect.top < windowHeight * 0.7 && rect.bottom > 0;
+      setIsVisible(!isContactVisible);
     };
 
-    window.addEventListener("scroll", handleScroll);
-    handleScroll(); // Check initial state
+    if (contactSection) {
+      window.addEventListener("scroll", handleScroll);
+      handleScroll(); // Check initial state
+    }
 
     return () => {
       clearTimeout(showTimer);
-      window.removeEventListener("scroll", handleScroll);
+      if (contactSection) {
+        window.removeEventListener("scroll", handleScroll);
+      }
     };
   }, []);
 
@@ -53,14 +61,18 @@ export function FloatingContactButton() {
 
       // Optional: Add brief highlight animation to contact section
       contactSection.style.transition = "background-color 0.3s ease";
-      const originalBg = contactSection.style.backgroundColor;
       contactSection.style.backgroundColor = "var(--andromeda-accent-beige)";
       setTimeout(() => {
-        contactSection.style.backgroundColor = originalBg;
+        // Revert to stylesheet by removing inline style
+        contactSection.style.backgroundColor = "";
+        // Clean up the inline transition style after the animation
+        setTimeout(() => {
+          contactSection.style.transition = "";
+        }, 300);
       }, 300);
     } else {
       // We're on a different page - navigate to home page contact section
-      window.location.href = "/#contact";
+      router.push("/#contact");
     }
   };
 
