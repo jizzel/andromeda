@@ -77,6 +77,7 @@ export function ProposalContent({ proposal }: ProposalContentProps) {
       {/* Call to Action Section */}
       <ProposalCTA
         validity={`${proposal.validityDays} days`}
+        clientName={proposal.client.name}
         contactEmail={proposal.contactEmail}
         pdfUrl={proposal.pdfUrl}
       />

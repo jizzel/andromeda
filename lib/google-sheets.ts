@@ -1,5 +1,5 @@
 import { google } from "googleapis";
-import type { ProposalData, ProposalAccess } from "@/types/proposal";
+import type { ProposalData } from "@/types/proposal";
 
 // Initialize Google Sheets API client
 function getGoogleSheetsClient() {
@@ -51,14 +51,22 @@ export async function getAllProposals(): Promise<ProposalRecord[]> {
   const rows = response.data.values || [];
 
   return rows
-    .filter((row) => row.length >= 5)
-    .map((row) => ({
-      id: row[COLUMNS.ID]?.trim(),
-      accessCode: row[COLUMNS.ACCESS_CODE]?.trim(),
-      expiryDate: row[COLUMNS.EXPIRY_DATE]?.trim(),
-      isActive: row[COLUMNS.IS_ACTIVE]?.trim().toLowerCase() === "true",
-      data: JSON.parse(row[COLUMNS.DATA]) as ProposalData,
-    }));
+    .map((row) => {
+      if (row.length < 5) return null;
+      try {
+        return {
+          id: row[COLUMNS.ID]?.trim(),
+          accessCode: row[COLUMNS.ACCESS_CODE]?.trim(),
+          expiryDate: row[COLUMNS.EXPIRY_DATE]?.trim(),
+          isActive: row[COLUMNS.IS_ACTIVE]?.trim().toLowerCase() === "true",
+          data: JSON.parse(row[COLUMNS.DATA]) as ProposalData,
+        };
+      } catch (error) {
+        console.error(`Failed to parse proposal data for row with ID ${row[COLUMNS.ID]}:`, error);
+        return null;
+      }
+    })
+    .filter((p): p is ProposalRecord => p !== null);
 }
 
 /**

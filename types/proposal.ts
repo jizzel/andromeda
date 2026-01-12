@@ -110,7 +110,6 @@ export interface ProposalAccess {
 }
 
 export interface ProposalData {
-  id: string;
   client: ProposalClient;
   title: string;
   subtitle: string;

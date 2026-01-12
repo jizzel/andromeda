@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 
 interface ProposalCTAProps {
   validity: string;
+  clientName: string;
   contactEmail?: string;
   contactPhone?: string;
   pdfUrl?: string;
@@ -14,6 +15,7 @@ interface ProposalCTAProps {
 
 export function ProposalCTA({
   validity,
+  clientName,
   contactEmail = "joseph@attakorah.com",
   contactPhone,
   pdfUrl,
@@ -59,7 +61,7 @@ export function ProposalCTA({
                 size="lg"
                 className="bg-[var(--andromeda-accent-beige)] text-[var(--andromeda-primary)] hover:bg-[var(--andromeda-accent-beige)]/90 px-8 py-6 text-base font-semibold"
               >
-                <a href={`mailto:${contactEmail}?subject=Proposal Discussion - N'Joy Hotel`}>
+                <a href={`mailto:${contactEmail}?subject=Proposal Discussion - ${clientName}`}>
                   <Mail className="w-5 h-5 mr-2" />
                   Get in Touch
                   <ArrowRight className="w-4 h-4 ml-2" />
