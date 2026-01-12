@@ -91,24 +91,4 @@ export const projects: Project[] = [
     isExpansionLayer: true,
     location: "Accra, Ghana"
   },
-  {
-    id: "ai-marketplace",
-    name: "AI Marketplace Architecture",
-    contextLine:
-      "Distributed system with AI-powered design generation and task automation",
-    outcomeLine:
-      "Reduced operational costs while improving fulfillment efficiency and scalability",
-    status: "Development",
-    context:
-      "A large-scale marketplace aimed to connect thousands of users while automating design generation and operational workflows using AI.",
-    problem:
-      "Manual coordination and quality control created cost overhead and limited scalability.",
-    approach:
-      "Architected a distributed system integrating AI services for design generation, intelligent task allocation, and automated quality checks. Focused on modular services and cost-aware AI integration.",
-    outcome:
-      "Reduced operational costs while improving fulfillment efficiency and scalability across a growing user base.",
-    techStack: ["Python", "AWS", "OpenAI API", "Microservices"],
-    isExpansionLayer: true,
-    location: "Tema, Ghana"
-  },
 ];
