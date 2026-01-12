@@ -54,6 +54,7 @@ export function ConnectSection() {
   };
   return (
     <section
+      id="contact"
       className="relative w-full py-32 px-6 bg-[var(--andromeda-primary)]"
       aria-labelledby="connect-heading"
     >
