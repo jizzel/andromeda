@@ -13,7 +13,7 @@ interface ProposalCTAProps {
 
 export function ProposalCTA({
   validity,
-  contactEmail = "hello@andromeda.dev",
+  contactEmail = "joseph@attakorah.com",
   contactPhone,
 }: ProposalCTAProps) {
   return (
