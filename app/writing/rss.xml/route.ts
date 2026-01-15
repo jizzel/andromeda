@@ -1,4 +1,5 @@
 import { getAllPosts } from "@/lib/content";
+import { profile } from "@/constants/profile";
 
 export async function GET() {
   const posts = getAllPosts();
@@ -7,7 +8,7 @@ export async function GET() {
   const rss = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Attakorah - Writing</title>
+    <title>${profile.surname} - Writing</title>
     <link>${siteUrl}/writing</link>
     <description>Thoughts on systems design, monitoring, automation, and building reliable software.</description>
     <language>en-us</language>

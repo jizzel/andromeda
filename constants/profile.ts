@@ -7,6 +7,8 @@ export const socialLinks = {
 
 export const profile = {
   name: "Joseph Afriyie Attakorah",
+  firstName: "Joseph",
+  middleName: "Afriyie",
   surname: "Attakorah",
   title: "Software Engineer",
   focus: "Systems • Monitoring • Operations",

@@ -5,6 +5,7 @@ import { useBusinessCard } from "./BusinessCardContext";
 import { useAnalytics } from "@/lib/hooks/useAnalytics";
 import { useEffect, useState } from "react";
 import { BusinessCardPreview } from "./BusinessCardPreview";
+import { profile } from "@/constants/profile";
 
 export function IdentityAnchor() {
   const { openBusinessCard } = useBusinessCard();
@@ -26,8 +27,7 @@ export function IdentityAnchor() {
     return null;
   }
 
-  const name = "Attakorah";
-  const letters = name.split("");
+  const letters = profile.surname.split("");
 
   return (
     <>
@@ -41,7 +41,7 @@ export function IdentityAnchor() {
         onBlur={() => setIsFocused(false)}
         className="fixed left-6 top-1/2 -translate-y-1/2 z-30 cursor-pointer focus:outline-none"
         role="button"
-        aria-label="Open business card - Attakorah"
+        aria-label={`Open business card - ${profile.surname}`}
         tabIndex={0}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {

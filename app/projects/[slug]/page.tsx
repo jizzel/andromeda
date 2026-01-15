@@ -5,6 +5,7 @@ import { projectsDetail } from "@/constants/projects-detail";
 import { ProjectDetailContent } from "@/components/projects/ProjectDetailContent";
 import { ScrollReveal } from "@/components/animations/ScrollReveal";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
+import { profile } from "@/constants/profile";
 import type { Metadata } from "next";
 
 interface ProjectPageProps {
@@ -28,7 +29,7 @@ export async function generateMetadata({ params }: ProjectPageProps): Promise<Me
   }
 
   return {
-    title: `${project.name} | Attakorah`,
+    title: `${project.name} | ${profile.surname}`,
     description: project.contextLine,
     openGraph: {
       title: `${project.name} - ${project.contextLine}`,
