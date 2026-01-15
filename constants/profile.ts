@@ -1,7 +1,9 @@
+const emailAddress =  "joseph@attakorah.com";
+
 export const socialLinks = {
   github: "https://github.com/jizzel",
   linkedin: "https://www.linkedin.com/in/jaa24",
-  email: "mailto:joseph@attakorah.com",
+  email: `mailto:${emailAddress}`,
   calendly: "https://calendly.com/juxluvjoe",
 };
 
@@ -15,6 +17,8 @@ export const profile = {
   location: "Accra, Ghana",
   tagline: "Building systems that turn operational complexity into clarity.",
   availability: "Available for remote collaboration worldwide",
+  phone: "+233547665651",
+  email: emailAddress,
 
   // Business Card specific
   profileImage: "/images/profile.jpg",
