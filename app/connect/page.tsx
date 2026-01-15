@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Phone, Mail, MessageCircle, Download, Globe, Linkedin } from "lucide-react";
+import { Phone, Mail, MessageCircle, Download, Globe, Linkedin, Calendar } from "lucide-react";
 import { profile, socialLinks } from "@/constants/profile";
 import { downloadVCard, type VCardData } from "@/lib/vcard";
 import { useAnalytics } from "@/lib/hooks/useAnalytics";
@@ -72,6 +72,18 @@ export default function ConnectPage() {
               <span>Call</span>
             </a>
 
+            {/* Schedule Call */}
+            <a
+              href={socialLinks.calendly}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => trackCTAClicked({ type: "calendly", location: "connect_page" })}
+              className="flex items-center justify-center gap-2.5 w-full py-3 px-4 bg-white/5 light:bg-black/5 text-[var(--andromeda-text-primary)] text-sm font-medium rounded-lg border border-white/10 light:border-black/10 hover:bg-white/10 light:hover:bg-black/10 transition-colors"
+            >
+              <Calendar size={16} strokeWidth={2} />
+              <span>Schedule Call</span>
+            </a>
+
             {/* Email */}
             <a
               href={`mailto:${profile.email}`}
@@ -105,7 +117,7 @@ export default function ConnectPage() {
           </section>
 
           {/* Divider */}
-          <div className="relative h-px bg-gradient-to-r from-transparent via-white/10 light:via-black/10 to-transparent mb-5" />
+          <div className="relative h-px bg-gradient-to-r from-transparent via-white/10 light:via-black/10 to-transparent mb-1" />
 
           {/* Secondary Actions */}
           <section className="relative flex items-center justify-center gap-4">
