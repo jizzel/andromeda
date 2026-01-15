@@ -8,6 +8,7 @@ import { ScrollReveal } from "@/components/animations/ScrollReveal";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { ReadingProgress } from "@/components/writing/ReadingProgress";
 import { BlogPostingStructuredData } from "@/components/writing/BlogPostingStructuredData";
+import { profile } from "@/constants/profile";
 import type { Metadata } from "next";
 
 interface PostPageProps {
@@ -32,14 +33,14 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
   }
 
   return {
-    title: `${post.title} | Attakorah`,
+    title: `${post.title} | ${profile.surname}`,
     description: post.excerpt,
     openGraph: {
       title: post.title,
       description: post.excerpt,
       type: "article",
       publishedTime: post.publishedAt,
-      authors: ["Joseph Attakorah"],
+      authors: [profile.name],
       tags: post.tags,
     },
     twitter: {

@@ -6,6 +6,7 @@ import { FloatingContactButton } from "@/components/ui/FloatingContactButton";
 import { IdentityAnchor } from "@/components/layout/IdentityAnchor";
 import { HomeButton } from "@/components/layout/HomeButton";
 import { BusinessCard } from "@/components/layout/BusinessCard";
+import { SiteFooter } from "@/components/layout/SiteFooter";
 import { useEffect, useState } from "react";
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
@@ -28,6 +29,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
         </>
       )}
       {children}
+      <SiteFooter />
     </>
   );
 }
