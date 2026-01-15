@@ -33,7 +33,7 @@ interface ProjectCaseStudyViewedEvent {
 }
 
 interface CTAClickedEvent {
-  type: "calendly" | "email" | "github" | "linkedin";
+  type: "calendly" | "email" | "github" | "linkedin" | "call" | "whatsapp" | "vcard";
   location: string;
 }
 

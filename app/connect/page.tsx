@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Phone, Mail, MessageCircle, Download, Globe, Linkedin } from "lucide-react";
 import { profile, socialLinks } from "@/constants/profile";
 import { downloadVCard, type VCardData } from "@/lib/vcard";
+import { useAnalytics } from "@/lib/hooks/useAnalytics";
 
 const vCardData: VCardData = {
   firstName: profile.firstName,
@@ -19,7 +20,10 @@ const vCardData: VCardData = {
 };
 
 export default function ConnectPage() {
+  const { trackCTAClicked } = useAnalytics();
+
   const handleSaveContact = () => {
+    trackCTAClicked({ type: "vcard", location: "connect_page" });
     downloadVCard(vCardData, profile.surname.toLowerCase());
   };
 
@@ -61,6 +65,7 @@ export default function ConnectPage() {
             {/* Call - Primary */}
             <a
               href={`tel:${profile.phone}`}
+              onClick={() => trackCTAClicked({ type: "call", location: "connect_page" })}
               className="flex items-center justify-center gap-2.5 w-full py-3 px-4 bg-[var(--andromeda-accent-beige)] text-[var(--andromeda-primary)] text-sm font-medium rounded-lg hover:bg-[var(--andromeda-accent-beige)]/90 transition-colors"
             >
               <Phone size={16} strokeWidth={2.5} />
@@ -70,6 +75,7 @@ export default function ConnectPage() {
             {/* Email */}
             <a
               href={`mailto:${profile.email}`}
+              onClick={() => trackCTAClicked({ type: "email", location: "connect_page" })}
               className="flex items-center justify-center gap-2.5 w-full py-3 px-4 bg-white/5 light:bg-black/5 text-[var(--andromeda-text-primary)] text-sm font-medium rounded-lg border border-white/10 light:border-black/10 hover:bg-white/10 light:hover:bg-black/10 transition-colors"
             >
               <Mail size={16} strokeWidth={2} />
@@ -79,6 +85,7 @@ export default function ConnectPage() {
             {/* WhatsApp */}
             <a
               href={`https://wa.me/${profile.phone.replace(/\D/g, "")}`}
+              onClick={() => trackCTAClicked({ type: "whatsapp", location: "connect_page" })}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-2.5 w-full py-3 px-4 bg-white/5 light:bg-black/5 text-[var(--andromeda-text-primary)] text-sm font-medium rounded-lg border border-white/10 light:border-black/10 hover:bg-white/10 light:hover:bg-black/10 transition-colors"
@@ -112,6 +119,7 @@ export default function ConnectPage() {
             <span className="text-[var(--andromeda-text-secondary)]/30">·</span>
             <a
               href={socialLinks.linkedin}
+              onClick={() => trackCTAClicked({ type: "linkedin", location: "connect_page" })}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 text-xs text-[var(--andromeda-text-secondary)] hover:text-[var(--andromeda-accent-beige)] transition-colors"
