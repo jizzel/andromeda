@@ -1,4 +1,4 @@
-interface VCardData {
+export interface VCardData {
   firstName: string;
   lastName: string;
   fullName: string;

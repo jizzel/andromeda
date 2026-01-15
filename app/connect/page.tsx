@@ -1,26 +1,26 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { Phone, Mail, MessageCircle, Download, Globe, Linkedin } from "lucide-react";
 import { profile, socialLinks } from "@/constants/profile";
-import { downloadVCard } from "@/lib/vcard";
+import { downloadVCard, type VCardData } from "@/lib/vcard";
+
+const vCardData: VCardData = {
+  firstName: profile.firstName,
+  lastName: profile.surname,
+  fullName: profile.name,
+  title: profile.title,
+  email: profile.email,
+  phone: profile.phone,
+  website: profile.siteUrl,
+  linkedin: socialLinks.linkedin,
+  location: profile.location,
+};
 
 export default function ConnectPage() {
   const handleSaveContact = () => {
-    downloadVCard(
-      {
-        firstName: profile.firstName,
-        lastName: profile.surname,
-        fullName: profile.name,
-        title: profile.title,
-        email: profile.email,
-        phone: profile.phone,
-        website: profile.siteUrl,
-        linkedin: socialLinks.linkedin,
-        location: profile.location,
-      },
-      profile.surname.toLowerCase()
-    );
+    downloadVCard(vCardData, profile.surname.toLowerCase());
   };
 
   return (
@@ -78,7 +78,7 @@ export default function ConnectPage() {
 
             {/* WhatsApp */}
             <a
-              href={`https://wa.me/${profile.phone.replace(/\+/g, "")}`}
+              href={`https://wa.me/${profile.phone.replace(/\D/g, "")}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-2.5 w-full py-3 px-4 bg-white/5 light:bg-black/5 text-[var(--andromeda-text-primary)] text-sm font-medium rounded-lg border border-white/10 light:border-black/10 hover:bg-white/10 light:hover:bg-black/10 transition-colors"
@@ -102,13 +102,13 @@ export default function ConnectPage() {
 
           {/* Secondary Actions */}
           <section className="relative flex items-center justify-center gap-4">
-            <a
+            <Link
               href="/"
               className="flex items-center gap-1.5 text-xs text-[var(--andromeda-text-secondary)] hover:text-[var(--andromeda-accent-beige)] transition-colors"
             >
               <Globe size={13} />
               <span>Website</span>
-            </a>
+            </Link>
             <span className="text-[var(--andromeda-text-secondary)]/30">·</span>
             <a
               href={socialLinks.linkedin}
