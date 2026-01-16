@@ -1,6 +1,7 @@
 /**
  * Utility functions for Calendly integration
  */
+import { socialLinks } from "@/constants/profile";
 
 declare global {
   interface Window {
@@ -13,7 +14,7 @@ declare global {
 /**
  * Opens Calendly popup widget
  */
-export function openCalendlyPopup(url: string = "https://calendly.com/juxluvjoe/30min") {
+export function openCalendlyPopup(url: string = socialLinks.calendly) {
   if (typeof window !== "undefined" && window.Calendly) {
     window.Calendly.initPopupWidget({ url });
   }
