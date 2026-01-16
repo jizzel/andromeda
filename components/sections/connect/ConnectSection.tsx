@@ -7,6 +7,7 @@ import { ScrollReveal } from "@/components/animations/ScrollReveal";
 import { Button } from "@/components/ui/button";
 import { useAnalytics } from "@/lib/hooks/useAnalytics";
 import { useState, useEffect } from "react";
+import { openCalendlyPopup } from "@/lib/calendly";
 
 export function ConnectSection() {
   const { trackCTAClicked } = useAnalytics();
@@ -34,6 +35,11 @@ export function ConnectSection() {
 
   const handleCTAClick = (type: "calendly" | "email" | "github") => {
     trackCTAClicked({ type, location: "connect_section" });
+  };
+
+  const handleScheduleCall = () => {
+    trackCTAClicked({ type: "calendly", location: "connect_section" });
+    openCalendlyPopup();
   };
 
   // Theme-aware button styles
@@ -78,17 +84,14 @@ export function ConnectSection() {
         <ScrollReveal delay={0.2}>
           <div className="flex flex-col md:flex-row items-center justify-center gap-4 mb-12">
             {/* Primary CTA - Schedule Call */}
-            <motion.a
-              href={socialLinks.calendly}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => handleCTAClick("calendly")}
+            <motion.div
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               transition={{ duration: 0.15 }}
             >
               <Button
                 size="lg"
+                onClick={handleScheduleCall}
                 className="bg-[var(--andromeda-highlight)] hover:bg-[var(--andromeda-highlight)]/90 text-white px-8 py-6 text-base font-medium rounded"
                 style={{
                   boxShadow:
@@ -98,7 +101,7 @@ export function ConnectSection() {
                 <Calendar size={20} className="mr-2" />
                 Schedule a Call
               </Button>
-            </motion.a>
+            </motion.div>
 
             {/* Secondary CTA - Email */}
             <motion.a

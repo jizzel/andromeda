@@ -4,7 +4,7 @@ export const socialLinks = {
   github: "https://github.com/jizzel",
   linkedin: "https://www.linkedin.com/in/jaa24",
   email: `mailto:${emailAddress}`,
-  calendly: "https://calendly.com/juxluvjoe",
+  calendly: "https://calendly.com/juxluvjoe/30min",
 };
 
 export const profile = {

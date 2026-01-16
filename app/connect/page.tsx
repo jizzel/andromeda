@@ -6,6 +6,7 @@ import { Phone, Mail, MessageCircle, Download, Globe, Linkedin, Calendar } from 
 import { profile, socialLinks } from "@/constants/profile";
 import { downloadVCard, type VCardData } from "@/lib/vcard";
 import { useAnalytics } from "@/lib/hooks/useAnalytics";
+import { openCalendlyPopup } from "@/lib/calendly";
 
 const vCardData: VCardData = {
   firstName: profile.firstName,
@@ -25,6 +26,11 @@ export default function ConnectPage() {
   const handleSaveContact = () => {
     trackCTAClicked({ type: "vcard", location: "connect_page" });
     downloadVCard(vCardData, profile.surname.toLowerCase());
+  };
+
+  const handleScheduleCall = () => {
+    trackCTAClicked({ type: "calendly", location: "connect_page" });
+    openCalendlyPopup();
   };
 
   return (
@@ -73,16 +79,13 @@ export default function ConnectPage() {
             </a>
 
             {/* Schedule Call */}
-            <a
-              href={socialLinks.calendly}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => trackCTAClicked({ type: "calendly", location: "connect_page" })}
+            <button
+              onClick={handleScheduleCall}
               className="flex items-center justify-center gap-2.5 w-full py-3 px-4 bg-white/5 light:bg-black/5 text-[var(--andromeda-text-primary)] text-sm font-medium rounded-lg border border-white/10 light:border-black/10 hover:bg-white/10 light:hover:bg-black/10 transition-colors"
             >
               <Calendar size={16} strokeWidth={2} />
               <span>Schedule Call</span>
-            </a>
+            </button>
 
             {/* Email */}
             <a

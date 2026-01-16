@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { profile } from "@/constants/profile";
 import { StructuredData } from "@/components/layout/StructuredData";
@@ -82,6 +83,10 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <StructuredData />
+        <link
+          href="https://assets.calendly.com/assets/external/widget.css"
+          rel="stylesheet"
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -103,6 +108,11 @@ export default function RootLayout({
             <Analytics />
           </BusinessCardProvider>
         </ThemeProvider>
+        {/* Calendly Widget Scripts */}
+        <Script
+          src="https://assets.calendly.com/assets/external/widget.js"
+          strategy="lazyOnload"
+        />
       </body>
     </html>
   );
