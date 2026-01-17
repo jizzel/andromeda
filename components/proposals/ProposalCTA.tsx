@@ -4,6 +4,7 @@ import { ScrollReveal } from "@/components/animations/ScrollReveal";
 import { motion } from "framer-motion";
 import { Calendar, Mail, Clock, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { openCalendlyPopup } from "@/lib/calendly";
 
 interface ProposalCTAProps {
   validity: string;
@@ -57,15 +58,13 @@ export function ProposalCTA({
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Button
-                asChild
                 size="lg"
+                onClick={() => openCalendlyPopup()}
                 className="bg-[var(--andromeda-accent-beige)] text-[var(--andromeda-primary)] hover:bg-[var(--andromeda-accent-beige)]/90 px-8 py-6 text-base font-semibold"
               >
-                <a href={`mailto:${contactEmail}?subject=Proposal Discussion - ${clientName}`}>
-                  <Mail className="w-5 h-5 mr-2" />
-                  Get in Touch
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </a>
+                <Calendar className="w-5 h-5 mr-2" />
+                Schedule Meeting
+                <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </motion.div>
 
@@ -77,7 +76,7 @@ export function ProposalCTA({
                 className="border-[var(--andromeda-accent-beige)]/50 text-[var(--andromeda-text-primary)] hover:bg-[var(--andromeda-accent-beige)]/10 px-8 py-6 text-base"
               >
                 <a href={pdfUrl} download>
-                  <Calendar className="w-5 h-5 mr-2" />
+                  <Mail className="w-5 h-5 mr-2" />
                   Download Proposal
                 </a>
               </Button>
