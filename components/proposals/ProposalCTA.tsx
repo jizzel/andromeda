@@ -43,7 +43,7 @@ export function ProposalCTA({
           >
             Ready to Transform Your
             <span className="block text-[var(--andromeda-accent-beige)]">
-              Digital Presence?
+              Business?
             </span>
           </h2>
 
