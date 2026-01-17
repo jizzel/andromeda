@@ -135,9 +135,121 @@ export interface ProposalSheetRow extends ProposalAccess {
   data: ProposalData;
 }
 
+// Church proposal types
+export interface ProposalCostBreakdown {
+  oneTime?: {
+    amount: string;
+    description: string;
+    details: string[];
+  };
+  recurring: {
+    type: "monthly" | "annual" | "both";
+    items: {
+      category: string;
+      cost: string;
+      details?: string[];
+    }[];
+  };
+  commercial?: {
+    description: string;
+    pricing: string;
+    terms?: string[];
+  };
+}
+
+export interface ProposalOption {
+  id: string;
+  label: string; // "OPTION 1" or "OPTION 2"
+  title: string;
+  description: string;
+  badge?: string; // "Pragmatic Choice" or "Strategic Investment"
+  timeline: string;
+  capabilities?: string[];
+  exclusions?: string[];
+  advantages: string[];
+  limitations: string[];
+  bestFor: string[];
+  costBreakdown: ProposalCostBreakdown;
+  note?: string;
+}
+
+export interface SubscriptionTier {
+  id: string;
+  size: string;
+  assetRange: string;
+  monthlyFee: string;
+  annualFee: string;
+  discount?: string;
+  recommended?: boolean;
+}
+
+export interface RevenueScenario {
+  branches: number;
+  monthlyRevenue: string;
+  annualRevenue: string;
+}
+
+export interface BreakEvenAnalysis {
+  branches: number;
+  annualRevenue: string;
+  annualCosts: string;
+  netMargin: string;
+  breakEvenTime: string;
+}
+
+export interface DecisionCriteria {
+  optionId: string;
+  optionName: string;
+  criteria: string[];
+}
+
+export interface CriticalFactor {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+}
+
+export interface IPTerms {
+  optionId: string;
+  optionName: string;
+  ownership: string[];
+  terms: string[];
+}
+
+// Church-style proposal type
+export interface ProposalDataChurch extends Omit<ProposalData, 'phases' | 'packages' | 'paymentPlans' | 'inspirations' | 'timeline'> {
+  proposalType: 'church-asset-management';
+  options: ProposalOption[];
+  decisionCriteria: {
+    option1: DecisionCriteria;
+    option2: DecisionCriteria;
+    warnings: string[];
+  };
+  subscriptionTiers?: SubscriptionTier[];
+  revenueProjections?: {
+    scenarios: RevenueScenario[];
+    breakEven: BreakEvenAnalysis;
+    caveats: string[];
+  };
+  criticalFactors?: CriticalFactor[];
+  ipRights: {
+    option1: IPTerms;
+    option2: IPTerms;
+    warningMessage: string;
+  };
+  timeline: ProposalTimelineItem[];
+  subscriptionTiersAverageExpected?: string;
+  criticalFactorsTitle?: string;
+  criticalFactorsSubtitle?: string;
+}
+
+// Union type for all proposal types
+export type ProposalDataUnion = ProposalData | ProposalDataChurch;
+
 // API response types
 export interface VerifyAccessResponse {
   success: boolean;
   error?: string;
-  proposal?: ProposalData;
+  proposal?: ProposalDataUnion;
 }
