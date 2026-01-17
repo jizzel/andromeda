@@ -2,7 +2,7 @@
 
 import { ScrollReveal } from "@/components/animations/ScrollReveal";
 import { motion } from "framer-motion";
-import { Calendar, Mail, Clock, ArrowRight } from "lucide-react";
+import { Calendar, Mail, Clock, ArrowRight, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { openCalendlyPopup } from "@/lib/calendly";
 
@@ -76,7 +76,7 @@ export function ProposalCTA({
                 className="border-[var(--andromeda-accent-beige)]/50 text-[var(--andromeda-text-primary)] hover:bg-[var(--andromeda-accent-beige)]/10 px-8 py-6 text-base"
               >
                 <a href={pdfUrl} download>
-                  <Mail className="w-5 h-5 mr-2" />
+                  <FileDown className="w-5 h-5 mr-2" />
                   Download Proposal
                 </a>
               </Button>

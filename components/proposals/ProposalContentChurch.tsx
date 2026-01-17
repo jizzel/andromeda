@@ -48,7 +48,7 @@ export function ProposalContentChurch({ proposal }: ProposalContentChurchProps) 
       {proposal.subscriptionTiers && (
         <ProposalSubscriptionTiers
           tiers={proposal.subscriptionTiers}
-          averageExpected="GHS 400/month per branch"
+          averageExpected={proposal.subscriptionTiersAverageExpected || "GHS 400/month per branch"}
         />
       )}
 
@@ -64,14 +64,14 @@ export function ProposalContentChurch({ proposal }: ProposalContentChurchProps) 
       {/* Critical Success Factors (conditional) */}
       {proposal.criticalFactors && (
         <ProposalCriticalFactors
-          title="Critical Success Factors"
-          subtitle="For Option 2 to succeed, the following must be in place:"
+          title={proposal.criticalFactorsTitle || "Critical Success Factors"}
+          subtitle={proposal.criticalFactorsSubtitle || "For Option 2 to succeed, the following must be in place:"}
           factors={proposal.criticalFactors}
         />
       )}
 
       {/* Next Steps Timeline */}
-      <ProposalTimeline timeline={proposal.nextSteps} />
+      <ProposalTimeline timeline={proposal.timeline} note={"Actual Timeline: To be Determined"} />
 
       {/* IP Rights & Revenue Sharing */}
       <ProposalIPRights

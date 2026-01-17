@@ -51,7 +51,7 @@ export function ProposalSubscriptionTiers({
               </thead>
               <tbody>
                 {tiers.map((tier, index) => {
-                  const isRecommended = tier.size === "Medium";
+                  const isRecommended = tier.recommended;
                   return (
                     <tr
                       key={tier.id}
@@ -104,7 +104,7 @@ export function ProposalSubscriptionTiers({
         {/* Mobile Card View */}
         <div className="md:hidden space-y-4">
           {tiers.map((tier, index) => {
-            const isRecommended = tier.size === "Medium";
+            const isRecommended = tier.recommended;
             return (
               <ScrollReveal key={tier.id} delay={0.1 * (index + 1)}>
                 <div

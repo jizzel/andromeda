@@ -180,6 +180,7 @@ export interface SubscriptionTier {
   monthlyFee: string;
   annualFee: string;
   discount?: string;
+  recommended?: boolean;
 }
 
 export interface RevenueScenario {
@@ -217,7 +218,7 @@ export interface IPTerms {
 }
 
 // Church-style proposal type
-export interface ProposalDataChurch extends Omit<ProposalData, 'phases' | 'packages' | 'paymentPlans' | 'inspirations'> {
+export interface ProposalDataChurch extends Omit<ProposalData, 'phases' | 'packages' | 'paymentPlans' | 'inspirations' | 'timeline'> {
   proposalType: 'church-asset-management';
   options: ProposalOption[];
   decisionCriteria: {
@@ -237,7 +238,10 @@ export interface ProposalDataChurch extends Omit<ProposalData, 'phases' | 'packa
     option2: IPTerms;
     warningMessage: string;
   };
-  nextSteps: ProposalTimelineItem[];
+  timeline: ProposalTimelineItem[];
+  subscriptionTiersAverageExpected?: string;
+  criticalFactorsTitle?: string;
+  criticalFactorsSubtitle?: string;
 }
 
 // Union type for all proposal types

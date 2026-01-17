@@ -15,7 +15,7 @@ interface ProposalTimelineProps {
   note?: string;
 }
 
-export function ProposalTimeline({ timeline, totalDuration = "4-8 weeks", note = "Actual Timeline: To be Determined" }: ProposalTimelineProps) {
+export function ProposalTimeline({ timeline, totalDuration = "4-8 weeks", note = "" }: ProposalTimelineProps) {
   return (
     <section
       id="timeline"
@@ -30,23 +30,22 @@ export function ProposalTimeline({ timeline, totalDuration = "4-8 weeks", note =
           >
             Project Timeline
           </h2>
-          {note &&
+          {note ? (
               <div className="mt-6 mb-2 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-center">
                 <p className="text-sm text-red-200/90 font-medium">
                   {note}
                 </p>
               </div>
-          }
-          {!note &&
+          ) : (
+            <>
               <p className="text-lg text-[var(--andromeda-text-secondary)] text-center mb-4">
                 Estimated delivery: <span className="text-[var(--andromeda-accent-beige)] font-semibold">{totalDuration}</span> from contract signing
               </p>
-          }
-          {!note &&
-            <p className="text-sm text-[var(--andromeda-text-secondary)] text-center mb-12">
-            Assuming timely content delivery
-            </p>
-          }
+              <p className="text-sm text-[var(--andromeda-text-secondary)] text-center mb-12">
+                Assuming timely content delivery
+              </p>
+            </>
+          )}
         </ScrollReveal>
 
         {/* Timeline */}
