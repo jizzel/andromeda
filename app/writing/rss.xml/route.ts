@@ -2,7 +2,7 @@ import { getAllPosts } from "@/lib/content";
 import { profile } from "@/constants/profile";
 
 export async function GET() {
-  const posts = getAllPosts();
+  const posts = await getAllPosts();
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://attakorah.com";
 
   const rss = `<?xml version="1.0" encoding="UTF-8"?>
@@ -10,7 +10,7 @@ export async function GET() {
   <channel>
     <title>${profile.surname} - Writing</title>
     <link>${siteUrl}/writing</link>
-    <description>Thoughts on systems design, monitoring, automation, and building reliable software.</description>
+    <description>Thoughts on system design, monitoring, automation, and building reliable software.</description>
     <language>en-us</language>
     <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
     <atom:link href="${siteUrl}/writing/rss.xml" rel="self" type="application/rss+xml"/>

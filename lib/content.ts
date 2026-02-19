@@ -2,10 +2,11 @@ import fs from "fs";
 import path from "path";
 import matter from "gray-matter";
 import readingTime from "reading-time";
+import { getAllBlogPosts, getBlogPostBySlug } from "@/lib/google-sheets";
 
 const contentDirectory = path.join(process.cwd(), "content/writing");
 
-export type PostCategory = "Systems Design" | "Monitoring" | "Automation" | "Research";
+export type PostCategory = "System Design" | "Monitoring" | "Automation" | "Research";
 
 export interface WritingPost {
   slug: string;
@@ -32,7 +33,7 @@ function getCategoryDirectories(): string[] {
  */
 function categoryFolderToName(folder: string): PostCategory {
   const mapping: Record<string, PostCategory> = {
-    "systems-design": "Systems Design",
+    "system-design": "System Design",
     "monitoring": "Monitoring",
     "automation": "Automation",
     "research": "Research",
@@ -89,17 +90,36 @@ function parseMDXFile(
 }
 
 /**
- * Get all writing posts sorted by date (newest first)
+ * Get all local MDX posts (sync helper)
  */
-export function getAllPosts(): WritingPost[] {
+function getLocalPosts(includeContent = false): WritingPost[] {
   const files = getAllMDXFiles();
-
-  const posts = files.map(({ categoryFolder, fileName }) =>
-    parseMDXFile(categoryFolder, fileName, false)
+  return files.map(({ categoryFolder, fileName }) =>
+    parseMDXFile(categoryFolder, fileName, includeContent)
   );
+}
 
-  // Sort by publishedAt date, newest first
-  return posts.sort((a, b) => {
+/**
+ * Get all writing posts sorted by date (newest first)
+ * Merges local MDX posts with Google Sheets posts
+ */
+export async function getAllPosts(): Promise<WritingPost[]> {
+  const localPosts = getLocalPosts();
+  const sheetPosts = await getAllBlogPosts();
+
+  // Calculate readTime for sheet posts and strip content for listing
+  const processedSheetPosts = sheetPosts.map((post) => {
+    const stats = readingTime(post.content || "");
+    return {
+      ...post,
+      readTime: Math.ceil(stats.minutes),
+      content: undefined,
+    };
+  });
+
+  const allPosts = [...localPosts, ...processedSheetPosts];
+
+  return allPosts.sort((a, b) => {
     return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
   });
 }
@@ -107,22 +127,32 @@ export function getAllPosts(): WritingPost[] {
 /**
  * Get posts filtered by category
  */
-export function getPostsByCategory(category: PostCategory): WritingPost[] {
-  const allPosts = getAllPosts();
+export async function getPostsByCategory(category: PostCategory): Promise<WritingPost[]> {
+  const allPosts = await getAllPosts();
   return allPosts.filter((post) => post.category === category);
 }
 
 /**
  * Get a single post by slug
  */
-export function getPostBySlug(slug: string): WritingPost | null {
+export async function getPostBySlug(slug: string): Promise<WritingPost | null> {
+  // Try local MDX first
   const files = getAllMDXFiles();
-
   for (const { categoryFolder, fileName } of files) {
     const fileSlug = fileName.replace(/\.mdx$/, "");
     if (fileSlug === slug) {
       return parseMDXFile(categoryFolder, fileName, true);
     }
+  }
+
+  // Try Google Sheets
+  const sheetPost = await getBlogPostBySlug(slug);
+  if (sheetPost) {
+    const stats = readingTime(sheetPost.content || "");
+    return {
+      ...sheetPost,
+      readTime: Math.ceil(stats.minutes),
+    };
   }
 
   return null;
@@ -131,16 +161,18 @@ export function getPostBySlug(slug: string): WritingPost | null {
 /**
  * Get all unique categories
  */
-export function getAllCategories(): PostCategory[] {
-  const categories = getCategoryDirectories();
-  return categories.map(categoryFolderToName);
+export async function getAllCategories(): Promise<PostCategory[]> {
+  const posts = await getAllPosts();
+  const categories = new Set<PostCategory>();
+  posts.forEach((post) => categories.add(post.category));
+  return Array.from(categories);
 }
 
 /**
  * Get all unique tags
  */
-export function getAllTags(): string[] {
-  const posts = getAllPosts();
+export async function getAllTags(): Promise<string[]> {
+  const posts = await getAllPosts();
   const tags = new Set<string>();
 
   posts.forEach((post) => {
@@ -153,22 +185,19 @@ export function getAllTags(): string[] {
 /**
  * Get related posts based on category and tags
  */
-export function getRelatedPosts(slug: string, limit = 3): WritingPost[] {
-  const currentPost = getPostBySlug(slug);
+export async function getRelatedPosts(slug: string, limit = 3): Promise<WritingPost[]> {
+  const currentPost = await getPostBySlug(slug);
   if (!currentPost) return [];
 
-  const allPosts = getAllPosts().filter((post) => post.slug !== slug);
+  const allPosts = (await getAllPosts()).filter((post) => post.slug !== slug);
 
-  // Score posts based on shared category and tags
   const scoredPosts = allPosts.map((post) => {
     let score = 0;
 
-    // Same category: +10 points
     if (post.category === currentPost.category) {
       score += 10;
     }
 
-    // Shared tags: +1 point per tag
     const sharedTags = post.tags.filter((tag) =>
       currentPost.tags.includes(tag)
     );
@@ -177,7 +206,6 @@ export function getRelatedPosts(slug: string, limit = 3): WritingPost[] {
     return { post, score };
   });
 
-  // Sort by score and return top N
   return scoredPosts
     .sort((a, b) => b.score - a.score)
     .slice(0, limit)

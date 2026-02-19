@@ -38,7 +38,7 @@ export function WritingContent({ posts, categories }: WritingContentProps) {
               Writing
             </h1>
             <p className="text-lg text-[var(--andromeda-text-secondary)] max-w-2xl">
-              Thoughts on systems design, monitoring, automation, and the practice
+              Thoughts on system design, monitoring, automation, and the practice
               of building software that works.
             </p>
           </div>

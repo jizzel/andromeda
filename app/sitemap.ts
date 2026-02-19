@@ -3,8 +3,8 @@ import { profile } from "@/constants/profile";
 import { getAllPosts } from "@/lib/content";
 import { projectsDetail } from "@/constants/projects-detail";
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  const posts = getAllPosts();
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const posts = await getAllPosts();
 
   const postEntries: MetadataRoute.Sitemap = posts.map((post) => ({
     url: `${profile.siteUrl}/writing/${post.slug}`,
