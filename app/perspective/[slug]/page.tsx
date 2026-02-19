@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Clock, Calendar } from "lucide-react";
+import { ArrowLeft, Clock, Calendar, User } from "lucide-react";
 import { getPostBySlug, getAllPosts, getRelatedPosts } from "@/lib/content";
 import { PostWrapper } from "@/components/perspective/PostWrapper";
 import { MDXContent } from "@/components/perspective/MDXContent";
@@ -112,6 +112,10 @@ export default async function PostPage({ params }: PostPageProps) {
 
               {/* Meta */}
               <div className="flex flex-wrap items-center gap-4 text-sm text-[var(--andromeda-text-secondary)] mb-6">
+                <div className="flex items-center gap-2">
+                  <User size={16} />
+                  <span>{profile.name}</span>
+                </div>
                 <div className="flex items-center gap-2">
                   <Calendar size={16} />
                   <span>{formattedDate}</span>
