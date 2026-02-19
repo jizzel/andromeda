@@ -5,6 +5,16 @@ import type { ProposalData } from "@/types/proposal";
 // Re-declare types here to avoid circular dependency with lib/content
 type PostCategory = "System Design" | "Monitoring" | "Automation" | "Research";
 
+const VALID_CATEGORIES: readonly PostCategory[] = ["System Design", "Monitoring", "Automation", "Research"];
+
+function validateCategory(value: string | undefined): PostCategory {
+  const trimmed = value?.trim() || "";
+  if (VALID_CATEGORIES.includes(trimmed as PostCategory)) {
+    return trimmed as PostCategory;
+  }
+  return "Research";
+}
+
 interface SheetBlogPost {
   slug: string;
   title: string;
@@ -166,7 +176,7 @@ async function fetchAllBlogPosts(): Promise<SheetBlogPost[]> {
         title: row[BLOG_COLUMNS.TITLE]?.trim() || "",
         excerpt: row[BLOG_COLUMNS.EXCERPT]?.trim() || "",
         publishedAt: row[BLOG_COLUMNS.PUBLISHED_AT]?.trim() || "",
-        category: (row[BLOG_COLUMNS.CATEGORY]?.trim() || "Research") as PostCategory,
+        category: validateCategory(row[BLOG_COLUMNS.CATEGORY]),
         tags: row[BLOG_COLUMNS.TAGS]
           ? row[BLOG_COLUMNS.TAGS].split(",").map((t: string) => t.trim()).filter(Boolean)
           : [],
