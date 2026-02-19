@@ -100,7 +100,7 @@ function getLocalPosts(includeContent = false): PerspectivePost[] {
 }
 
 /**
- * Get all writing posts sorted by date (newest first)
+ * Get all perspective posts sorted by date (newest first)
  * Merges local MDX posts with Google Sheets posts
  */
 export async function getAllPosts(): Promise<PerspectivePost[]> {
