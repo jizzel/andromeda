@@ -13,6 +13,12 @@ export function BlogPostingStructuredData({ post }: BlogPostingStructuredDataPro
     description: post.excerpt,
     datePublished: post.publishedAt,
     dateModified: post.publishedAt,
+    image: {
+      "@type": "ImageObject",
+      url: `${profile.siteUrl}/writing/${post.slug}/opengraph-image`,
+      width: 1200,
+      height: 630,
+    },
     author: {
       "@type": "Person",
       name: profile.name,

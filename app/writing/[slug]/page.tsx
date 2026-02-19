@@ -11,6 +11,8 @@ import { BlogPostingStructuredData } from "@/components/writing/BlogPostingStruc
 import { profile } from "@/constants/profile";
 import type { Metadata } from "next";
 
+export const revalidate = 3600;
+
 interface PostPageProps {
   params: Promise<{ slug: string }>;
 }

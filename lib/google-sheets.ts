@@ -1,4 +1,5 @@
 import { google } from "googleapis";
+import { unstable_cache } from "next/cache";
 import type { ProposalData } from "@/types/proposal";
 
 // Re-declare types here to avoid circular dependency with lib/content
@@ -145,9 +146,9 @@ const BLOG_COLUMNS = {
 };
 
 /**
- * Fetch all published blog posts from Google Sheets
+ * Fetch all published blog posts from Google Sheets (raw, uncached)
  */
-export async function getAllBlogPosts(): Promise<SheetBlogPost[]> {
+async function fetchAllBlogPosts(): Promise<SheetBlogPost[]> {
   try {
     const sheets = getGoogleSheetsClient();
 
@@ -178,6 +179,15 @@ export async function getAllBlogPosts(): Promise<SheetBlogPost[]> {
     return [];
   }
 }
+
+/**
+ * Fetch all published blog posts from Google Sheets (cached for 1 hour)
+ */
+export const getAllBlogPosts = unstable_cache(
+  fetchAllBlogPosts,
+  ["blog-posts"],
+  { revalidate: 3600 }
+);
 
 /**
  * Fetch a single blog post by slug from Google Sheets
