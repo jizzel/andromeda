@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Project } from "@/constants/projects";
 import { ProjectExpansion } from "./ProjectExpansion";
+import { MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useKeyboardNav } from "@/lib/hooks/useKeyboardNav";
 import { useAnalytics } from "@/lib/hooks/useAnalytics";
@@ -91,6 +92,16 @@ export function ProjectCard({ project }: ProjectCardProps) {
             {project.status}
           </Badge>
         </div>
+
+        {/* Location */}
+        {project.location && (
+          <div className="flex justify-end mt-3">
+            <div className="flex items-center gap-1.5 text-xs text-[var(--andromeda-text-secondary)]/60">
+              <MapPin size={12} className="opacity-40" />
+              <span>{project.location}</span>
+            </div>
+          </div>
+        )}
 
         {/* Expanded State */}
         <motion.div
