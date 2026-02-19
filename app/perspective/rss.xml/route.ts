@@ -8,19 +8,19 @@ export async function GET() {
   const rss = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>${profile.surname} - Writing</title>
-    <link>${siteUrl}/writing</link>
+    <title>${profile.surname} - Perspectives</title>
+    <link>${siteUrl}/perspective</link>
     <description>Thoughts on system design, monitoring, automation, and building reliable software.</description>
     <language>en-us</language>
     <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
-    <atom:link href="${siteUrl}/writing/rss.xml" rel="self" type="application/rss+xml"/>
+    <atom:link href="${siteUrl}/perspective/rss.xml" rel="self" type="application/rss+xml"/>
     ${posts
       .map(
         (post) => `
     <item>
       <title>${escapeXml(post.title)}</title>
-      <link>${siteUrl}/writing/${post.slug}</link>
-      <guid isPermaLink="true">${siteUrl}/writing/${post.slug}</guid>
+      <link>${siteUrl}/perspective/${post.slug}</link>
+      <guid isPermaLink="true">${siteUrl}/perspective/${post.slug}</guid>
       <description>${escapeXml(post.excerpt)}</description>
       <pubDate>${new Date(post.publishedAt).toUTCString()}</pubDate>
       <category>${escapeXml(post.category)}</category>

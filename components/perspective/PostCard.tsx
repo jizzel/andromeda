@@ -3,10 +3,10 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { Clock, Calendar } from "lucide-react";
-import type { WritingPost } from "@/lib/content";
+import type { PerspectivePost } from "@/lib/content";
 
 interface PostCardProps {
-  post: WritingPost;
+  post: PerspectivePost;
   index: number;
 }
 
@@ -27,7 +27,7 @@ export function PostCard({ post, index }: PostCardProps) {
         ease: [0.33, 1, 0.68, 1],
       }}
     >
-      <Link href={`/writing/${post.slug}`} className="block group">
+      <Link href={`/perspective/${post.slug}`} className="block group">
         <motion.div
           className="bg-[var(--andromeda-secondary)] rounded-lg p-6 border border-white/10 light:border-black/10 h-full transition-all duration-200"
           style={{

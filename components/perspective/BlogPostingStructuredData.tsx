@@ -1,8 +1,8 @@
 import { profile } from "@/constants/profile";
-import type { WritingPost } from "@/lib/content";
+import type { PerspectivePost } from "@/lib/content";
 
 interface BlogPostingStructuredDataProps {
-  post: WritingPost;
+  post: PerspectivePost;
 }
 
 export function BlogPostingStructuredData({ post }: BlogPostingStructuredDataProps) {
@@ -15,7 +15,7 @@ export function BlogPostingStructuredData({ post }: BlogPostingStructuredDataPro
     dateModified: post.publishedAt,
     image: {
       "@type": "ImageObject",
-      url: `${profile.siteUrl}/writing/${post.slug}/opengraph-image`,
+      url: `${profile.siteUrl}/perspective/${post.slug}/opengraph-image`,
       width: 1200,
       height: 630,
     },
@@ -31,7 +31,7 @@ export function BlogPostingStructuredData({ post }: BlogPostingStructuredDataPro
     },
     mainEntityOfPage: {
       "@type": "WebPage",
-      "@id": `${profile.siteUrl}/writing/${post.slug}`,
+      "@id": `${profile.siteUrl}/perspective/${post.slug}`,
     },
     articleSection: post.category,
     keywords: post.tags.join(", "),

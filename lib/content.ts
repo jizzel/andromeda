@@ -4,11 +4,11 @@ import matter from "gray-matter";
 import readingTime from "reading-time";
 import { getAllBlogPosts, getBlogPostBySlug } from "@/lib/google-sheets";
 
-const contentDirectory = path.join(process.cwd(), "content/writing");
+const contentDirectory = path.join(process.cwd(), "content/perspective");
 
 export type PostCategory = "System Design" | "Monitoring" | "Automation" | "Research";
 
-export interface WritingPost {
+export interface PerspectivePost {
   slug: string;
   title: string;
   excerpt: string;
@@ -69,7 +69,7 @@ function parseMDXFile(
   categoryFolder: string,
   fileName: string,
   includeContent = false
-): WritingPost {
+): PerspectivePost {
   const filePath = path.join(contentDirectory, categoryFolder, fileName);
   const fileContents = fs.readFileSync(filePath, "utf8");
   const { data, content } = matter(fileContents);
@@ -92,7 +92,7 @@ function parseMDXFile(
 /**
  * Get all local MDX posts (sync helper)
  */
-function getLocalPosts(includeContent = false): WritingPost[] {
+function getLocalPosts(includeContent = false): PerspectivePost[] {
   const files = getAllMDXFiles();
   return files.map(({ categoryFolder, fileName }) =>
     parseMDXFile(categoryFolder, fileName, includeContent)
@@ -103,7 +103,7 @@ function getLocalPosts(includeContent = false): WritingPost[] {
  * Get all writing posts sorted by date (newest first)
  * Merges local MDX posts with Google Sheets posts
  */
-export async function getAllPosts(): Promise<WritingPost[]> {
+export async function getAllPosts(): Promise<PerspectivePost[]> {
   const localPosts = getLocalPosts();
   const sheetPosts = await getAllBlogPosts();
 
@@ -127,7 +127,7 @@ export async function getAllPosts(): Promise<WritingPost[]> {
 /**
  * Get posts filtered by category
  */
-export async function getPostsByCategory(category: PostCategory): Promise<WritingPost[]> {
+export async function getPostsByCategory(category: PostCategory): Promise<PerspectivePost[]> {
   const allPosts = await getAllPosts();
   return allPosts.filter((post) => post.category === category);
 }
@@ -135,7 +135,7 @@ export async function getPostsByCategory(category: PostCategory): Promise<Writin
 /**
  * Get a single post by slug
  */
-export async function getPostBySlug(slug: string): Promise<WritingPost | null> {
+export async function getPostBySlug(slug: string): Promise<PerspectivePost | null> {
   // Try local MDX first
   const files = getAllMDXFiles();
   for (const { categoryFolder, fileName } of files) {
@@ -185,7 +185,7 @@ export async function getAllTags(): Promise<string[]> {
 /**
  * Get related posts based on category and tags
  */
-export async function getRelatedPosts(slug: string, limit = 3): Promise<WritingPost[]> {
+export async function getRelatedPosts(slug: string, limit = 3): Promise<PerspectivePost[]> {
   const currentPost = await getPostBySlug(slug);
   if (!currentPost) return [];
 

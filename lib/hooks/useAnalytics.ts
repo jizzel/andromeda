@@ -10,8 +10,8 @@ import { track } from "@vercel/analytics";
  * - project_expanded: When a project card is expanded
  * - project_case_study_viewed: When viewing a project case study page
  * - cta_clicked: When a CTA button is clicked
- * - writing_post_viewed: When viewing a blog post
- * - writing_category_filtered: When filtering blog posts by category
+ * - perspective_post_viewed: When viewing a blog post
+ * - perspective_category_filtered: When filtering blog posts by category
  * - theme_toggled: When theme is switched
  * - screenshot_lightbox_opened: When opening screenshot lightbox
  * - video_played: When playing a project video
@@ -37,13 +37,13 @@ interface CTAClickedEvent {
   location: string;
 }
 
-interface WritingPostViewedEvent {
+interface PerspectivePostViewedEvent {
   post_slug: string;
   category: string;
   read_time: number;
 }
 
-interface WritingCategoryFilteredEvent {
+interface PerspectiveCategoryFilteredEvent {
   category: string;
 }
 
@@ -79,12 +79,12 @@ export const useAnalytics = () => {
     track("cta_clicked", data as unknown as Record<string, string | number | boolean>);
   };
 
-  const trackWritingPostViewed = (data: WritingPostViewedEvent) => {
-    track("writing_post_viewed", data as unknown as Record<string, string | number | boolean>);
+  const trackPerspectivePostViewed = (data: PerspectivePostViewedEvent) => {
+    track("perspective_post_viewed", data as unknown as Record<string, string | number | boolean>);
   };
 
-  const trackWritingCategoryFiltered = (data: WritingCategoryFilteredEvent) => {
-    track("writing_category_filtered", data as unknown as Record<string, string | number | boolean>);
+  const trackPerspectiveCategoryFiltered = (data: PerspectiveCategoryFilteredEvent) => {
+    track("perspective_category_filtered", data as unknown as Record<string, string | number | boolean>);
   };
 
   const trackThemeToggled = (data: ThemeToggledEvent) => {
@@ -104,8 +104,8 @@ export const useAnalytics = () => {
     trackProjectExpanded,
     trackProjectCaseStudyViewed,
     trackCTAClicked,
-    trackWritingPostViewed,
-    trackWritingCategoryFiltered,
+    trackPerspectivePostViewed,
+    trackPerspectiveCategoryFiltered,
     trackThemeToggled,
     trackScreenshotLightboxOpened,
     trackVideoPlayed,
