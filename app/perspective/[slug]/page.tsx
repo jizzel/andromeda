@@ -2,21 +2,23 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Clock, Calendar } from "lucide-react";
 import { getPostBySlug, getAllPosts, getRelatedPosts } from "@/lib/content";
-import { PostWrapper } from "@/components/writing/PostWrapper";
-import { MDXContent } from "@/components/writing/MDXContent";
+import { PostWrapper } from "@/components/perspective/PostWrapper";
+import { MDXContent } from "@/components/perspective/MDXContent";
 import { ScrollReveal } from "@/components/animations/ScrollReveal";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
-import { ReadingProgress } from "@/components/writing/ReadingProgress";
-import { BlogPostingStructuredData } from "@/components/writing/BlogPostingStructuredData";
+import { ReadingProgress } from "@/components/perspective/ReadingProgress";
+import { BlogPostingStructuredData } from "@/components/perspective/BlogPostingStructuredData";
 import { profile } from "@/constants/profile";
 import type { Metadata } from "next";
+
+export const revalidate = 3600;
 
 interface PostPageProps {
   params: Promise<{ slug: string }>;
 }
 
 export async function generateStaticParams() {
-  const posts = getAllPosts();
+  const posts = await getAllPosts();
   return posts.map((post) => ({
     slug: post.slug,
   }));
@@ -24,7 +26,7 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: PostPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const post = getPostBySlug(slug);
+  const post = await getPostBySlug(slug);
 
   if (!post) {
     return {
@@ -53,13 +55,13 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
 
 export default async function PostPage({ params }: PostPageProps) {
   const { slug } = await params;
-  const post = getPostBySlug(slug);
+  const post = await getPostBySlug(slug);
 
   if (!post) {
     notFound();
   }
 
-  const relatedPosts = getRelatedPosts(slug);
+  const relatedPosts = await getRelatedPosts(slug);
 
   const formattedDate = new Date(post.publishedAt).toLocaleDateString("en-US", {
     year: "numeric",
@@ -75,11 +77,11 @@ export default async function PostPage({ params }: PostPageProps) {
         {/* Back Button */}
         <div className="max-w-3xl mx-auto mb-8">
           <Link
-            href="/writing"
+            href="/perspective"
             className="inline-flex items-center gap-2 text-[var(--andromeda-text-secondary)] hover:text-[var(--andromeda-text-primary)] transition-colors"
           >
             <ArrowLeft size={16} />
-            <span>Back to Writing</span>
+            <span>Back to Perspectives</span>
           </Link>
         </div>
 
@@ -88,7 +90,7 @@ export default async function PostPage({ params }: PostPageProps) {
           <Breadcrumb
             items={[
               { label: "Home", href: "/" },
-              { label: "Writing", href: "/writing" },
+              { label: "Perspective", href: "/perspective" },
               { label: post.title },
             ]}
           />
@@ -152,7 +154,7 @@ export default async function PostPage({ params }: PostPageProps) {
                   {relatedPosts.map((relatedPost) => (
                     <Link
                       key={relatedPost.slug}
-                      href={`/writing/${relatedPost.slug}`}
+                      href={`/perspective/${relatedPost.slug}`}
                       className="block group"
                     >
                       <div className="bg-[var(--andromeda-secondary)] rounded-lg p-4 border border-white/10 light:border-black/10 transition-all duration-200 hover:translate-x-1">

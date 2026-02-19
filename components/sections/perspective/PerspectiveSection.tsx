@@ -5,11 +5,11 @@ import { ArrowUpRight } from "lucide-react";
 import { ScrollReveal } from "@/components/animations/ScrollReveal";
 import { motion } from "framer-motion";
 
-export function WritingSection() {
+export function PerspectiveSection() {
   return (
     <section
       className="relative w-full py-32 px-6 bg-[var(--andromeda-primary)]"
-      aria-label="Writing section"
+      aria-label="Perspectives section"
     >
       <div className="max-w-4xl mx-auto">
         <ScrollReveal>
@@ -19,14 +19,14 @@ export function WritingSection() {
               Articles on software engineering, system design, and the practical realities of building reliable software that holds up in production and scales correctly.
             </p>
 
-            {/* Minimal link to writing page */}
-            <Link href="/writing">
+            {/* Minimal link to perspective page */}
+            <Link href="/perspective">
               <motion.span
                 className="inline-flex items-center gap-2 text-[var(--andromeda-text-primary)] hover:text-[var(--andromeda-highlight)] transition-colors text-base"
                 whileHover={{ x: 4 }}
                 transition={{ duration: 0.2, ease: [0.33, 1, 0.68, 1] }}
               >
-                <span>View writing</span>
+                <span>View perspectives</span>
                 <ArrowUpRight size={18} />
               </motion.span>
             </Link>

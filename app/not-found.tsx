@@ -58,10 +58,10 @@ export default function NotFound() {
               </Link>
               <span className="text-[var(--andromeda-text-secondary)]">·</span>
               <Link
-                href="/writing"
+                href="/perspective"
                 className="text-[var(--andromeda-highlight)] hover:underline transition-colors"
               >
-                Writing
+                Perspectives
               </Link>
               <span className="text-[var(--andromeda-text-secondary)]">·</span>
               <Link

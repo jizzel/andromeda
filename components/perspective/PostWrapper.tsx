@@ -11,15 +11,15 @@ interface PostWrapperProps {
 }
 
 export function PostWrapper({ slug, category, readTime, children }: PostWrapperProps) {
-  const { trackWritingPostViewed } = useAnalytics();
+  const { trackPerspectivePostViewed } = useAnalytics();
 
   useEffect(() => {
-    trackWritingPostViewed({
+    trackPerspectivePostViewed({
       post_slug: slug,
       category: category,
       read_time: readTime,
     });
-  }, [slug, category, readTime, trackWritingPostViewed]);
+  }, [slug, category, readTime, trackPerspectivePostViewed]);
 
   return <>{children}</>;
 }

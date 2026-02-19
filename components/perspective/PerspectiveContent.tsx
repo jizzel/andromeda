@@ -2,20 +2,20 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import type { WritingPost, PostCategory } from "@/lib/content";
+import type { PerspectivePost, PostCategory } from "@/lib/content";
 import { CategoryFilter } from "./CategoryFilter";
 import { PostCard } from "./PostCard";
 import { ScrollReveal } from "@/components/animations/ScrollReveal";
 import { useAnalytics } from "@/lib/hooks/useAnalytics";
 
-interface WritingContentProps {
-  posts: WritingPost[];
+interface PerspectiveContentProps {
+  posts: PerspectivePost[];
   categories: PostCategory[];
 }
 
-export function WritingContent({ posts, categories }: WritingContentProps) {
+export function PerspectiveContent({ posts, categories }: PerspectiveContentProps) {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const { trackWritingCategoryFiltered } = useAnalytics();
+  const { trackPerspectiveCategoryFiltered } = useAnalytics();
 
   const filteredPosts = activeCategory
     ? posts.filter((post) => post.category === activeCategory)
@@ -24,7 +24,7 @@ export function WritingContent({ posts, categories }: WritingContentProps) {
   const handleCategoryChange = (category: string | null) => {
     setActiveCategory(category);
     if (category) {
-      trackWritingCategoryFiltered({ category });
+      trackPerspectiveCategoryFiltered({ category });
     }
   };
 
@@ -35,10 +35,10 @@ export function WritingContent({ posts, categories }: WritingContentProps) {
         <ScrollReveal>
           <div className="mb-12">
             <h1 className="text-5xl md:text-6xl font-bold mb-4 text-[var(--andromeda-text-primary)]">
-              Writing
+              Perspectives
             </h1>
             <p className="text-lg text-[var(--andromeda-text-secondary)] max-w-2xl">
-              Thoughts on systems design, monitoring, automation, and the practice
+              Thoughts on system design, monitoring, automation, and the practice
               of building software that works.
             </p>
           </div>
