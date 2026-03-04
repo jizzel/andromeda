@@ -222,7 +222,7 @@ export function ProposalScope({ phases }: ProposalScopeProps) {
             Scope of Work
           </h2>
           <p className="text-lg text-[var(--andromeda-text-secondary)] mb-12">
-            Phase 1 deliverables designed for immediate impact
+            Phase deliverables designed for immediate impact
           </p>
         </ScrollReveal>
 
