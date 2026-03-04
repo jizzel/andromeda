@@ -96,11 +96,13 @@ export interface ProposalInspiration {
   name: string;
   url: string;
   image: string;
+  description?: string;
 }
 
 export interface ProposalInspirations {
-  hotel: ProposalInspiration[];
-  restaurant: ProposalInspiration[];
+  hotel?: ProposalInspiration[];
+  restaurant?: ProposalInspiration[];
+  items?: ProposalInspiration[];
 }
 
 export interface ProposalAccess {
@@ -110,6 +112,7 @@ export interface ProposalAccess {
 }
 
 export interface ProposalData {
+  proposalType?: string;
   client: ProposalClient;
   title: string;
   subtitle: string;
@@ -122,13 +125,14 @@ export interface ProposalData {
   phases: ProposalPhase[];
   packages: ProposalPackage[];
   paymentPlans: ProposalPaymentPlan[];
+  paymentClarification?: string;
   timeline: ProposalTimelineItem[];
   clientResponsibilities: ProposalRequirement[];
-  revisions: ProposalRevisions;
+  revisions?: ProposalRevisions;
   hosting: ProposalHosting;
-  exclusions: string[];
-  inspirations: ProposalInspirations;
-  phase2Preview: string[];
+  exclusions?: string[];
+  inspirations?: ProposalInspirations;
+  phase2Preview?: string[];
 }
 
 export interface ProposalSheetRow extends ProposalAccess {

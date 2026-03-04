@@ -18,16 +18,19 @@ interface ProposalContentProps {
 
 export function ProposalContent({ proposal }: ProposalContentProps) {
   // Flatten inspirations for the component
-  const allInspirations = [
-    ...proposal.inspirations.hotel.map((item) => ({
+  const allInspirations = proposal.inspirations ? [
+    ...(proposal.inspirations.items || []),
+    ...(proposal.inspirations.hotel || []).map((item) => ({
       ...item,
-      description: "Hotel website design inspiration",
+      description: item.description || "Design inspiration",
     })),
-    ...proposal.inspirations.restaurant.map((item) => ({
+    ...(proposal.inspirations.restaurant || []).map((item) => ({
       ...item,
-      description: "Restaurant website design inspiration",
+      description: item.description || "Design inspiration",
     })),
-  ];
+  ] : [];
+
+  const hasInspirations = allInspirations.length > 0;
 
   return (
     <main className="min-h-screen bg-[var(--andromeda-primary)]">
@@ -47,22 +50,28 @@ export function ProposalContent({ proposal }: ProposalContentProps) {
       />
 
       {/* Goals Section */}
-      <ProposalGoals goals={proposal.goals} />
+      {proposal.goals && proposal.goals.length > 0 && <ProposalGoals goals={proposal.goals} />}
 
       {/* Scope of Work Section */}
-      <ProposalScope phases={proposal.phases} />
+      {proposal.phases && proposal.phases.length > 0 && <ProposalScope phases={proposal.phases} />}
 
       {/* Pricing Summary Section */}
-      <ProposalPricing packages={proposal.packages} />
+      {proposal.packages && proposal.packages.length > 0 && <ProposalPricing packages={proposal.packages} />}
 
       {/* Payment Plans Section */}
-      <ProposalPaymentPlans plans={proposal.paymentPlans} />
+      {proposal.paymentPlans && proposal.paymentPlans.length > 0 && (
+        <ProposalPaymentPlans 
+          plans={proposal.paymentPlans} 
+          clarification={proposal.paymentClarification}
+        />
+      )}
 
       {/* Timeline Section */}
-      <ProposalTimeline
-        timeline={proposal.timeline}
-        totalDuration="4-8 weeks"
-      />
+      {proposal.timeline && proposal.timeline.length > 0 && (
+        <ProposalTimeline
+          timeline={proposal.timeline}
+        />
+      )}
 
       {/* Client Responsibilities Section */}
       <ProposalRequirements
@@ -72,7 +81,7 @@ export function ProposalContent({ proposal }: ProposalContentProps) {
       />
 
       {/* Design Inspirations Section */}
-      <ProposalInspirations inspirations={allInspirations} />
+      {hasInspirations && <ProposalInspirations inspirations={allInspirations} />}
 
       {/* Call to Action Section */}
       <ProposalCTA

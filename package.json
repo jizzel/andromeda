@@ -2,6 +2,10 @@
   "name": "andromeda",
   "version": "0.1.0",
   "private": true,
+  "author": {
+    "name": "Joseph Afriyie Attakorah",
+    "email": "joseph@attakorah.com"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",

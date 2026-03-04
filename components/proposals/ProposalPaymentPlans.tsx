@@ -24,6 +24,7 @@ interface PaymentPlan {
 
 interface ProposalPaymentPlansProps {
   plans: PaymentPlan[];
+  clarification?: string;
 }
 
 const badgeIcons: Record<string, typeof Sparkles> = {
@@ -32,7 +33,7 @@ const badgeIcons: Record<string, typeof Sparkles> = {
   "Maximum Flexibility": CalendarDays,
 };
 
-export function ProposalPaymentPlans({ plans }: ProposalPaymentPlansProps) {
+export function ProposalPaymentPlans({ plans, clarification }: ProposalPaymentPlansProps) {
   return (
     <section
       id="payment-plans"
@@ -150,16 +151,18 @@ export function ProposalPaymentPlans({ plans }: ProposalPaymentPlansProps) {
         </div>
 
         {/* Important Note */}
-        <ScrollReveal delay={0.4}>
-          <div className="mt-12 p-6 rounded-lg bg-[var(--andromeda-secondary)] border border-white/10 light:border-black/10">
-            <h4 className="text-sm font-semibold text-[var(--andromeda-text-primary)] mb-2">
-              Important Clarification on Social Media Services
-            </h4>
-            <p className="text-sm text-[var(--andromeda-text-secondary)]">
-              Full social media management, including content creation, daily engagement, and active audience growth, is not included beyond the first month in any payment plan. Ongoing social media management is available as a separate monthly retainer, priced per brand.
-            </p>
-          </div>
-        </ScrollReveal>
+        {clarification && (
+          <ScrollReveal delay={0.4}>
+            <div className="mt-12 p-6 rounded-lg bg-[var(--andromeda-secondary)] border border-white/10 light:border-black/10">
+              <h4 className="text-sm font-semibold text-[var(--andromeda-text-primary)] mb-2">
+                Important Clarification
+              </h4>
+              <p className="text-sm text-[var(--andromeda-text-secondary)] italic">
+                {clarification}
+              </p>
+            </div>
+          </ScrollReveal>
+        )}
       </div>
     </section>
   );

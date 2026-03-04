@@ -9,7 +9,7 @@ interface Inspiration {
   name: string;
   url: string;
   image: string;
-  description: string;
+  description?: string;
 }
 
 interface ProposalInspirationsProps {
