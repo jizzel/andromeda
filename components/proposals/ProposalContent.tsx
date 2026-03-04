@@ -11,23 +11,23 @@ import { ProposalTimeline } from "@/components/proposals/ProposalTimeline";
 import { ProposalRequirements } from "@/components/proposals/ProposalRequirements";
 import { ProposalInspirations } from "@/components/proposals/ProposalInspirations";
 import { ProposalCTA } from "@/components/proposals/ProposalCTA";
+import type { ProposalInspiration } from "@/types/proposal";
 
 interface ProposalContentProps {
   proposal: ProposalData;
 }
 
+const mapInspirationWithDefault = (item: ProposalInspiration) => ({
+  ...item,
+  description: item.description || "Design inspiration",
+});
+
 export function ProposalContent({ proposal }: ProposalContentProps) {
   // Flatten inspirations for the component
   const allInspirations = proposal.inspirations ? [
-    ...(proposal.inspirations.items || []),
-    ...(proposal.inspirations.hotel || []).map((item) => ({
-      ...item,
-      description: item.description || "Design inspiration",
-    })),
-    ...(proposal.inspirations.restaurant || []).map((item) => ({
-      ...item,
-      description: item.description || "Design inspiration",
-    })),
+    ...(proposal.inspirations.items || []).map(mapInspirationWithDefault),
+    ...(proposal.inspirations.hotel || []).map(mapInspirationWithDefault),
+    ...(proposal.inspirations.restaurant || []).map(mapInspirationWithDefault),
   ] : [];
 
   const hasInspirations = allInspirations.length > 0;
