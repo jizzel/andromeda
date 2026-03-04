@@ -2,7 +2,14 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Lock, ArrowRight, AlertCircle, Loader2 } from "lucide-react";
+import {
+  Lock,
+  ArrowRight,
+  AlertCircle,
+  Loader2,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface ProposalAccessGateProps {
@@ -15,6 +22,7 @@ export function ProposalAccessGate({
   onAccessGranted,
 }: ProposalAccessGateProps) {
   const [accessCode, setAccessCode] = useState("");
+  const [showAccessCode, setShowAccessCode] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -69,21 +77,34 @@ export function ProposalAccessGate({
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
+          <div className="relative">
             <label htmlFor="accessCode" className="sr-only">
               Access Code
             </label>
             <input
               id="accessCode"
-              type="text"
+              type={showAccessCode ? "text" : "password"}
               value={accessCode}
               onChange={(e) => setAccessCode(e.target.value)}
               placeholder="Enter access code"
-              className="w-full px-4 py-3 rounded-lg bg-[var(--andromeda-secondary)] border border-white/10 light:border-black/10 text-[var(--andromeda-text-primary)] placeholder:text-[var(--andromeda-text-secondary)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--andromeda-accent-beige)]/50 focus:border-transparent transition-all text-center text-lg tracking-widest uppercase"
+              className="w-full pl-12 pr-12 py-3 rounded-lg bg-[var(--andromeda-secondary)] border border-white/10 light:border-black/10 text-[var(--andromeda-text-primary)] placeholder:text-[var(--andromeda-text-secondary)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--andromeda-accent-beige)]/50 focus:border-transparent transition-all text-center text-lg tracking-widest uppercase"
               autoComplete="off"
               autoFocus
               disabled={isLoading}
             />
+            <button
+              type="button"
+              onClick={() => setShowAccessCode(!showAccessCode)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-[var(--andromeda-text-secondary)]/50 hover:text-[var(--andromeda-text-primary)] transition-colors focus:outline-none"
+              disabled={isLoading}
+              aria-label={showAccessCode ? "Hide access code" : "Show access code"}
+            >
+              {showAccessCode ? (
+                <EyeOff className="w-5 h-5" />
+              ) : (
+                <Eye className="w-5 h-5" />
+              )}
+            </button>
           </div>
 
           {/* Error Message */}
