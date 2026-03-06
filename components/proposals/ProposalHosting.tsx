@@ -3,14 +3,10 @@
 import { ScrollReveal } from "@/components/animations/ScrollReveal";
 import { motion } from "framer-motion";
 import { Server, Check, Info } from "lucide-react";
+import type { ProposalHosting as ProposalHostingType } from "@/types/proposal";
 
 interface ProposalHostingProps {
-  hosting: {
-    annual: string;
-    monthly: string;
-    includes: string[];
-    note: string;
-  };
+  hosting: ProposalHostingType;
 }
 
 export function ProposalHosting({ hosting }: ProposalHostingProps) {

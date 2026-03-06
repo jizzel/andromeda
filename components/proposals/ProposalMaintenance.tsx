@@ -3,25 +3,18 @@
 import { ScrollReveal } from "@/components/animations/ScrollReveal";
 import { motion } from "framer-motion";
 import { ShieldCheck, Check, X, Info, Settings } from "lucide-react";
-
-interface MaintenancePlan {
-  name: string;
-  price: string;
-  billing: string;
-}
+import type { ProposalMaintenance as ProposalMaintenanceType } from "@/types/proposal";
 
 interface ProposalMaintenanceProps {
-  maintenance: {
-    title: string;
-    description: string;
-    includes: string[];
-    excludes: string[];
-    plans: MaintenancePlan[];
-    note: string;
-  };
+  maintenance: ProposalMaintenanceType;
 }
 
 export function ProposalMaintenance({ maintenance }: ProposalMaintenanceProps) {
+  // Don't render if there's no meaningful data
+  if (!maintenance.title && maintenance.includes.length === 0 && maintenance.excludes.length === 0 && maintenance.plans.length === 0) {
+    return null;
+  }
+
   return (
     <section
       id="maintenance"
