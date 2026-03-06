@@ -129,7 +129,7 @@ export interface ProposalData {
   timeline: ProposalTimelineItem[];
   clientResponsibilities: ProposalRequirement[];
   revisions?: ProposalRevisions;
-  hosting: ProposalHosting;
+  hosting?: ProposalHosting;
   exclusions?: string[];
   inspirations?: ProposalInspirations;
   phase2Preview?: string[];
