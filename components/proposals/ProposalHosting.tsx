@@ -51,17 +51,27 @@ export function ProposalHosting({ hosting }: ProposalHostingProps) {
                 Investment
               </h3>
               
-              {hosting.annual && hosting.annual !== "N/A" && (
+              {((hosting.annual && hosting.annual !== "N/A") || (hosting.monthly && hosting.monthly !== "N/A")) ? (
+                <>
+                  {hosting.annual && hosting.annual !== "N/A" && (
+                    <div className="mb-6">
+                      <p className="text-xs text-[var(--andromeda-text-secondary)] mb-1">Annual</p>
+                      <p className="text-2xl font-bold text-[var(--andromeda-accent-beige)]">{hosting.annual}</p>
+                    </div>
+                  )}
+                  
+                  {hosting.monthly && hosting.monthly !== "N/A" && (
+                    <div className="mb-6">
+                      <p className="text-xs text-[var(--andromeda-text-secondary)] mb-1">Monthly</p>
+                      <p className="text-2xl font-bold text-[var(--andromeda-accent-beige)]">{hosting.monthly}</p>
+                    </div>
+                  )}
+                </>
+              ) : (
                 <div className="mb-6">
-                  <p className="text-xs text-[var(--andromeda-text-secondary)] mb-1">Annual</p>
-                  <p className="text-2xl font-bold text-[var(--andromeda-accent-beige)]">{hosting.annual}</p>
-                </div>
-              )}
-              
-              {hosting.monthly && hosting.monthly !== "N/A" && (
-                <div className="mb-6">
-                  <p className="text-xs text-[var(--andromeda-text-secondary)] mb-1">Monthly</p>
-                  <p className="text-2xl font-bold text-[var(--andromeda-accent-beige)]">{hosting.monthly}</p>
+                  <p className="text-sm text-[var(--andromeda-text-secondary)] italic">
+                    Infrastructure included in standard agreement.
+                  </p>
                 </div>
               )}
 
