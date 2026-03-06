@@ -92,6 +92,21 @@ export interface ProposalHosting {
   note: string;
 }
 
+export interface ProposalMaintenancePlan {
+  name: string;
+  price: string;
+  billing: string;
+}
+
+export interface ProposalMaintenance {
+  title: string;
+  description: string;
+  includes: string[];
+  excludes: string[];
+  plans: ProposalMaintenancePlan[];
+  note: string;
+}
+
 export interface ProposalInspiration {
   name: string;
   url: string;
@@ -129,7 +144,8 @@ export interface ProposalData {
   timeline: ProposalTimelineItem[];
   clientResponsibilities: ProposalRequirement[];
   revisions?: ProposalRevisions;
-  hosting: ProposalHosting;
+  hosting?: ProposalHosting;
+  maintenance?: ProposalMaintenance;
   exclusions?: string[];
   inspirations?: ProposalInspirations;
   phase2Preview?: string[];

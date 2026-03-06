@@ -7,6 +7,8 @@ import { ProposalGoals } from "@/components/proposals/ProposalGoals";
 import { ProposalScope } from "@/components/proposals/ProposalScope";
 import { ProposalPricing } from "@/components/proposals/ProposalPricing";
 import { ProposalPaymentPlans } from "@/components/proposals/ProposalPaymentPlans";
+import { ProposalHosting } from "@/components/proposals/ProposalHosting";
+import { ProposalMaintenance } from "@/components/proposals/ProposalMaintenance";
 import { ProposalTimeline } from "@/components/proposals/ProposalTimeline";
 import { ProposalRequirements } from "@/components/proposals/ProposalRequirements";
 import { ProposalInspirations } from "@/components/proposals/ProposalInspirations";
@@ -64,6 +66,16 @@ export function ProposalContent({ proposal }: ProposalContentProps) {
           plans={proposal.paymentPlans} 
           clarification={proposal.paymentClarification}
         />
+      )}
+
+      {/* Hosting & Infrastructure Section */}
+      {proposal.hosting && (
+        <ProposalHosting hosting={proposal.hosting} />
+      )}
+
+      {/* Support & Maintenance Section */}
+      {proposal.maintenance && (
+        <ProposalMaintenance maintenance={proposal.maintenance} />
       )}
 
       {/* Timeline Section */}
