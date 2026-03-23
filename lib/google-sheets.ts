@@ -112,7 +112,7 @@ export async function getProposalById(
 export async function verifyProposalAccess(
   proposalId: string,
   accessCode: string
-): Promise<{ success: boolean; proposal?: ProposalData; error?: string }> {
+): Promise<{ success: boolean; proposal?: ProposalData; expiryDate?: string; error?: string }> {
   try {
     const proposal = await getProposalById(proposalId);
 
@@ -136,7 +136,7 @@ export async function verifyProposalAccess(
       return { success: false, error: "Invalid access code" };
     }
 
-    return { success: true, proposal: proposal.data };
+    return { success: true, proposal: proposal.data, expiryDate: proposal.expiryDate };
   } catch (error) {
     console.error("Error verifying proposal access:", error);
     return { success: false, error: "Unable to verify access. Please try again." };

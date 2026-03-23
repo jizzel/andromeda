@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, CalendarDays } from "lucide-react";
 import Image from "next/image";
 
 interface ProposalHeroProps {
@@ -9,9 +9,13 @@ interface ProposalHeroProps {
   subtitle: string;
   clientName: string;
   backgroundImage: string;
+  issuedAt?: string;
 }
 
-export function ProposalHero({ title, subtitle, clientName, backgroundImage }: ProposalHeroProps) {
+export function ProposalHero({ title, subtitle, clientName, backgroundImage, issuedAt }: ProposalHeroProps) {
+  const formattedIssuedAt = issuedAt
+    ? new Date(issuedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
+    : null;
   const scrollToContent = () => {
     const overviewSection = document.getElementById("overview");
     if (overviewSection) {
@@ -73,6 +77,18 @@ export function ProposalHero({ title, subtitle, clientName, backgroundImage }: P
         >
           {clientName}
         </motion.p>
+
+        {formattedIssuedAt && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.6 }}
+            className="flex items-center justify-center gap-2 mt-6 text-sm text-white/50"
+          >
+            <CalendarDays size={14} />
+            <span>Prepared {formattedIssuedAt}</span>
+          </motion.div>
+        )}
       </div>
 
       {/* Scroll Indicator */}

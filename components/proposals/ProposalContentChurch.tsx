@@ -14,9 +14,10 @@ import type { ProposalDataChurch } from "@/types/proposal";
 
 interface ProposalContentChurchProps {
   proposal: ProposalDataChurch;
+  expiryDate?: string;
 }
 
-export function ProposalContentChurch({ proposal }: ProposalContentChurchProps) {
+export function ProposalContentChurch({ proposal, expiryDate }: ProposalContentChurchProps) {
   return (
     <main className="min-h-screen bg-[var(--andromeda-primary)]">
       {/* Hero Section */}
@@ -25,6 +26,7 @@ export function ProposalContentChurch({ proposal }: ProposalContentChurchProps) 
         subtitle={proposal.subtitle}
         clientName={proposal.client.name}
         backgroundImage={proposal.heroImage}
+        issuedAt={proposal.issuedAt}
       />
 
       {/* Overview Section */}
@@ -82,7 +84,7 @@ export function ProposalContentChurch({ proposal }: ProposalContentChurchProps) 
 
       {/* Call to Action */}
       <ProposalCTA
-        validity={`${proposal.validityDays} days`}
+        expiryDate={expiryDate}
         clientName={proposal.client.name}
         contactEmail={proposal.contactEmail}
         pdfUrl={proposal.pdfUrl}

@@ -131,7 +131,7 @@ export interface ProposalData {
   client: ProposalClient;
   title: string;
   subtitle: string;
-  validityDays: number;
+  issuedAt: string;
   heroImage: string;
   pdfUrl: string;
   contactEmail: string;
@@ -272,4 +272,5 @@ export interface VerifyAccessResponse {
   success: boolean;
   error?: string;
   proposal?: ProposalDataUnion;
+  expiryDate?: string;
 }

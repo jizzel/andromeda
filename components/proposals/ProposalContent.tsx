@@ -17,6 +17,7 @@ import type { ProposalInspiration } from "@/types/proposal";
 
 interface ProposalContentProps {
   proposal: ProposalData;
+  expiryDate?: string;
 }
 
 const mapInspirationWithDefault = (item: ProposalInspiration) => ({
@@ -24,7 +25,7 @@ const mapInspirationWithDefault = (item: ProposalInspiration) => ({
   description: item.description || "Design inspiration",
 });
 
-export function ProposalContent({ proposal }: ProposalContentProps) {
+export function ProposalContent({ proposal, expiryDate }: ProposalContentProps) {
   // Flatten inspirations for the component
   const allInspirations = proposal.inspirations ? [
     ...(proposal.inspirations.items || []).map(mapInspirationWithDefault),
@@ -42,6 +43,7 @@ export function ProposalContent({ proposal }: ProposalContentProps) {
         subtitle={proposal.subtitle}
         clientName={proposal.client.name}
         backgroundImage={proposal.heroImage}
+        issuedAt={proposal.issuedAt}
       />
 
       {/* Overview Section */}
@@ -97,7 +99,7 @@ export function ProposalContent({ proposal }: ProposalContentProps) {
 
       {/* Call to Action Section */}
       <ProposalCTA
-        validity={`${proposal.validityDays} days`}
+        expiryDate={expiryDate}
         clientName={proposal.client.name}
         contactEmail={proposal.contactEmail}
         pdfUrl={proposal.pdfUrl}
