@@ -35,6 +35,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<VerifyAcc
     return NextResponse.json({
       success: true,
       proposal: result.proposal,
+      expiryDate: result.expiryDate,
     });
   } catch (error) {
     console.error("Error in proposal verify API:", error);

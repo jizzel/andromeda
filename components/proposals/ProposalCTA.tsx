@@ -4,10 +4,11 @@ import { ScrollReveal } from "@/components/animations/ScrollReveal";
 import { motion } from "framer-motion";
 import { Calendar, Mail, Clock, ArrowRight, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { formatDate } from "@/lib/dates";
 import { openCalendlyPopup } from "@/lib/calendly";
 
 interface ProposalCTAProps {
-  validity: string;
+  expiryDate?: string;
   clientName: string;
   contactEmail?: string;
   contactPhone?: string;
@@ -15,12 +16,13 @@ interface ProposalCTAProps {
 }
 
 export function ProposalCTA({
-  validity,
+  expiryDate,
   clientName,
   contactEmail = "joseph@attakorah.com",
   contactPhone,
   pdfUrl,
 }: ProposalCTAProps) {
+  const formattedExpiry = expiryDate ? formatDate(expiryDate) : null;
   return (
     <section
       id="next-steps"
@@ -29,13 +31,15 @@ export function ProposalCTA({
     >
       <div className="max-w-3xl mx-auto text-center">
         <ScrollReveal>
-          {/* Validity Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--andromeda-accent-beige)]/10 border border-[var(--andromeda-accent-beige)]/30 mb-8">
-            <Clock className="w-4 h-4 text-[var(--andromeda-accent-beige)]" />
-            <span className="text-sm text-[var(--andromeda-accent-beige)] font-medium">
-              Proposal valid for {validity}
-            </span>
-          </div>
+          {/* Expiry Badge */}
+          {formattedExpiry && (
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--andromeda-accent-beige)]/10 border border-[var(--andromeda-accent-beige)]/30 mb-8">
+              <Clock className="w-4 h-4 text-[var(--andromeda-accent-beige)]" />
+              <span className="text-sm text-[var(--andromeda-accent-beige)] font-medium">
+                This proposal is valid until {formattedExpiry}
+              </span>
+            </div>
+          )}
 
           <h2
             id="cta-heading"
@@ -75,7 +79,7 @@ export function ProposalCTA({
                 variant="outline"
                 className="border-[var(--andromeda-accent-beige)]/50 text-[var(--andromeda-text-primary)] hover:bg-[var(--andromeda-accent-beige)]/10 px-8 py-6 text-base"
               >
-                <a href={pdfUrl} download>
+                <a href={pdfUrl} download target="_blank" rel="noopener noreferrer">
                   <FileDown className="w-5 h-5 mr-2" />
                   Download Proposal
                 </a>

@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { Clock, Calendar } from "lucide-react";
 import type { PerspectivePost } from "@/lib/content";
+import { formatDate } from "@/lib/dates";
 
 interface PostCardProps {
   post: PerspectivePost;
@@ -11,11 +12,7 @@ interface PostCardProps {
 }
 
 export function PostCard({ post, index }: PostCardProps) {
-  const formattedDate = new Date(post.publishedAt).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  const formattedDate = formatDate(post.publishedAt);
 
   return (
     <motion.article

@@ -12,9 +12,11 @@ interface ProposalPageWrapperProps {
 
 export function ProposalPageWrapper({ proposalId }: ProposalPageWrapperProps) {
   const [proposal, setProposal] = useState<ProposalDataUnion | null>(null);
+  const [expiryDate, setExpiryDate] = useState<string | undefined>(undefined);
 
-  const handleAccessGranted = (proposalData: unknown) => {
+  const handleAccessGranted = (proposalData: unknown, expiry?: string) => {
     setProposal(proposalData as ProposalDataUnion);
+    setExpiryDate(expiry);
   };
 
   if (!proposal) {
@@ -28,8 +30,8 @@ export function ProposalPageWrapper({ proposalId }: ProposalPageWrapperProps) {
 
   // Type detection and routing
   if ('proposalType' in proposal && proposal.proposalType === 'church-asset-management') {
-    return <ProposalContentChurch proposal={proposal as ProposalDataChurch} />;
+    return <ProposalContentChurch proposal={proposal as ProposalDataChurch} expiryDate={expiryDate} />;
   }
 
-  return <ProposalContent proposal={proposal as ProposalData} />;
+  return <ProposalContent proposal={proposal as ProposalData} expiryDate={expiryDate} />;
 }
