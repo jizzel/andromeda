@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { ChevronDown, CalendarDays } from "lucide-react";
+import { formatDate } from "@/lib/dates";
 import Image from "next/image";
 
 interface ProposalHeroProps {
@@ -13,9 +14,7 @@ interface ProposalHeroProps {
 }
 
 export function ProposalHero({ title, subtitle, clientName, backgroundImage, issuedAt }: ProposalHeroProps) {
-  const formattedIssuedAt = issuedAt
-    ? new Date(issuedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
-    : null;
+  const formattedIssuedAt = issuedAt ? formatDate(issuedAt) : null;
   const scrollToContent = () => {
     const overviewSection = document.getElementById("overview");
     if (overviewSection) {

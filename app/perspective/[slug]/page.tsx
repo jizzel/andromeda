@@ -9,6 +9,7 @@ import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { ReadingProgress } from "@/components/perspective/ReadingProgress";
 import { BlogPostingStructuredData } from "@/components/perspective/BlogPostingStructuredData";
 import { profile } from "@/constants/profile";
+import { formatDate } from "@/lib/dates";
 import type { Metadata } from "next";
 
 export const revalidate = 3600;
@@ -63,11 +64,7 @@ export default async function PostPage({ params }: PostPageProps) {
 
   const relatedPosts = await getRelatedPosts(slug);
 
-  const formattedDate = new Date(post.publishedAt).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  const formattedDate = formatDate(post.publishedAt);
 
   return (
     <PostWrapper slug={post.slug} category={post.category} readTime={post.readTime}>
