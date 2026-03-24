@@ -1,36 +1,80 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Andromeda — attakorah.com
 
-## Getting Started
+Personal portfolio and professional web presence for [Joseph Afriyie Attakorah](https://attakorah.com) — Software Engineer focused on systems, monitoring, and operations.
 
-First, run the development server:
+## Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Framework**: Next.js 16 (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS v4
+- **Animation**: Framer Motion
+- **3D**: React Three Fiber / Three.js
+- **Content**: MDX (local files) + Google Sheets (remote posts)
+- **Analytics**: Vercel Analytics
+- **Deployment**: Vercel
+
+## Project Structure
+
+```
+app/
+  page.tsx                    # Home page
+  perspective/                # Perspectives (posts) — list + slug pages + RSS
+  projects/[slug]/            # Project case study pages
+  proposal/[id]/              # Protected client proposals (access-gated)
+  api/proposal/verify/        # API route for proposal access verification
+
+components/
+  sections/                   # Page sections (hero, projects, perspective, connect, etc.)
+  perspective/                # Post-related components (card, content, MDX renderer, etc.)
+  proposals/                  # Proposal components (hero, CTA, pricing, timeline, etc.)
+  ui/                         # Shared UI primitives
+  animations/                 # Scroll reveal, motion wrappers
+
+content/
+  perspective/                # Local MDX posts, organised by category
+
+lib/
+  content.ts                  # MDX post loading + Google Sheets merging
+  google-sheets.ts            # Google Sheets client (posts + proposals)
+  dates.ts                    # Shared date formatting utility
+  hooks/                      # useAnalytics, useKeyboardNav, etc.
+
+constants/
+  profile.ts                  # Site-wide identity, SEO, and social links
+  projects.ts                 # Project card data
+  projects-detail.ts          # Full project case study content
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Key Features
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Projects** — Expandable inline cards with location, status badge, and full case study pages
+- **Perspectives** — MDX + Google Sheets hybrid content system at `/perspective`
+- **Proposals** — Access-code protected client proposals with hero, pricing, timeline, and CTA sections
+- **RSS feed** — `/perspective/rss.xml`
+- **Sitemap** — Auto-generated at `/sitemap.xml`
+- **Redirects** — `/writing/*` → `/perspective/*` (308 permanent)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Environment Variables
 
-## Learn More
+```env
+NEXT_PUBLIC_SITE_URL=https://attakorah.com
+GOOGLE_SERVICE_ACCOUNT_EMAIL=
+GOOGLE_PRIVATE_KEY=
+GOOGLE_PROPOSALS_SHEET_ID=
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Development
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm install
+npm run dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Open [http://localhost:3000](http://localhost:3000).
 
-## Deploy on Vercel
+## Build
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run build
+npm run start
+```
