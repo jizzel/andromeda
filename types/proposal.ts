@@ -117,6 +117,7 @@ export interface ProposalInspiration {
 export interface ProposalInspirations {
   hotel?: ProposalInspiration[];
   restaurant?: ProposalInspiration[];
+  website?: ProposalInspiration[];
   items?: ProposalInspiration[];
 }
 

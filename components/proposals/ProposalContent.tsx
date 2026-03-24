@@ -31,6 +31,7 @@ export function ProposalContent({ proposal, expiryDate }: ProposalContentProps) 
     ...(proposal.inspirations.items || []).map(mapInspirationWithDefault),
     ...(proposal.inspirations.hotel || []).map(mapInspirationWithDefault),
     ...(proposal.inspirations.restaurant || []).map(mapInspirationWithDefault),
+    ...(proposal.inspirations.website || []).map(mapInspirationWithDefault),
   ] : [];
 
   const hasInspirations = allInspirations.length > 0;
