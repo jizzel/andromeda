@@ -85,6 +85,7 @@ export function ProposalContent({ proposal, expiryDate }: ProposalContentProps) 
       {proposal.timeline && proposal.timeline.length > 0 && (
         <ProposalTimeline
           timeline={proposal.timeline}
+          totalDuration={proposal.totalDuration}
         />
       )}
 

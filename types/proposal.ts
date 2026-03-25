@@ -133,6 +133,7 @@ export interface ProposalData {
   title: string;
   subtitle: string;
   issuedAt: string;
+  totalDuration?: string;
   heroImage: string;
   pdfUrl: string;
   contactEmail: string;
