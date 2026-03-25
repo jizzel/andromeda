@@ -112,7 +112,7 @@ export function ProposalPaymentPlans({ plans, clarification }: ProposalPaymentPl
                           className="flex justify-between items-center text-sm py-2 border-b border-white/5 light:border-black/5 last:border-0"
                         >
                           <span className="text-[var(--andromeda-text-secondary)]">
-                            {item.milestone}
+                            {item.milestone} {item.percentage && `- ${item.percentage}`}
                           </span>
                           <span className="font-medium text-[var(--andromeda-text-primary)]">
                             {item.amount}
