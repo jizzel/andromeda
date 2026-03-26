@@ -159,6 +159,7 @@ export const projectsDetail: ProjectDetail[] = [
     ],
     lastModified: "2024-06-15",
     location: "Tema, Ghana",
+    logos: ["/projects/rcmonsys_logo"],
   },
   {
     id: "crypto-trading",
@@ -276,6 +277,7 @@ export const projectsDetail: ProjectDetail[] = [
     ],
     lastModified: "2024-08-20",
     location: "Tallinn, Estonia",
+    logos: ["/projects/tradelink_logo"],
   },
   {
     id: "eolang-java",
@@ -392,6 +394,7 @@ export const projectsDetail: ProjectDetail[] = [
     repositoryUrl: "https://github.com/objectionary/eo",
     lastModified: "2024-03-10",
     location: "Moscow, Russia",
+    logos: ["/projects/hse_logo", "/projects/huawei_logo"],
   },
   {
     id: "legal-intelligence",

@@ -11,6 +11,7 @@ export interface Project {
   techStack: string[];
   isExpansionLayer: boolean;
   location: string;
+  logos?: string[];
 }
 
 export const projects: Project[] = [
@@ -31,7 +32,8 @@ export const projects: Project[] = [
       "Eliminated paper-based recording and manual data re-entry, providing live container visibility, traceable history, and automated report generation for terminal operators and shipping line clients.",
     techStack: ["Next.js", "NestJS", "PostgreSQL", "Excel/PDF Generation"],
     isExpansionLayer: false,
-    location: "Tema, Ghana"
+    location: "Tema, Ghana",
+    logos: ["/projects/rcmonsys_logo"],
   },
   {
     id: "crypto-trading",
@@ -51,7 +53,8 @@ export const projects: Project[] = [
       "Improved system performance substantially while maintaining high availability under sustained concurrent usage.",
     techStack: ["Node.js", "Redis", "MongoDB", "Grafana", "Prometheus", "Python", "Telegram Bot"],
     isExpansionLayer: false,
-    location: "Tallinn, Estonia"
+    location: "Tallinn, Estonia",
+    logos: ["/projects/tradelink_logo"],
   },
   {
     id: "eolang-java",
@@ -70,7 +73,8 @@ export const projects: Project[] = [
       "Expanded the language's usability and contributed to published academic work on language design and interoperability.",
     techStack: ["Java", "Eolang", "Maven", "JUnit"],
     isExpansionLayer: false,
-    location: "Moscow, Russia"
+    location: "Moscow, Russia",
+    logos: ["/projects/hse_logo", "/projects/huawei_logo"],
   },
   {
     id: "legal-intelligence",

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Project } from "@/constants/projects";
 import { ProjectExpansion } from "./ProjectExpansion";
+import { ProjectLogo } from "@/components/projects/ProjectLogo";
 import { MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useKeyboardNav } from "@/lib/hooks/useKeyboardNav";
@@ -93,13 +94,23 @@ export function ProjectCard({ project }: ProjectCardProps) {
           </Badge>
         </div>
 
-        {/* Location */}
-        {project.location && (
-          <div className="flex justify-end mt-3">
-            <div className="flex items-center gap-1.5 text-xs text-[var(--andromeda-text-secondary)]/60">
-              <MapPin size={12} className="opacity-40" />
-              <span>{project.location}</span>
+        {/* Bottom row: logos (left) + location (right) */}
+        {(project.logos?.length || project.location) && (
+          <div className="flex items-center justify-between mt-4">
+            {/* Logos */}
+            <div className="flex items-center gap-3">
+              {project.logos?.map((logo, i) => (
+                <ProjectLogo key={i} src={logo} size={24} className="opacity-60" />
+              ))}
             </div>
+
+            {/* Location */}
+            {project.location && (
+              <div className="flex items-center gap-1.5 text-xs text-[var(--andromeda-text-secondary)]/60">
+                <MapPin size={12} className="opacity-40" />
+                <span>{project.location}</span>
+              </div>
+            )}
           </div>
         )}
 
