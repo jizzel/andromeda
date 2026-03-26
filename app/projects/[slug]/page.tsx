@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, MapPin } from "lucide-react";
+import { ProjectLogo } from "@/components/projects/ProjectLogo";
 import { projectsDetail } from "@/constants/projects-detail";
 import { ProjectDetailContent } from "@/components/projects/ProjectDetailContent";
 import { ScrollReveal } from "@/components/animations/ScrollReveal";
@@ -99,9 +100,20 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
             )}
           </div>
 
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 text-[var(--andromeda-text-primary)]">
-            {project.name}
-          </h1>
+          <div className="flex items-start gap-6 mb-4">
+            <h1 className="text-4xl md:text-5xl font-bold text-[var(--andromeda-text-primary)]">
+              {project.name}
+            </h1>
+
+            {/* Logos */}
+            {project.logos && project.logos.length > 0 && (
+              <div className="flex items-center gap-4 mt-2 shrink-0">
+                {project.logos.map((logo, i) => (
+                  <ProjectLogo key={i} src={logo} size={40} className="opacity-70" />
+                ))}
+              </div>
+            )}
+          </div>
 
           <p className="text-xl text-[var(--andromeda-text-secondary)] mb-6">
             {project.contextLine}
