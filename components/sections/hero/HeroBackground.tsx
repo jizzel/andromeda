@@ -8,7 +8,6 @@ import { useIsMobile } from "@/lib/hooks/useMediaQuery";
 function Particles() {
   const particlesRef = useRef<THREE.Points>(null);
   const materialRef = useRef<THREE.PointsMaterial>(null);
-  const [, setMousePosition] = useState({ x: 0, y: 0 });
   const isMobile = useIsMobile();
 
   // Particle count based on device
@@ -39,25 +38,6 @@ function Particles() {
     return () => observer.disconnect();
   }, []);
 
-  useEffect(() => {
-    const handleMouseMove = (event: MouseEvent) => {
-      setMousePosition({
-        x: (event.clientX / window.innerWidth) * 2 - 1,
-        y: -(event.clientY / window.innerHeight) * 2 + 1,
-      });
-    };
-
-    if (!isMobile) {
-      window.addEventListener("mousemove", handleMouseMove);
-    }
-
-    return () => {
-      if (!isMobile) {
-        window.removeEventListener("mousemove", handleMouseMove);
-      }
-    };
-  }, [isMobile]);
-
   // Create particle geometry
   const [geometry, setGeometry] = useState<THREE.BufferGeometry | null>(null);
 
@@ -74,7 +54,10 @@ function Particles() {
 
     geo.setAttribute("position", new THREE.BufferAttribute(positionsArray, 3));
     const id = setTimeout(() => setGeometry(geo), 0);
-    return () => clearTimeout(id);
+    return () => {
+      clearTimeout(id);
+      geo.dispose();
+    };
   }, [particleCount]);
 
   // Animate particles
