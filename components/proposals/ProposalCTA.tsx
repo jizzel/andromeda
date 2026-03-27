@@ -17,7 +17,6 @@ interface ProposalCTAProps {
 
 export function ProposalCTA({
   expiryDate,
-  clientName,
   contactEmail = "joseph@attakorah.com",
   contactPhone,
   pdfUrl,

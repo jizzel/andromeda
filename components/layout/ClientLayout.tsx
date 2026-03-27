@@ -20,7 +20,8 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const isMinimalUI = MINIMAL_UI_ROUTES.includes(pathname);
 
   useEffect(() => {
-    setMounted(true);
+    const id = setTimeout(() => setMounted(true), 0);
+    return () => clearTimeout(id);
   }, []);
 
   return (

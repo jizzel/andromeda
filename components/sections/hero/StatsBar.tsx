@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useTransform } from "framer-motion";
+import { motion } from "framer-motion";
 import { useScrollPosition } from "@/lib/hooks/useScrollPosition";
 import { useEffect, useState } from "react";
 
@@ -58,6 +58,8 @@ export function StatsBar() {
           <span>Software Engineer</span>
           <span className="text-[var(--andromeda-accent-beige)]">•</span>
           <span>Based in Accra</span>
+          <span className="text-[var(--andromeda-accent-beige)]">•</span>
+          <span>Working Globally</span>
 
           <motion.span
             initial={{ opacity: 0, width: 0 }}
@@ -73,7 +75,7 @@ export function StatsBar() {
             className="overflow-hidden whitespace-nowrap"
           >
             <span className="text-[var(--andromeda-accent-beige)]"> • </span>
-            Working Globally
+            Solving Real Problems
           </motion.span>
         </motion.div>
       </div>

@@ -50,7 +50,7 @@ export function ProposalSubscriptionTiers({
                 </tr>
               </thead>
               <tbody>
-                {tiers.map((tier, index) => {
+                {tiers.map((tier) => {
                   const isRecommended = tier.recommended;
                   return (
                     <tr

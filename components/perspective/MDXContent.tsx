@@ -1,5 +1,5 @@
 import { MDXRemote } from "next-mdx-remote/rsc";
-import { useMDXComponents } from "@/components/mdx/MDXComponents";
+import { mdxComponents } from "@/components/mdx/MDXComponents";
 import rehypeHighlight from "rehype-highlight";
 import rehypeSlug from "rehype-slug";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
@@ -10,12 +10,10 @@ interface MDXContentProps {
 }
 
 export async function MDXContent({ content }: MDXContentProps) {
-  const components = useMDXComponents({});
-
   return (
     <MDXRemote
       source={content}
-      components={components}
+      components={mdxComponents}
       options={{
         mdxOptions: {
           remarkPlugins: [remarkGfm],

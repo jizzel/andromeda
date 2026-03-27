@@ -25,7 +25,7 @@ export function ProposalDecisionFramework({
             </h2>
             <p className="text-[var(--andromeda-text-secondary)] max-w-2xl mx-auto">
               Use these criteria to determine which implementation approach best serves your
-              organization's needs.
+              organization&apos;s needs.
             </p>
           </div>
         </ScrollReveal>

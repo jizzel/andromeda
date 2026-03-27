@@ -15,7 +15,8 @@ export function IdentityAnchor() {
   const [isFocused, setIsFocused] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    const id = setTimeout(() => setMounted(true), 0);
+    return () => clearTimeout(id);
   }, []);
 
   const handleClick = () => {
