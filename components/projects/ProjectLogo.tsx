@@ -25,7 +25,7 @@ export function ProjectLogo({ src, size, className = "" }: ProjectLogoProps) {
         src={`${src}_dark.svg`}
         alt="Project logo"
         width={0}
-        height={size}
+        height={0}
         style={{ width: "auto", height: `${size}px` }}
         className={`${base} hidden dark:block`}
       />
@@ -34,7 +34,7 @@ export function ProjectLogo({ src, size, className = "" }: ProjectLogoProps) {
         src={`${src}_light.svg`}
         alt="Project logo"
         width={0}
-        height={size}
+        height={0}
         style={{ width: "auto", height: `${size}px` }}
         className={`${base} block dark:hidden`}
       />
