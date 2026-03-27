@@ -76,7 +76,7 @@ export function ConnectSection() {
 
         <ScrollReveal delay={0.1}>
           <p className="text-lg md:text-xl text-[var(--andromeda-text-secondary)] mb-12 max-w-2xl mx-auto">
-            For businesses that need reliable software to automate and scale their operations, let's talk.
+            For businesses that need reliable software to automate and scale their operations, let&apos;s talk.
           </p>
         </ScrollReveal>
 

@@ -5,9 +5,7 @@ interface ProposalPageProps {
   params: Promise<{ id: string }>;
 }
 
-export async function generateMetadata({ params }: ProposalPageProps): Promise<Metadata> {
-  const { id } = await params;
-
+export function generateMetadata(): Metadata {
   return {
     title: "Protected Proposal",
     description: "Enter your access code to view this proposal",

@@ -22,7 +22,7 @@ export default function NotFound() {
           </h2>
 
           <p className="text-lg text-[var(--andromeda-text-secondary)] mb-12 max-w-md mx-auto">
-            The page you're looking for doesn't exist or has been moved.
+            The page you&apos;re looking for doesn&apos;t exist or has been moved.
           </p>
 
           {/* Navigation Options */}

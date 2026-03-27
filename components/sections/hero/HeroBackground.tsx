@@ -8,7 +8,6 @@ import { useIsMobile } from "@/lib/hooks/useMediaQuery";
 function Particles() {
   const particlesRef = useRef<THREE.Points>(null);
   const materialRef = useRef<THREE.PointsMaterial>(null);
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const isMobile = useIsMobile();
 
   // Particle count based on device
@@ -39,31 +38,11 @@ function Particles() {
     return () => observer.disconnect();
   }, []);
 
-  useEffect(() => {
-    const handleMouseMove = (event: MouseEvent) => {
-      setMousePosition({
-        x: (event.clientX / window.innerWidth) * 2 - 1,
-        y: -(event.clientY / window.innerHeight) * 2 + 1,
-      });
-    };
-
-    if (!isMobile) {
-      window.addEventListener("mousemove", handleMouseMove);
-    }
-
-    return () => {
-      if (!isMobile) {
-        window.removeEventListener("mousemove", handleMouseMove);
-      }
-    };
-  }, [isMobile]);
-
   // Create particle geometry
-  const particles = useRef<THREE.BufferGeometry | null>(null);
-  const positions = useRef<Float32Array | null>(null);
+  const [geometry, setGeometry] = useState<THREE.BufferGeometry | null>(null);
 
   useEffect(() => {
-    const geometry = new THREE.BufferGeometry();
+    const geo = new THREE.BufferGeometry();
     const positionsArray = new Float32Array(particleCount * 3);
 
     // Initialize positions in a grid with randomness
@@ -73,9 +52,12 @@ function Particles() {
       positionsArray[i + 2] = (Math.random() - 0.5) * 10; // z
     }
 
-    geometry.setAttribute("position", new THREE.BufferAttribute(positionsArray, 3));
-    particles.current = geometry;
-    positions.current = positionsArray;
+    geo.setAttribute("position", new THREE.BufferAttribute(positionsArray, 3));
+    const id = setTimeout(() => setGeometry(geo), 0);
+    return () => {
+      clearTimeout(id);
+      geo.dispose();
+    };
   }, [particleCount]);
 
   // Animate particles
@@ -86,10 +68,10 @@ function Particles() {
     }
   });
 
-  if (!particles.current) return null;
+  if (!geometry) return null;
 
   return (
-    <points ref={particlesRef} geometry={particles.current}>
+    <points ref={particlesRef} geometry={geometry}>
       <pointsMaterial
         ref={materialRef}
         size={0.05}

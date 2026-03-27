@@ -13,7 +13,8 @@ export function ReadingProgress() {
   });
 
   useEffect(() => {
-    setMounted(true);
+    const id = setTimeout(() => setMounted(true), 0);
+    return () => clearTimeout(id);
   }, []);
 
   if (!mounted) {
