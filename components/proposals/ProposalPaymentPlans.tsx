@@ -122,7 +122,7 @@ export function ProposalPaymentPlans({ plans, clarification, selectedId, onSelec
 
                   {/* Total Investment */}
                   <div className="mb-6">
-                    <span className="text-3xl font-bold text-[var(--andromeda-accent-beige)]">
+                    <span className="text-1xl font-bold text-[var(--andromeda-accent-beige)]">
                       {plan.totalInvestment}
                     </span>
                   </div>
