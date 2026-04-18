@@ -210,6 +210,8 @@ export async function getBlogPostBySlug(slug: string): Promise<SheetBlogPost | n
 // Asset checklist — stored in "ProposalAssets" tab
 // Columns: A: proposalId | B: itemId | C: checked | D: checkedAt
 const ASSETS_SHEET_NAME = "ProposalAssets";
+// Cached once per process — sheetId for ProposalAssets tab never changes
+let cachedAssetsSheetId: number | null = null;
 
 export async function getCheckedAssetItems(proposalId: string): Promise<string[]> {
   try {
@@ -229,6 +231,15 @@ export async function getCheckedAssetItems(proposalId: string): Promise<string[]
   }
 }
 
+async function getAssetsSheetId(sheets: ReturnType<typeof getGoogleSheetsClient>): Promise<number | null> {
+  if (cachedAssetsSheetId !== null) return cachedAssetsSheetId;
+  const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+  const sheet = meta.data.sheets?.find((s) => s.properties?.title === ASSETS_SHEET_NAME);
+  const id = sheet?.properties?.sheetId ?? null;
+  if (id !== null) cachedAssetsSheetId = id;
+  return id;
+}
+
 export async function setAssetItemChecked(
   proposalId: string,
   itemId: string,
@@ -236,8 +247,18 @@ export async function setAssetItemChecked(
 ): Promise<void> {
   const sheets = getGoogleSheetsClient();
 
+  // Read existing rows first to prevent duplicates and handle idempotency
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${ASSETS_SHEET_NAME}!A2:B`,
+  });
+  const rows = response.data.values || [];
+  const rowIndex = rows.findIndex(
+    (row) => row[0]?.trim() === proposalId && row[1]?.trim() === itemId
+  );
+
   if (checked) {
-    // Append a new row
+    if (rowIndex !== -1) return; // Already exists — skip to avoid duplicates
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
       range: `${ASSETS_SHEET_NAME}!A:D`,
@@ -247,27 +268,12 @@ export async function setAssetItemChecked(
       },
     });
   } else {
-    // Find and delete the matching row
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${ASSETS_SHEET_NAME}!A2:B`,
-    });
-    const rows = response.data.values || [];
-    // Find the 1-based row index (offset by 1 for header row)
-    const rowIndex = rows.findIndex(
-      (row) => row[0]?.trim() === proposalId && row[1]?.trim() === itemId
-    );
-    if (rowIndex === -1) return;
+    if (rowIndex === -1) return; // Already gone — nothing to delete
 
-    const sheetRowIndex = rowIndex + 2; // +1 for 0-based, +1 for header
+    const sheetId = await getAssetsSheetId(sheets);
+    if (sheetId === null) return;
 
-    // Get the sheet ID for ProposalAssets tab
-    const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
-    const sheet = meta.data.sheets?.find(
-      (s) => s.properties?.title === ASSETS_SHEET_NAME
-    );
-    if (!sheet?.properties?.sheetId) return;
-
+    const sheetRowIndex = rowIndex + 2; // +1 for 0-based index, +1 for header row
     await sheets.spreadsheets.batchUpdate({
       spreadsheetId: SPREADSHEET_ID,
       requestBody: {
@@ -275,7 +281,7 @@ export async function setAssetItemChecked(
           {
             deleteDimension: {
               range: {
-                sheetId: sheet.properties.sheetId,
+                sheetId,
                 dimension: "ROWS",
                 startIndex: sheetRowIndex - 1,
                 endIndex: sheetRowIndex,
