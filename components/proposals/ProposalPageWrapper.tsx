@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import type { ProposalData, ProposalDataUnion, ProposalDataChurch } from "@/types/proposal";
+import { useState, useEffect } from "react";
+import type { ProposalData, ProposalDataUnion, ProposalDataChurch, ProposalAcceptance } from "@/types/proposal";
 import { ProposalAccessGate } from "./ProposalAccessGate";
 import { ProposalContent } from "./ProposalContent";
 import { ProposalContentChurch } from "./ProposalContentChurch";
@@ -13,11 +13,35 @@ interface ProposalPageWrapperProps {
 export function ProposalPageWrapper({ proposalId }: ProposalPageWrapperProps) {
   const [proposal, setProposal] = useState<ProposalDataUnion | null>(null);
   const [expiryDate, setExpiryDate] = useState<string | undefined>(undefined);
+  const [accessCode, setAccessCode] = useState<string>("");
+  const [initialAcceptance, setInitialAcceptance] = useState<ProposalAcceptance | null>(null);
+  const [acceptanceLoaded, setAcceptanceLoaded] = useState(false);
 
-  const handleAccessGranted = (proposalData: unknown, expiry?: string) => {
+  // Load acceptance state once access is granted, before rendering content
+  useEffect(() => {
+    if (!proposal || !accessCode) return;
+    const load = async () => {
+      try {
+        const res = await fetch(
+          `/api/proposal/acceptance?proposalId=${encodeURIComponent(proposalId)}&accessCode=${encodeURIComponent(accessCode)}`
+        );
+        const data = await res.json();
+        if (data.success && data.acceptance) {
+          setInitialAcceptance(data.acceptance);
+        }
+      } catch {
+        // Non-blocking — content renders with null acceptance
+      } finally {
+        setAcceptanceLoaded(true);
+      }
+    };
+    load();
+  }, [proposal, accessCode, proposalId]);
+
+  const handleAccessGranted = (proposalData: unknown, expiry?: string, code?: string) => {
     setProposal(proposalData as ProposalDataUnion);
     setExpiryDate(expiry);
-    // accessCode arg intentionally ignored here — used only in AssetsPageWrapper
+    setAccessCode(code ?? "");
   };
 
   if (!proposal) {
@@ -29,10 +53,41 @@ export function ProposalPageWrapper({ proposalId }: ProposalPageWrapperProps) {
     );
   }
 
-  // Type detection and routing
-  if ('proposalType' in proposal && proposal.proposalType === 'church-asset-management') {
-    return <ProposalContentChurch proposal={proposal as ProposalDataChurch} expiryDate={expiryDate} proposalId={proposalId} />;
+  // Wait for acceptance fetch before mounting content — useState initial values only run once
+  if (!acceptanceLoaded) {
+    return (
+      <div className="min-h-screen bg-[var(--andromeda-primary)] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-2 border-[var(--andromeda-accent-beige)]/30 border-t-[var(--andromeda-accent-beige)] rounded-full animate-spin" />
+          <p className="text-sm text-[var(--andromeda-text-secondary)]">Loading proposal…</p>
+        </div>
+      </div>
+    );
   }
 
-  return <ProposalContent proposal={proposal as ProposalData} expiryDate={expiryDate} proposalId={proposalId} />;
+  const isExpired = expiryDate ? new Date() > new Date(expiryDate) : false;
+
+  if ('proposalType' in proposal && proposal.proposalType === 'church-asset-management') {
+    return (
+      <ProposalContentChurch
+        proposal={proposal as ProposalDataChurch}
+        expiryDate={expiryDate}
+        proposalId={proposalId}
+        accessCode={accessCode}
+        isExpired={isExpired}
+        initialAcceptance={initialAcceptance}
+      />
+    );
+  }
+
+  return (
+    <ProposalContent
+      proposal={proposal as ProposalData}
+      expiryDate={expiryDate}
+      proposalId={proposalId}
+      accessCode={accessCode}
+      isExpired={isExpired}
+      initialAcceptance={initialAcceptance}
+    />
+  );
 }

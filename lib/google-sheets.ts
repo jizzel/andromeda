@@ -1,6 +1,6 @@
 import { google } from "googleapis";
 import { unstable_cache } from "next/cache";
-import type { ProposalData } from "@/types/proposal";
+import type { ProposalData, ProposalAcceptance, AcceptanceStatus } from "@/types/proposal";
 
 // Re-declare types here to avoid circular dependency with lib/content
 type PostCategory = "System Design" | "Monitoring" | "Automation" | "Research";
@@ -210,8 +210,10 @@ export async function getBlogPostBySlug(slug: string): Promise<SheetBlogPost | n
 // Asset checklist — stored in "ProposalAssets" tab
 // Columns: A: proposalId | B: itemId | C: checked | D: checkedAt
 const ASSETS_SHEET_NAME = "ProposalAssets";
-// Cached once per process — sheetId for ProposalAssets tab never changes
-let cachedAssetsSheetId: number | null = null;
+
+// Acceptance — stored in "ProposalAcceptance" tab
+// Columns: A: proposalId | B: status | C: counterNote | D: acceptedAt
+const ACCEPTANCE_SHEET_NAME = "ProposalAcceptance";
 
 export async function getCheckedAssetItems(proposalId: string): Promise<string[]> {
   try {
@@ -231,13 +233,22 @@ export async function getCheckedAssetItems(proposalId: string): Promise<string[]
   }
 }
 
-async function getAssetsSheetId(sheets: ReturnType<typeof getGoogleSheetsClient>): Promise<number | null> {
-  if (cachedAssetsSheetId !== null) return cachedAssetsSheetId;
+async function getSheetId(
+  sheets: ReturnType<typeof getGoogleSheetsClient>,
+  tabName: string,
+  cache: { value: number | null }
+): Promise<number | null> {
+  if (cache.value !== null) return cache.value;
   const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
-  const sheet = meta.data.sheets?.find((s) => s.properties?.title === ASSETS_SHEET_NAME);
+  const sheet = meta.data.sheets?.find((s) => s.properties?.title === tabName);
   const id = sheet?.properties?.sheetId ?? null;
-  if (id !== null) cachedAssetsSheetId = id;
+  if (id !== null) cache.value = id;
   return id;
+}
+
+const assetsSheetIdCache = { value: null as number | null };
+async function getAssetsSheetId(sheets: ReturnType<typeof getGoogleSheetsClient>): Promise<number | null> {
+  return getSheetId(sheets, ASSETS_SHEET_NAME, assetsSheetIdCache);
 }
 
 export async function setAssetItemChecked(
@@ -292,5 +303,81 @@ export async function setAssetItemChecked(
       },
     });
   }
+}
+
+// Proposal acceptance — read/write "ProposalAcceptance" tab
+
+// ProposalAcceptance sheet columns: A:proposalId | B:status | C:counterNote | D:acceptedAt | E:packageId | F:paymentPlanId
+
+export async function getProposalAcceptance(proposalId: string): Promise<ProposalAcceptance | null> {
+  try {
+    const sheets = getGoogleSheetsClient();
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${ACCEPTANCE_SHEET_NAME}!A2:F`,
+    });
+    const rows = response.data.values || [];
+    const row = rows.find((r) => r[0]?.trim() === proposalId);
+    if (!row) return null;
+    return {
+      status: (row[1]?.trim() || "pending") as AcceptanceStatus,
+      counterNote: row[2]?.trim() || undefined,
+      acceptedAt: row[3]?.trim() || "",
+      packageId: row[4]?.trim() || undefined,
+      paymentPlanId: row[5]?.trim() || undefined,
+    };
+  } catch (error) {
+    console.error("Failed to fetch proposal acceptance:", error);
+    return null;
+  }
+}
+
+const acceptanceSheetIdCache = { value: null as number | null };
+
+export async function setProposalAcceptance(
+  proposalId: string,
+  acceptance: Omit<ProposalAcceptance, "acceptedAt">
+): Promise<void> {
+  const sheets = getGoogleSheetsClient();
+  const acceptedAt = new Date().toISOString();
+  const row = [
+    proposalId,
+    acceptance.status,
+    acceptance.counterNote ?? "",
+    acceptedAt,
+    acceptance.packageId ?? "",
+    acceptance.paymentPlanId ?? "",
+  ];
+
+  // Check if a row already exists for this proposal
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${ACCEPTANCE_SHEET_NAME}!A2:A`,
+  });
+  const rows = response.data.values || [];
+  const rowIndex = rows.findIndex((r) => r[0]?.trim() === proposalId);
+
+  if (rowIndex === -1) {
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${ACCEPTANCE_SHEET_NAME}!A:F`,
+      valueInputOption: "RAW",
+      requestBody: { values: [row] },
+    });
+  } else {
+    const sheetRow = rowIndex + 2;
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${ACCEPTANCE_SHEET_NAME}!A${sheetRow}:F${sheetRow}`,
+      valueInputOption: "RAW",
+      requestBody: { values: [row] },
+    });
+  }
+}
+
+export async function getAcceptanceSheetId(
+  sheets: ReturnType<typeof getGoogleSheetsClient>
+): Promise<number | null> {
+  return getSheetId(sheets, ACCEPTANCE_SHEET_NAME, acceptanceSheetIdCache);
 }
 

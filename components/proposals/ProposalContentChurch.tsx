@@ -10,15 +10,19 @@ import { ProposalCriticalFactors } from "./ProposalCriticalFactors";
 import { ProposalTimeline } from "./ProposalTimeline";
 import { ProposalIPRights } from "./ProposalIPRights";
 import { ProposalCTA } from "./ProposalCTA";
-import type { ProposalDataChurch } from "@/types/proposal";
+import { ProposalAcceptance } from "./ProposalAcceptance";
+import type { ProposalDataChurch, ProposalAcceptance as AcceptanceData } from "@/types/proposal";
 
 interface ProposalContentChurchProps {
   proposal: ProposalDataChurch;
   expiryDate?: string;
   proposalId: string;
+  accessCode: string;
+  isExpired: boolean;
+  initialAcceptance: AcceptanceData | null;
 }
 
-export function ProposalContentChurch({ proposal, expiryDate, proposalId }: ProposalContentChurchProps) {
+export function ProposalContentChurch({ proposal, expiryDate, proposalId, accessCode, isExpired, initialAcceptance }: ProposalContentChurchProps) {
   return (
     <main className="min-h-screen bg-[var(--andromeda-primary)]">
       {/* Hero Section */}
@@ -91,6 +95,17 @@ export function ProposalContentChurch({ proposal, expiryDate, proposalId }: Prop
         pdfUrl={proposal.pdfUrl}
         proposalId={proposalId}
         assetsReady={proposal.assetsReady}
+      />
+
+      {/* Acceptance Form / Confirmation */}
+      <ProposalAcceptance
+        proposalId={proposalId}
+        accessCode={accessCode}
+        clientName={proposal.client.name}
+        isExpired={isExpired}
+        initialAcceptance={initialAcceptance}
+        selectedPackageId={null}
+        selectedPlanId={null}
       />
     </main>
   );
