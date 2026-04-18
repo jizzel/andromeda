@@ -121,6 +121,32 @@ export interface ProposalInspirations {
   items?: ProposalInspiration[];
 }
 
+export interface AssetCategoryItem {
+  id: string;
+  label: string;
+  note?: string;
+}
+
+export interface AssetCategory {
+  id: string;
+  title: string;
+  description?: string;
+  icon?: string;
+  minimumCount?: number;
+  deadline?: string;
+  items: AssetCategoryItem[];
+  note?: string;
+}
+
+export interface AssetRequest {
+  intro?: string;
+  uploadUrl?: string;
+  uploadLabel?: string;
+  deadline?: string;
+  categories: AssetCategory[];
+  delayNotice?: string;
+}
+
 export interface ProposalAccess {
   accessCode: string;
   expiryDate: string;
@@ -151,6 +177,8 @@ export interface ProposalData {
   exclusions?: string[];
   inspirations?: ProposalInspirations;
   phase2Preview?: string[];
+  assets?: AssetRequest;
+  assetsReady?: boolean;
 }
 
 export interface ProposalSheetRow extends ProposalAccess {

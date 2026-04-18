@@ -17,6 +17,7 @@ export function ProposalPageWrapper({ proposalId }: ProposalPageWrapperProps) {
   const handleAccessGranted = (proposalData: unknown, expiry?: string) => {
     setProposal(proposalData as ProposalDataUnion);
     setExpiryDate(expiry);
+    // accessCode arg intentionally ignored here — used only in AssetsPageWrapper
   };
 
   if (!proposal) {
@@ -30,8 +31,8 @@ export function ProposalPageWrapper({ proposalId }: ProposalPageWrapperProps) {
 
   // Type detection and routing
   if ('proposalType' in proposal && proposal.proposalType === 'church-asset-management') {
-    return <ProposalContentChurch proposal={proposal as ProposalDataChurch} expiryDate={expiryDate} />;
+    return <ProposalContentChurch proposal={proposal as ProposalDataChurch} expiryDate={expiryDate} proposalId={proposalId} />;
   }
 
-  return <ProposalContent proposal={proposal as ProposalData} expiryDate={expiryDate} />;
+  return <ProposalContent proposal={proposal as ProposalData} expiryDate={expiryDate} proposalId={proposalId} />;
 }

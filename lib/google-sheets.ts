@@ -35,7 +35,7 @@ function getGoogleSheetsClient() {
 
   const auth = new google.auth.GoogleAuth({
     credentials,
-    scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
+    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
   });
 
   return google.sheets({ version: "v4", auth });
@@ -205,5 +205,92 @@ export const getAllBlogPosts = unstable_cache(
 export async function getBlogPostBySlug(slug: string): Promise<SheetBlogPost | null> {
   const posts = await getAllBlogPosts();
   return posts.find((p) => p.slug === slug) || null;
+}
+
+// Asset checklist — stored in "ProposalAssets" tab
+// Columns: A: proposalId | B: itemId | C: checked | D: checkedAt
+const ASSETS_SHEET_NAME = "ProposalAssets";
+// Cached once per process — sheetId for ProposalAssets tab never changes
+let cachedAssetsSheetId: number | null = null;
+
+export async function getCheckedAssetItems(proposalId: string): Promise<string[]> {
+  try {
+    const sheets = getGoogleSheetsClient();
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${ASSETS_SHEET_NAME}!A2:D`,
+    });
+    const rows = response.data.values || [];
+    return rows
+      .filter((row) => row[0]?.trim() === proposalId && row[2]?.trim().toLowerCase() === "true")
+      .map((row) => row[1]?.trim())
+      .filter(Boolean);
+  } catch (error) {
+    console.error("Failed to fetch asset checklist:", error);
+    return [];
+  }
+}
+
+async function getAssetsSheetId(sheets: ReturnType<typeof getGoogleSheetsClient>): Promise<number | null> {
+  if (cachedAssetsSheetId !== null) return cachedAssetsSheetId;
+  const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+  const sheet = meta.data.sheets?.find((s) => s.properties?.title === ASSETS_SHEET_NAME);
+  const id = sheet?.properties?.sheetId ?? null;
+  if (id !== null) cachedAssetsSheetId = id;
+  return id;
+}
+
+export async function setAssetItemChecked(
+  proposalId: string,
+  itemId: string,
+  checked: boolean
+): Promise<void> {
+  const sheets = getGoogleSheetsClient();
+
+  // Read existing rows first to prevent duplicates and handle idempotency
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${ASSETS_SHEET_NAME}!A2:B`,
+  });
+  const rows = response.data.values || [];
+  const rowIndex = rows.findIndex(
+    (row) => row[0]?.trim() === proposalId && row[1]?.trim() === itemId
+  );
+
+  if (checked) {
+    if (rowIndex !== -1) return; // Already exists — skip to avoid duplicates
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${ASSETS_SHEET_NAME}!A:D`,
+      valueInputOption: "RAW",
+      requestBody: {
+        values: [[proposalId, itemId, "true", new Date().toISOString()]],
+      },
+    });
+  } else {
+    if (rowIndex === -1) return; // Already gone — nothing to delete
+
+    const sheetId = await getAssetsSheetId(sheets);
+    if (sheetId === null) return;
+
+    const sheetRowIndex = rowIndex + 2; // +1 for 0-based index, +1 for header row
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: SPREADSHEET_ID,
+      requestBody: {
+        requests: [
+          {
+            deleteDimension: {
+              range: {
+                sheetId,
+                dimension: "ROWS",
+                startIndex: sheetRowIndex - 1,
+                endIndex: sheetRowIndex,
+              },
+            },
+          },
+        ],
+      },
+    });
+  }
 }
 
