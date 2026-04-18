@@ -85,7 +85,7 @@ export function ProposalHero({ title, subtitle, clientName, backgroundImage, iss
             className="flex items-center justify-center gap-2 mt-6 text-sm text-white/50"
           >
             <CalendarDays size={14} />
-            <span>Prepared {formattedIssuedAt}</span>
+            <span>Prepared on {formattedIssuedAt}</span>
           </motion.div>
         )}
       </div>
