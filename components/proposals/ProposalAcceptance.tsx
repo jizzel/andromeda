@@ -49,10 +49,13 @@ export function ProposalAcceptance({
   const [error, setError] = useState<string | null>(null);
 
   const locked = !!acceptance;
+  const hasPackages = !!(packages && packages.length > 0);
+  const hasPlans = !!(paymentPlans && paymentPlans.length > 0);
 
   const handleSubmit = async () => {
     if (!responseMode || !confirmed) return;
     if (responseMode === "counter" && !counterNote.trim()) return;
+    if (responseMode === "accepted" && ((hasPackages && !selectedPackageId) || (hasPlans && !selectedPlanId))) return;
 
     setSubmitting(true);
     setError(null);
@@ -212,9 +215,6 @@ export function ProposalAcceptance({
 
   // Expired — no form
   if (isExpired) return null;
-
-  const hasPackages = packages && packages.length > 0;
-  const hasPlans = paymentPlans && paymentPlans.length > 0;
 
   return (
     <section className="w-full py-16 px-6 border-t border-white/5 light:border-black/5">
@@ -462,6 +462,7 @@ export function ProposalAcceptance({
                     !confirmed ||
                     submitting ||
                     (responseMode === "counter" && !counterNote.trim()) ||
+                    (responseMode === "accepted" && ((hasPackages && !selectedPackageId) || (hasPlans && !selectedPlanId))) ||
                     locked
                   }
                   className="bg-[var(--andromeda-accent-beige)] text-[var(--andromeda-primary)] hover:bg-[var(--andromeda-accent-beige)]/90 px-8 py-5 text-base font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
