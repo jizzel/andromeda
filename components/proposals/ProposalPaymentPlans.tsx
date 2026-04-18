@@ -25,6 +25,9 @@ interface PaymentPlan {
 interface ProposalPaymentPlansProps {
   plans: PaymentPlan[];
   clarification?: string;
+  selectedId?: string | null;
+  onSelect?: (id: string) => void;
+  locked?: boolean;
 }
 
 const badgeIcons: Record<string, typeof Sparkles> = {
@@ -33,7 +36,8 @@ const badgeIcons: Record<string, typeof Sparkles> = {
   "Maximum Flexibility": CalendarDays,
 };
 
-export function ProposalPaymentPlans({ plans, clarification }: ProposalPaymentPlansProps) {
+export function ProposalPaymentPlans({ plans, clarification, selectedId, onSelect, locked }: ProposalPaymentPlansProps) {
+  const interactive = !!onSelect && !locked;
   return (
     <section
       id="payment-plans"
@@ -49,7 +53,7 @@ export function ProposalPaymentPlans({ plans, clarification }: ProposalPaymentPl
             Payment Plan Options
           </h2>
           <p className="text-lg text-[var(--andromeda-text-secondary)] text-center mb-12 max-w-2xl mx-auto">
-            Flexible payment structures to suit your cash flow
+            {interactive ? "Select the payment structure that suits your cash flow" : "Flexible payment structures to suit your cash flow"}
           </p>
         </ScrollReveal>
 
@@ -57,23 +61,46 @@ export function ProposalPaymentPlans({ plans, clarification }: ProposalPaymentPl
           {plans.map((plan, index) => {
             const BadgeIcon = badgeIcons[plan.badge] || Sparkles;
             const isHighlighted = plan.badge === "Best Value";
+            const isSelected = selectedId === plan.id;
+            const dimmed = interactive && selectedId !== null && selectedId !== undefined && !isSelected;
 
             return (
               <ScrollReveal key={plan.id} delay={0.1 * (index + 1)}>
                 <motion.div
-                  whileHover={{ y: -4 }}
+                  whileHover={interactive ? { y: -4 } : {}}
+                  whileTap={interactive ? { scale: 0.99 } : {}}
                   transition={{ duration: 0.2 }}
-                  className={`relative h-full rounded-xl p-6 flex flex-col ${
-                    isHighlighted
-                      ? "bg-gradient-to-br from-[var(--andromeda-accent-beige)]/15 to-transparent border-2 border-[var(--andromeda-accent-beige)]/40"
-                      : "bg-[var(--andromeda-secondary)] border border-white/10 light:border-black/10"
-                  }`}
+                  onClick={() => interactive && onSelect(plan.id)}
+                  role={interactive ? "button" : undefined}
+                  tabIndex={interactive ? 0 : undefined}
+                  onKeyDown={(e) => interactive && (e.key === "Enter" || e.key === " ") && onSelect(plan.id)}
+                  aria-pressed={interactive ? isSelected : undefined}
+                  className={`relative h-full rounded-xl p-6 flex flex-col transition-all duration-200 ${
+                    interactive ? "cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--andromeda-accent-beige)]/50" : ""
+                  } ${
+                    isSelected
+                      ? "bg-gradient-to-br from-[var(--andromeda-accent-beige)]/15 to-transparent border-2 border-[var(--andromeda-accent-beige)]"
+                      : isHighlighted && !interactive
+                        ? "bg-gradient-to-br from-[var(--andromeda-accent-beige)]/15 to-transparent border-2 border-[var(--andromeda-accent-beige)]/40"
+                        : "bg-[var(--andromeda-secondary)] border border-white/10 light:border-black/10"
+                  } ${dimmed ? "opacity-40" : ""}`}
                 >
+                  {/* Selected indicator */}
+                  {isSelected && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="absolute top-4 right-4 w-6 h-6 rounded-full bg-[var(--andromeda-accent-beige)] flex items-center justify-center"
+                    >
+                      <Check size={12} className="text-[var(--andromeda-primary)]" strokeWidth={3} />
+                    </motion.div>
+                  )}
+
                   {/* Badge */}
                   <div className="flex items-center gap-2 mb-4">
                     <Badge
                       className={
-                        isHighlighted
+                        isSelected || (isHighlighted && !interactive)
                           ? "bg-[var(--andromeda-accent-beige)] text-[var(--andromeda-primary)]"
                           : "bg-[var(--andromeda-primary)] text-[var(--andromeda-text-secondary)] border border-white/20"
                       }

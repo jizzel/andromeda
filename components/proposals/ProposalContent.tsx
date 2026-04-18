@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { ProposalData } from "@/types/proposal";
 import { ProposalHero } from "@/components/proposals/ProposalHero";
 import { ProposalOverview } from "@/components/proposals/ProposalOverview";
@@ -13,12 +14,16 @@ import { ProposalTimeline } from "@/components/proposals/ProposalTimeline";
 import { ProposalRequirements } from "@/components/proposals/ProposalRequirements";
 import { ProposalInspirations } from "@/components/proposals/ProposalInspirations";
 import { ProposalCTA } from "@/components/proposals/ProposalCTA";
-import type { ProposalInspiration } from "@/types/proposal";
+import { ProposalAcceptance } from "@/components/proposals/ProposalAcceptance";
+import type { ProposalInspiration, ProposalAcceptance as AcceptanceData } from "@/types/proposal";
 
 interface ProposalContentProps {
   proposal: ProposalData;
   expiryDate?: string;
   proposalId: string;
+  accessCode: string;
+  isExpired: boolean;
+  initialAcceptance: AcceptanceData | null;
 }
 
 const mapInspirationWithDefault = (item: ProposalInspiration) => ({
@@ -26,8 +31,16 @@ const mapInspirationWithDefault = (item: ProposalInspiration) => ({
   description: item.description || "Design inspiration",
 });
 
-export function ProposalContent({ proposal, expiryDate, proposalId }: ProposalContentProps) {
-  // Flatten inspirations for the component
+export function ProposalContent({ proposal, expiryDate, proposalId, accessCode, isExpired, initialAcceptance }: ProposalContentProps) {
+  const [selectedPackageId, setSelectedPackageId] = useState<string | null>(
+    initialAcceptance?.packageId ?? null
+  );
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(
+    initialAcceptance?.paymentPlanId ?? null
+  );
+
+  const locked = !!initialAcceptance;
+
   const allInspirations = proposal.inspirations ? [
     ...(proposal.inspirations.items || []).map(mapInspirationWithDefault),
     ...(proposal.inspirations.hotel || []).map(mapInspirationWithDefault),
@@ -39,7 +52,6 @@ export function ProposalContent({ proposal, expiryDate, proposalId }: ProposalCo
 
   return (
     <main className="min-h-screen bg-[var(--andromeda-primary)]">
-      {/* Hero Section */}
       <ProposalHero
         title={proposal.title}
         subtitle={proposal.subtitle}
@@ -48,41 +60,39 @@ export function ProposalContent({ proposal, expiryDate, proposalId }: ProposalCo
         issuedAt={proposal.issuedAt}
       />
 
-      {/* Overview Section */}
       <ProposalOverview
         situation={proposal.overview.situation}
         solution={proposal.overview.solution}
         primaryObjective={proposal.overview.primaryObjective}
       />
 
-      {/* Goals Section */}
       {proposal.goals && proposal.goals.length > 0 && <ProposalGoals goals={proposal.goals} />}
 
-      {/* Scope of Work Section */}
       {proposal.phases && proposal.phases.length > 0 && <ProposalScope phases={proposal.phases} />}
 
-      {/* Pricing Summary Section */}
-      {proposal.packages && proposal.packages.length > 0 && <ProposalPricing packages={proposal.packages} />}
-
-      {/* Payment Plans Section */}
-      {proposal.paymentPlans && proposal.paymentPlans.length > 0 && (
-        <ProposalPaymentPlans 
-          plans={proposal.paymentPlans} 
-          clarification={proposal.paymentClarification}
+      {proposal.packages && proposal.packages.length > 0 && (
+        <ProposalPricing
+          packages={proposal.packages}
+          selectedId={selectedPackageId}
+          onSelect={setSelectedPackageId}
+          locked={locked}
         />
       )}
 
-      {/* Hosting & Infrastructure Section */}
-      {proposal.hosting && (
-        <ProposalHosting hosting={proposal.hosting} />
+      {proposal.paymentPlans && proposal.paymentPlans.length > 0 && (
+        <ProposalPaymentPlans
+          plans={proposal.paymentPlans}
+          clarification={proposal.paymentClarification}
+          selectedId={selectedPlanId}
+          onSelect={setSelectedPlanId}
+          locked={locked}
+        />
       )}
 
-      {/* Support & Maintenance Section */}
-      {proposal.maintenance && (
-        <ProposalMaintenance maintenance={proposal.maintenance} />
-      )}
+      {proposal.hosting && <ProposalHosting hosting={proposal.hosting} />}
 
-      {/* Timeline Section */}
+      {proposal.maintenance && <ProposalMaintenance maintenance={proposal.maintenance} />}
+
       {proposal.timeline && proposal.timeline.length > 0 && (
         <ProposalTimeline
           timeline={proposal.timeline}
@@ -90,17 +100,14 @@ export function ProposalContent({ proposal, expiryDate, proposalId }: ProposalCo
         />
       )}
 
-      {/* Client Responsibilities Section */}
       <ProposalRequirements
         requirements={proposal.clientResponsibilities}
         revisions={proposal.revisions}
         exclusions={proposal.exclusions}
       />
 
-      {/* Design Inspirations Section */}
       {hasInspirations && <ProposalInspirations inspirations={allInspirations} />}
 
-      {/* Call to Action Section */}
       <ProposalCTA
         expiryDate={expiryDate}
         clientName={proposal.client.name}
@@ -108,6 +115,18 @@ export function ProposalContent({ proposal, expiryDate, proposalId }: ProposalCo
         pdfUrl={proposal.pdfUrl}
         proposalId={proposalId}
         assetsReady={proposal.assetsReady}
+      />
+
+      <ProposalAcceptance
+        proposalId={proposalId}
+        accessCode={accessCode}
+        clientName={proposal.client.name}
+        isExpired={isExpired}
+        initialAcceptance={initialAcceptance}
+        packages={proposal.packages}
+        paymentPlans={proposal.paymentPlans}
+        selectedPackageId={selectedPackageId}
+        selectedPlanId={selectedPlanId}
       />
     </main>
   );

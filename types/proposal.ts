@@ -147,6 +147,16 @@ export interface AssetRequest {
   delayNotice?: string;
 }
 
+export type AcceptanceStatus = "pending" | "accepted" | "counter";
+
+export interface ProposalAcceptance {
+  status: AcceptanceStatus;
+  counterNote?: string;
+  packageId?: string;
+  paymentPlanId?: string;
+  acceptedAt: string;
+}
+
 export interface ProposalAccess {
   accessCode: string;
   expiryDate: string;
