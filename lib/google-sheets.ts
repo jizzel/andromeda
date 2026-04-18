@@ -35,7 +35,7 @@ function getGoogleSheetsClient() {
 
   const auth = new google.auth.GoogleAuth({
     credentials,
-    scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
+    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
   });
 
   return google.sheets({ version: "v4", auth });
@@ -205,5 +205,86 @@ export const getAllBlogPosts = unstable_cache(
 export async function getBlogPostBySlug(slug: string): Promise<SheetBlogPost | null> {
   const posts = await getAllBlogPosts();
   return posts.find((p) => p.slug === slug) || null;
+}
+
+// Asset checklist — stored in "ProposalAssets" tab
+// Columns: A: proposalId | B: itemId | C: checked | D: checkedAt
+const ASSETS_SHEET_NAME = "ProposalAssets";
+
+export async function getCheckedAssetItems(proposalId: string): Promise<string[]> {
+  try {
+    const sheets = getGoogleSheetsClient();
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${ASSETS_SHEET_NAME}!A2:D`,
+    });
+    const rows = response.data.values || [];
+    return rows
+      .filter((row) => row[0]?.trim() === proposalId && row[2]?.trim().toLowerCase() === "true")
+      .map((row) => row[1]?.trim())
+      .filter(Boolean);
+  } catch (error) {
+    console.error("Failed to fetch asset checklist:", error);
+    return [];
+  }
+}
+
+export async function setAssetItemChecked(
+  proposalId: string,
+  itemId: string,
+  checked: boolean
+): Promise<void> {
+  const sheets = getGoogleSheetsClient();
+
+  if (checked) {
+    // Append a new row
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${ASSETS_SHEET_NAME}!A:D`,
+      valueInputOption: "RAW",
+      requestBody: {
+        values: [[proposalId, itemId, "true", new Date().toISOString()]],
+      },
+    });
+  } else {
+    // Find and delete the matching row
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${ASSETS_SHEET_NAME}!A2:B`,
+    });
+    const rows = response.data.values || [];
+    // Find the 1-based row index (offset by 1 for header row)
+    const rowIndex = rows.findIndex(
+      (row) => row[0]?.trim() === proposalId && row[1]?.trim() === itemId
+    );
+    if (rowIndex === -1) return;
+
+    const sheetRowIndex = rowIndex + 2; // +1 for 0-based, +1 for header
+
+    // Get the sheet ID for ProposalAssets tab
+    const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+    const sheet = meta.data.sheets?.find(
+      (s) => s.properties?.title === ASSETS_SHEET_NAME
+    );
+    if (!sheet?.properties?.sheetId) return;
+
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: SPREADSHEET_ID,
+      requestBody: {
+        requests: [
+          {
+            deleteDimension: {
+              range: {
+                sheetId: sheet.properties.sheetId,
+                dimension: "ROWS",
+                startIndex: sheetRowIndex - 1,
+                endIndex: sheetRowIndex,
+              },
+            },
+          },
+        ],
+      },
+    });
+  }
 }
 

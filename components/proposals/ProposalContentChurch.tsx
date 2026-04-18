@@ -15,9 +15,10 @@ import type { ProposalDataChurch } from "@/types/proposal";
 interface ProposalContentChurchProps {
   proposal: ProposalDataChurch;
   expiryDate?: string;
+  proposalId: string;
 }
 
-export function ProposalContentChurch({ proposal, expiryDate }: ProposalContentChurchProps) {
+export function ProposalContentChurch({ proposal, expiryDate, proposalId }: ProposalContentChurchProps) {
   return (
     <main className="min-h-screen bg-[var(--andromeda-primary)]">
       {/* Hero Section */}
@@ -88,6 +89,8 @@ export function ProposalContentChurch({ proposal, expiryDate }: ProposalContentC
         clientName={proposal.client.name}
         contactEmail={proposal.contactEmail}
         pdfUrl={proposal.pdfUrl}
+        proposalId={proposalId}
+        assetsReady={proposal.assetsReady}
       />
     </main>
   );

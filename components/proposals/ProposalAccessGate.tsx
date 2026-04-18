@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 
 interface ProposalAccessGateProps {
   proposalId: string;
-  onAccessGranted: (proposalData: unknown, expiryDate?: string) => void;
+  onAccessGranted: (proposalData: unknown, expiryDate?: string, accessCode?: string) => void;
 }
 
 export function ProposalAccessGate({
@@ -41,7 +41,7 @@ export function ProposalAccessGate({
       const data = await response.json();
 
       if (data.success && data.proposal) {
-        onAccessGranted(data.proposal, data.expiryDate);
+        onAccessGranted(data.proposal, data.expiryDate, accessCode.trim());
       } else {
         setError(data.error || "Invalid access code");
       }
