@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollReveal } from "@/components/animations/ScrollReveal";
 import { formatDate } from "@/lib/dates";
 import type { ProposalAcceptance as AcceptanceData, ProposalPackage, ProposalPaymentPlan } from "@/types/proposal";
+import { useAnalytics } from "@/lib/hooks/useAnalytics";
 
 interface ProposalAcceptanceProps {
   proposalId: string;
@@ -48,6 +49,7 @@ export function ProposalAcceptance({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const { trackProposalResponseSubmitted } = useAnalytics();
   const locked = !!acceptance;
   const hasPackages = !!(packages && packages.length > 0);
   const hasPlans = !!(paymentPlans && paymentPlans.length > 0);
@@ -75,6 +77,12 @@ export function ProposalAcceptance({
       });
       const data = await res.json();
       if (data.success) {
+        trackProposalResponseSubmitted({
+          proposal_id: proposalId,
+          status: responseMode,
+          package_id: selectedPackageId ?? undefined,
+          payment_plan_id: selectedPlanId ?? undefined,
+        });
         setAcceptance({
           status: responseMode,
           counterNote: responseMode === "counter" ? counterNote.trim() : undefined,

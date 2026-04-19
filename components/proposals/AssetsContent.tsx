@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollReveal } from "@/components/animations/ScrollReveal";
+import { useAnalytics } from "@/lib/hooks/useAnalytics";
 import type { AssetRequest } from "@/types/proposal";
 import Link from "next/link";
 
@@ -49,6 +50,7 @@ function getIcon(name?: string) {
 }
 
 export function AssetsContent({ proposalId, accessCode, assets, clientName }: AssetsContentProps) {
+  const { trackProposalAssetItemToggled, trackProposalUploadFolderOpened } = useAnalytics();
   const totalItems = assets.categories.reduce((sum, cat) => sum + cat.items.length, 0);
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -102,7 +104,9 @@ export function AssetsContent({ proposalId, accessCode, assets, clientName }: As
           body: JSON.stringify({ proposalId, accessCode, itemId, checked: nowChecked }),
         });
         const data = await res.json();
-        if (!data.success) {
+        if (data.success) {
+          trackProposalAssetItemToggled({ proposal_id: proposalId, item_id: itemId, checked: nowChecked });
+        } else {
           // Roll back
           setCheckedIds((prev) => {
             const next = new Set(prev);
@@ -129,7 +133,7 @@ export function AssetsContent({ proposalId, accessCode, assets, clientName }: As
         });
       }
     },
-    [loading, checkedIds, proposalId, accessCode]
+    [loading, checkedIds, proposalId, accessCode, trackProposalAssetItemToggled]
   );
 
   const checkedCount = checkedIds.size;
@@ -179,7 +183,12 @@ export function AssetsContent({ proposalId, accessCode, assets, clientName }: As
                     asChild
                     className="bg-[var(--andromeda-accent-beige)] text-[var(--andromeda-primary)] hover:bg-[var(--andromeda-accent-beige)]/90 font-semibold"
                   >
-                    <a href={assets.uploadUrl} target="_blank" rel="noopener noreferrer">
+                    <a
+                      href={assets.uploadUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => trackProposalUploadFolderOpened({ proposal_id: proposalId })}
+                    >
                       <FolderOpen className="w-4 h-4 mr-2" />
                       {assets.uploadLabel ?? "Open upload folder"}
                     </a>

@@ -5,12 +5,14 @@ import type { ProposalData, ProposalDataUnion, ProposalDataChurch, ProposalAccep
 import { ProposalAccessGate } from "./ProposalAccessGate";
 import { ProposalContent } from "./ProposalContent";
 import { ProposalContentChurch } from "./ProposalContentChurch";
+import { useAnalytics } from "@/lib/hooks/useAnalytics";
 
 interface ProposalPageWrapperProps {
   proposalId: string;
 }
 
 export function ProposalPageWrapper({ proposalId }: ProposalPageWrapperProps) {
+  const { trackProposalAccessed } = useAnalytics();
   const [proposal, setProposal] = useState<ProposalDataUnion | null>(null);
   const [expiryDate, setExpiryDate] = useState<string | undefined>(undefined);
   const [accessCode, setAccessCode] = useState<string>("");
@@ -42,6 +44,7 @@ export function ProposalPageWrapper({ proposalId }: ProposalPageWrapperProps) {
     setProposal(proposalData as ProposalDataUnion);
     setExpiryDate(expiry);
     setAccessCode(code ?? "");
+    trackProposalAccessed({ proposal_id: proposalId });
   };
 
   if (!proposal) {

@@ -33,8 +33,45 @@ interface ProjectCaseStudyViewedEvent {
 }
 
 interface CTAClickedEvent {
-  type: "calendly" | "email" | "github" | "linkedin" | "call" | "whatsapp" | "vcard";
+  type: "calendly" | "email" | "github" | "linkedin" | "call" | "whatsapp" | "vcard" | "download";
   location: string;
+}
+
+interface ProposalAccessedEvent {
+  proposal_id: string;
+}
+
+interface ProposalPackageSelectedEvent {
+  proposal_id: string;
+  package_id: string;
+  package_name: string;
+}
+
+interface ProposalPaymentPlanSelectedEvent {
+  proposal_id: string;
+  plan_id: string;
+  plan_name: string;
+}
+
+interface ProposalResponseSubmittedEvent {
+  proposal_id: string;
+  status: "accepted" | "counter";
+  package_id?: string;
+  payment_plan_id?: string;
+}
+
+interface ProposalAssetsOpenedEvent {
+  proposal_id: string;
+}
+
+interface ProposalAssetItemToggledEvent {
+  proposal_id: string;
+  item_id: string;
+  checked: boolean;
+}
+
+interface ProposalUploadFolderOpenedEvent {
+  proposal_id: string;
 }
 
 interface PerspectivePostViewedEvent {
@@ -62,42 +99,27 @@ interface VideoPlayedEvent {
   project_slug: string;
 }
 
+function emit(name: string, data: object) {
+  track(name, data as Record<string, string | number | boolean>);
+}
+
 export const useAnalytics = () => {
-  const trackBusinessCardOpened = (data: BusinessCardOpenedEvent) => {
-    track("business_card_opened", data as unknown as Record<string, string | number | boolean>);
-  };
-
-  const trackProjectExpanded = (data: ProjectExpandedEvent) => {
-    track("project_expanded", data as unknown as Record<string, string | number | boolean>);
-  };
-
-  const trackProjectCaseStudyViewed = (data: ProjectCaseStudyViewedEvent) => {
-    track("project_case_study_viewed", data as unknown as Record<string, string | number | boolean>);
-  };
-
-  const trackCTAClicked = (data: CTAClickedEvent) => {
-    track("cta_clicked", data as unknown as Record<string, string | number | boolean>);
-  };
-
-  const trackPerspectivePostViewed = (data: PerspectivePostViewedEvent) => {
-    track("perspective_post_viewed", data as unknown as Record<string, string | number | boolean>);
-  };
-
-  const trackPerspectiveCategoryFiltered = (data: PerspectiveCategoryFilteredEvent) => {
-    track("perspective_category_filtered", data as unknown as Record<string, string | number | boolean>);
-  };
-
-  const trackThemeToggled = (data: ThemeToggledEvent) => {
-    track("theme_toggled", data as unknown as Record<string, string | number | boolean>);
-  };
-
-  const trackScreenshotLightboxOpened = (data: ScreenshotLightboxOpenedEvent) => {
-    track("screenshot_lightbox_opened", data as unknown as Record<string, string | number | boolean>);
-  };
-
-  const trackVideoPlayed = (data: VideoPlayedEvent) => {
-    track("video_played", data as unknown as Record<string, string | number | boolean>);
-  };
+  const trackBusinessCardOpened = (data: BusinessCardOpenedEvent) => emit("business_card_opened", data);
+  const trackProjectExpanded = (data: ProjectExpandedEvent) => emit("project_expanded", data);
+  const trackProjectCaseStudyViewed = (data: ProjectCaseStudyViewedEvent) => emit("project_case_study_viewed", data);
+  const trackCTAClicked = (data: CTAClickedEvent) => emit("cta_clicked", data);
+  const trackPerspectivePostViewed = (data: PerspectivePostViewedEvent) => emit("perspective_post_viewed", data);
+  const trackPerspectiveCategoryFiltered = (data: PerspectiveCategoryFilteredEvent) => emit("perspective_category_filtered", data);
+  const trackThemeToggled = (data: ThemeToggledEvent) => emit("theme_toggled", data);
+  const trackScreenshotLightboxOpened = (data: ScreenshotLightboxOpenedEvent) => emit("screenshot_lightbox_opened", data);
+  const trackVideoPlayed = (data: VideoPlayedEvent) => emit("video_played", data);
+  const trackProposalAccessed = (data: ProposalAccessedEvent) => emit("proposal_accessed", data);
+  const trackProposalPackageSelected = (data: ProposalPackageSelectedEvent) => emit("proposal_package_selected", data);
+  const trackProposalPaymentPlanSelected = (data: ProposalPaymentPlanSelectedEvent) => emit("proposal_payment_plan_selected", data);
+  const trackProposalResponseSubmitted = (data: ProposalResponseSubmittedEvent) => emit("proposal_response_submitted", data);
+  const trackProposalAssetsOpened = (data: ProposalAssetsOpenedEvent) => emit("proposal_assets_opened", data);
+  const trackProposalAssetItemToggled = (data: ProposalAssetItemToggledEvent) => emit("proposal_asset_item_toggled", data);
+  const trackProposalUploadFolderOpened = (data: ProposalUploadFolderOpenedEvent) => emit("proposal_upload_folder_opened", data);
 
   return {
     trackBusinessCardOpened,
@@ -109,5 +131,12 @@ export const useAnalytics = () => {
     trackThemeToggled,
     trackScreenshotLightboxOpened,
     trackVideoPlayed,
+    trackProposalAccessed,
+    trackProposalPackageSelected,
+    trackProposalPaymentPlanSelected,
+    trackProposalResponseSubmitted,
+    trackProposalAssetsOpened,
+    trackProposalAssetItemToggled,
+    trackProposalUploadFolderOpened,
   };
 };
