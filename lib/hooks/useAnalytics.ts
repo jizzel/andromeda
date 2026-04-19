@@ -33,8 +33,45 @@ interface ProjectCaseStudyViewedEvent {
 }
 
 interface CTAClickedEvent {
-  type: "calendly" | "email" | "github" | "linkedin" | "call" | "whatsapp" | "vcard";
+  type: "calendly" | "email" | "github" | "linkedin" | "call" | "whatsapp" | "vcard" | "download";
   location: string;
+}
+
+interface ProposalAccessedEvent {
+  proposal_id: string;
+}
+
+interface ProposalPackageSelectedEvent {
+  proposal_id: string;
+  package_id: string;
+  package_name: string;
+}
+
+interface ProposalPaymentPlanSelectedEvent {
+  proposal_id: string;
+  plan_id: string;
+  plan_name: string;
+}
+
+interface ProposalResponseSubmittedEvent {
+  proposal_id: string;
+  status: "accepted" | "counter";
+  package_id?: string;
+  payment_plan_id?: string;
+}
+
+interface ProposalAssetsOpenedEvent {
+  proposal_id: string;
+}
+
+interface ProposalAssetItemToggledEvent {
+  proposal_id: string;
+  item_id: string;
+  checked: boolean;
+}
+
+interface ProposalUploadFolderOpenedEvent {
+  proposal_id: string;
 }
 
 interface PerspectivePostViewedEvent {
@@ -99,6 +136,34 @@ export const useAnalytics = () => {
     track("video_played", data as unknown as Record<string, string | number | boolean>);
   };
 
+  const trackProposalAccessed = (data: ProposalAccessedEvent) => {
+    track("proposal_accessed", data as unknown as Record<string, string | number | boolean>);
+  };
+
+  const trackProposalPackageSelected = (data: ProposalPackageSelectedEvent) => {
+    track("proposal_package_selected", data as unknown as Record<string, string | number | boolean>);
+  };
+
+  const trackProposalPaymentPlanSelected = (data: ProposalPaymentPlanSelectedEvent) => {
+    track("proposal_payment_plan_selected", data as unknown as Record<string, string | number | boolean>);
+  };
+
+  const trackProposalResponseSubmitted = (data: ProposalResponseSubmittedEvent) => {
+    track("proposal_response_submitted", data as unknown as Record<string, string | number | boolean>);
+  };
+
+  const trackProposalAssetsOpened = (data: ProposalAssetsOpenedEvent) => {
+    track("proposal_assets_opened", data as unknown as Record<string, string | number | boolean>);
+  };
+
+  const trackProposalAssetItemToggled = (data: ProposalAssetItemToggledEvent) => {
+    track("proposal_asset_item_toggled", data as unknown as Record<string, string | number | boolean>);
+  };
+
+  const trackProposalUploadFolderOpened = (data: ProposalUploadFolderOpenedEvent) => {
+    track("proposal_upload_folder_opened", data as unknown as Record<string, string | number | boolean>);
+  };
+
   return {
     trackBusinessCardOpened,
     trackProjectExpanded,
@@ -109,5 +174,12 @@ export const useAnalytics = () => {
     trackThemeToggled,
     trackScreenshotLightboxOpened,
     trackVideoPlayed,
+    trackProposalAccessed,
+    trackProposalPackageSelected,
+    trackProposalPaymentPlanSelected,
+    trackProposalResponseSubmitted,
+    trackProposalAssetsOpened,
+    trackProposalAssetItemToggled,
+    trackProposalUploadFolderOpened,
   };
 };

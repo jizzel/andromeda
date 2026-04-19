@@ -6,6 +6,7 @@ import { Calendar, Mail, Clock, ArrowRight, FileDown, FolderOpen } from "lucide-
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/dates";
 import { openCalendlyPopup } from "@/lib/calendly";
+import { useAnalytics } from "@/lib/hooks/useAnalytics";
 import Link from "next/link";
 
 interface ProposalCTAProps {
@@ -26,6 +27,7 @@ export function ProposalCTA({
   proposalId,
   assetsReady,
 }: ProposalCTAProps) {
+  const { trackCTAClicked, trackProposalAssetsOpened } = useAnalytics();
   const formattedExpiry = expiryDate ? formatDate(expiryDate) : null;
   return (
     <section
@@ -83,7 +85,13 @@ export function ProposalCTA({
                 variant="outline"
                 className="border-[var(--andromeda-accent-beige)]/50 text-[var(--andromeda-text-primary)] hover:bg-[var(--andromeda-accent-beige)]/10 px-8 py-6 text-base"
               >
-                <a href={pdfUrl} download target="_blank" rel="noopener noreferrer">
+                <a
+                  href={pdfUrl}
+                  download
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => trackCTAClicked({ type: "download", location: "proposal_cta" })}
+                >
                   <FileDown className="w-5 h-5 mr-2" />
                   Download Proposal
                 </a>
@@ -97,7 +105,10 @@ export function ProposalCTA({
                   size="lg"
                   className="bg-[var(--andromeda-highlight)] text-white hover:bg-[var(--andromeda-highlight)]/90 px-8 py-6 text-base font-semibold"
                 >
-                  <Link href={`/proposal/${proposalId}/assets`}>
+                  <Link
+                    href={`/proposal/${proposalId}/assets`}
+                    onClick={() => proposalId && trackProposalAssetsOpened({ proposal_id: proposalId })}
+                  >
                     <FolderOpen className="w-5 h-5 mr-2" />
                     Provide Project Assets
                     <ArrowRight className="w-4 h-4 ml-2" />

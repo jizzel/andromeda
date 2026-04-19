@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import type { ProposalData } from "@/types/proposal";
 import { ProposalHero } from "@/components/proposals/ProposalHero";
 import { ProposalOverview } from "@/components/proposals/ProposalOverview";
@@ -16,6 +16,7 @@ import { ProposalInspirations } from "@/components/proposals/ProposalInspiration
 import { ProposalCTA } from "@/components/proposals/ProposalCTA";
 import { ProposalAcceptance } from "@/components/proposals/ProposalAcceptance";
 import type { ProposalInspiration, ProposalAcceptance as AcceptanceData } from "@/types/proposal";
+import { useAnalytics } from "@/lib/hooks/useAnalytics";
 
 interface ProposalContentProps {
   proposal: ProposalData;
@@ -32,6 +33,8 @@ const mapInspirationWithDefault = (item: ProposalInspiration) => ({
 });
 
 export function ProposalContent({ proposal, expiryDate, proposalId, accessCode, isExpired, initialAcceptance }: ProposalContentProps) {
+  const { trackProposalPackageSelected, trackProposalPaymentPlanSelected } = useAnalytics();
+
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(
     initialAcceptance?.packageId ?? null
   );
@@ -40,6 +43,18 @@ export function ProposalContent({ proposal, expiryDate, proposalId, accessCode, 
   );
 
   const locked = !!initialAcceptance;
+
+  const handlePackageSelect = useCallback((id: string) => {
+    setSelectedPackageId(id);
+    const pkg = proposal.packages?.find((p) => p.id === id);
+    if (pkg) trackProposalPackageSelected({ proposal_id: proposalId, package_id: id, package_name: pkg.name });
+  }, [proposal.packages, proposalId, trackProposalPackageSelected]);
+
+  const handlePlanSelect = useCallback((id: string) => {
+    setSelectedPlanId(id);
+    const plan = proposal.paymentPlans?.find((p) => p.id === id);
+    if (plan) trackProposalPaymentPlanSelected({ proposal_id: proposalId, plan_id: id, plan_name: plan.name });
+  }, [proposal.paymentPlans, proposalId, trackProposalPaymentPlanSelected]);
 
   const allInspirations = proposal.inspirations ? [
     ...(proposal.inspirations.items || []).map(mapInspirationWithDefault),
@@ -74,7 +89,7 @@ export function ProposalContent({ proposal, expiryDate, proposalId, accessCode, 
         <ProposalPricing
           packages={proposal.packages}
           selectedId={selectedPackageId}
-          onSelect={setSelectedPackageId}
+          onSelect={handlePackageSelect}
           locked={locked}
         />
       )}
@@ -84,7 +99,7 @@ export function ProposalContent({ proposal, expiryDate, proposalId, accessCode, 
           plans={proposal.paymentPlans}
           clarification={proposal.paymentClarification}
           selectedId={selectedPlanId}
-          onSelect={setSelectedPlanId}
+          onSelect={handlePlanSelect}
           locked={locked}
         />
       )}
