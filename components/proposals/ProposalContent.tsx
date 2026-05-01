@@ -130,6 +130,7 @@ export function ProposalContent({ proposal, expiryDate, proposalId, accessCode, 
         pdfUrl={proposal.pdfUrl}
         proposalId={proposalId}
         assetsReady={proposal.assetsReady}
+        trackerReady={proposal.trackerReady}
       />
 
       <ProposalAcceptance

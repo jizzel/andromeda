@@ -74,6 +74,15 @@ interface ProposalUploadFolderOpenedEvent {
   proposal_id: string;
 }
 
+interface ProposalTrackerOpenedEvent {
+  proposal_id: string;
+}
+
+interface ProposalTrackerPhaseViewedEvent {
+  proposal_id: string;
+  phase_id: string;
+}
+
 interface PerspectivePostViewedEvent {
   post_slug: string;
   category: string;
@@ -120,6 +129,8 @@ export const useAnalytics = () => {
   const trackProposalAssetsOpened = (data: ProposalAssetsOpenedEvent) => emit("proposal_assets_opened", data);
   const trackProposalAssetItemToggled = (data: ProposalAssetItemToggledEvent) => emit("proposal_asset_item_toggled", data);
   const trackProposalUploadFolderOpened = (data: ProposalUploadFolderOpenedEvent) => emit("proposal_upload_folder_opened", data);
+  const trackProposalTrackerOpened = (data: ProposalTrackerOpenedEvent) => emit("proposal_tracker_opened", data);
+  const trackProposalTrackerPhaseViewed = (data: ProposalTrackerPhaseViewedEvent) => emit("proposal_tracker_phase_viewed", data);
 
   return {
     trackBusinessCardOpened,
@@ -138,5 +149,7 @@ export const useAnalytics = () => {
     trackProposalAssetsOpened,
     trackProposalAssetItemToggled,
     trackProposalUploadFolderOpened,
+    trackProposalTrackerOpened,
+    trackProposalTrackerPhaseViewed,
   };
 };

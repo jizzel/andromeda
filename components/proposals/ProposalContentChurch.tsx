@@ -95,6 +95,7 @@ export function ProposalContentChurch({ proposal, expiryDate, proposalId, access
         pdfUrl={proposal.pdfUrl}
         proposalId={proposalId}
         assetsReady={proposal.assetsReady}
+        trackerReady={proposal.trackerReady}
       />
 
       {/* Acceptance Form / Confirmation */}

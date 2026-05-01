@@ -1,6 +1,12 @@
 import { google } from "googleapis";
 import { unstable_cache } from "next/cache";
-import type { ProposalData, ProposalAcceptance, AcceptanceStatus } from "@/types/proposal";
+import type {
+  ProposalData,
+  ProposalAcceptance,
+  AcceptanceStatus,
+  TrackerMilestoneState,
+  TrackerStatus,
+} from "@/types/proposal";
 
 // Re-declare types here to avoid circular dependency with lib/content
 type PostCategory = "System Design" | "Monitoring" | "Automation" | "Research";
@@ -379,5 +385,172 @@ export async function getAcceptanceSheetId(
   sheets: ReturnType<typeof getGoogleSheetsClient>
 ): Promise<number | null> {
   return getSheetId(sheets, ACCEPTANCE_SHEET_NAME, acceptanceSheetIdCache);
+}
+
+// Project tracker — stored in "ProjectTracker" tab
+// Columns: A: proposalId | B: phaseId | C: milestoneId | D: status |
+//          E: startedAt | F: completedAt | G: note | H: updatedAt | I: notifiedAt
+const TRACKER_SHEET_NAME = "ProjectTracker";
+const TRACKER_VALID_STATUSES: readonly TrackerStatus[] = ["pending", "in_progress", "done", "blocked"];
+
+const trackerSheetIdCache = { value: null as number | null };
+
+function rowToTrackerState(row: string[]): TrackerMilestoneState {
+  const rawStatus = row[3]?.trim() || "pending";
+  const status = (TRACKER_VALID_STATUSES as readonly string[]).includes(rawStatus)
+    ? (rawStatus as TrackerStatus)
+    : "pending";
+  return {
+    phaseId: row[1]?.trim() || "",
+    milestoneId: row[2]?.trim() || "",
+    status,
+    startedAt: row[4]?.trim() || undefined,
+    completedAt: row[5]?.trim() || undefined,
+    note: row[6]?.trim() || undefined,
+    updatedAt: row[7]?.trim() || "",
+  };
+}
+
+function trackerStateToRow(proposalId: string, state: TrackerMilestoneState, notifiedAt = ""): string[] {
+  return [
+    proposalId,
+    state.phaseId,
+    state.milestoneId,
+    state.status,
+    state.startedAt ?? "",
+    state.completedAt ?? "",
+    state.note ?? "",
+    state.updatedAt,
+    notifiedAt,
+  ];
+}
+
+export async function getTrackerStates(proposalId: string): Promise<TrackerMilestoneState[]> {
+  try {
+    const sheets = getGoogleSheetsClient();
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${TRACKER_SHEET_NAME}!A2:I`,
+    });
+    const rows = response.data.values || [];
+    return rows
+      .filter((row) => row[0]?.trim() === proposalId)
+      .map(rowToTrackerState)
+      .filter((s) => s.phaseId && s.milestoneId);
+  } catch (error) {
+    console.error("Failed to fetch tracker states:", error);
+    return [];
+  }
+}
+
+export async function getTrackerRow(
+  proposalId: string,
+  phaseId: string,
+  milestoneId: string
+): Promise<{ rowIndex: number; state: TrackerMilestoneState; notifiedAt: string } | null> {
+  const sheets = getGoogleSheetsClient();
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${TRACKER_SHEET_NAME}!A2:I`,
+  });
+  const rows = response.data.values || [];
+  const idx = rows.findIndex(
+    (row) =>
+      row[0]?.trim() === proposalId &&
+      row[1]?.trim() === phaseId &&
+      row[2]?.trim() === milestoneId
+  );
+  if (idx === -1) return null;
+  return {
+    rowIndex: idx + 2,
+    state: rowToTrackerState(rows[idx]),
+    notifiedAt: rows[idx][8]?.trim() || "",
+  };
+}
+
+export async function appendTrackerRows(
+  proposalId: string,
+  states: TrackerMilestoneState[]
+): Promise<void> {
+  if (states.length === 0) return;
+  const sheets = getGoogleSheetsClient();
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${TRACKER_SHEET_NAME}!A:I`,
+    valueInputOption: "RAW",
+    requestBody: {
+      values: states.map((s) => trackerStateToRow(proposalId, s)),
+    },
+  });
+}
+
+export async function setTrackerMilestone(
+  proposalId: string,
+  phaseId: string,
+  milestoneId: string,
+  patch: Partial<Pick<TrackerMilestoneState, "status" | "startedAt" | "completedAt" | "note">>
+): Promise<void> {
+  const sheets = getGoogleSheetsClient();
+  const existing = await getTrackerRow(proposalId, phaseId, milestoneId);
+  const now = new Date().toISOString();
+
+  const merged: TrackerMilestoneState = {
+    phaseId,
+    milestoneId,
+    status: patch.status ?? existing?.state.status ?? "pending",
+    startedAt: patch.startedAt ?? existing?.state.startedAt,
+    completedAt: patch.completedAt ?? existing?.state.completedAt,
+    note: patch.note !== undefined ? patch.note : existing?.state.note,
+    updatedAt: now,
+  };
+
+  // Auto-stamp completedAt when transitioning into done
+  if (merged.status === "done" && existing?.state.status !== "done" && !merged.completedAt) {
+    merged.completedAt = now;
+  }
+
+  if (existing) {
+    // Preserve notifiedAt unless the row is no longer "done" (then clear it so a re-completion re-notifies)
+    const preservedNotifiedAt = merged.status === "done" ? existing.notifiedAt : "";
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${TRACKER_SHEET_NAME}!A${existing.rowIndex}:I${existing.rowIndex}`,
+      valueInputOption: "RAW",
+      requestBody: {
+        values: [trackerStateToRow(proposalId, merged, preservedNotifiedAt)],
+      },
+    });
+  } else {
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${TRACKER_SHEET_NAME}!A:I`,
+      valueInputOption: "RAW",
+      requestBody: {
+        values: [trackerStateToRow(proposalId, merged)],
+      },
+    });
+  }
+}
+
+export async function markTrackerNotified(
+  proposalId: string,
+  phaseId: string,
+  milestoneId: string
+): Promise<void> {
+  const sheets = getGoogleSheetsClient();
+  const existing = await getTrackerRow(proposalId, phaseId, milestoneId);
+  if (!existing) return;
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${TRACKER_SHEET_NAME}!I${existing.rowIndex}`,
+    valueInputOption: "RAW",
+    requestBody: { values: [[new Date().toISOString()]] },
+  });
+}
+
+export async function getTrackerSheetId(
+  sheets: ReturnType<typeof getGoogleSheetsClient>
+): Promise<number | null> {
+  return getSheetId(sheets, TRACKER_SHEET_NAME, trackerSheetIdCache);
 }
 
