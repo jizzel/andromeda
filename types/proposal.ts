@@ -3,6 +3,7 @@
 export interface ProposalClient {
   name: string;
   location: string;
+  email?: string;
 }
 
 export interface ProposalOverview {
@@ -163,6 +164,46 @@ export interface ProposalAccess {
   isActive: boolean;
 }
 
+export type TrackerStatus = "pending" | "in_progress" | "done" | "blocked";
+
+export interface TrackerMilestone {
+  id: string;
+  label: string;
+  description?: string;
+}
+
+export interface TrackerPhase {
+  id: string;
+  title: string;
+  description?: string;
+  icon?: string;
+  milestones: TrackerMilestone[];
+}
+
+export interface TrackerTemplate {
+  id: string;
+  name: string;
+  phases: TrackerPhase[];
+}
+
+export interface ProjectTrackerConfig {
+  templates: string[];
+  startedAt?: string;
+  estimatedEndAt?: string;
+  exclude?: string[];
+  additions?: TrackerPhase[];
+}
+
+export interface TrackerMilestoneState {
+  phaseId: string;
+  milestoneId: string;
+  status: TrackerStatus;
+  startedAt?: string;
+  completedAt?: string;
+  note?: string;
+  updatedAt: string;
+}
+
 export interface ProposalData {
   proposalType?: string;
   client: ProposalClient;
@@ -189,6 +230,8 @@ export interface ProposalData {
   phase2Preview?: string[];
   assets?: AssetRequest;
   assetsReady?: boolean;
+  tracker?: ProjectTrackerConfig;
+  trackerReady?: boolean;
 }
 
 export interface ProposalSheetRow extends ProposalAccess {
