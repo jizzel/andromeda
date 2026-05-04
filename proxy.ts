@@ -23,7 +23,7 @@ export function proxy(request: NextRequest) {
   requestHeaders.set("x-nonce", nonce);
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
-  response.headers.set("Content-Security-Policy-Report-Only", csp);
+  response.headers.set("Content-Security-Policy", csp);
   return response;
 }
 
