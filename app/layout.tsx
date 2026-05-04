@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Script from "next/script";
+import { headers } from "next/headers";
 import "./globals.css";
 import { profile } from "@/constants/profile";
 import { StructuredData } from "@/components/layout/StructuredData";
@@ -74,11 +75,13 @@ export const metadata: Metadata = {
   // },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
   return (
     <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
       <head>
@@ -88,6 +91,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
         <script
+          nonce={nonce}
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
@@ -112,6 +116,7 @@ export default function RootLayout({
         <Script
           src="https://assets.calendly.com/assets/external/widget.js"
           strategy="lazyOnload"
+          nonce={nonce}
         />
       </body>
     </html>
