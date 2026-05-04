@@ -6,9 +6,9 @@ export function proxy(request: NextRequest) {
 
   const csp = [
     `default-src 'self'`,
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://assets.calendly.com https://va.vercel-scripts.com https://vercel.live`,
+    `script-src 'self' 'nonce-${nonce}' https://assets.calendly.com https://va.vercel-scripts.com https://vercel.live`,
     `style-src 'self' 'unsafe-inline' https://assets.calendly.com https://vercel.live`,
-    `img-src 'self' data: blob: https://images.unsplash.com https://res.cloudinary.com https://lh3.googleusercontent.com https://*.calendly.com https://vercel.live https://vercel.com`,
+    `img-src 'self' data: blob: https://attakorah.com https://images.unsplash.com https://res.cloudinary.com https://lh3.googleusercontent.com https://*.calendly.com https://vercel.live https://vercel.com`,
     `font-src 'self' data: https://vercel.live https://assets.vercel.com`,
     `connect-src 'self' https://calendly.com https://*.calendly.com https://va.vercel-scripts.com https://vercel.live wss://ws-us3.pusher.com`,
     `frame-src https://calendly.com https://vercel.live`,
