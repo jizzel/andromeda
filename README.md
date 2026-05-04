@@ -1,6 +1,6 @@
 # Andromeda — attakorah.com
 
-Personal portfolio and professional web presence for [Joseph Afriyie Attakorah](https://attakorah.com) — Software Engineer focused on systems, monitoring, and operations.
+Personal portfolio and professional web presence for [Joseph Afriyie Attakorah](https://attakorah.com) - Software Engineer focused on systems, monitoring, and operations.
 
 ## Stack
 
