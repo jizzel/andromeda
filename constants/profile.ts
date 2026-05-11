@@ -5,20 +5,35 @@ function req(name: string, value: string | undefined): string {
   return value;
 }
 
+function reqUrl(name: string, value: string | undefined): string {
+  const v = req(name, value);
+  try {
+    new URL(v);
+  } catch {
+    throw new Error(`Env var ${name} must be a valid absolute URL (got: ${JSON.stringify(v)})`);
+  }
+  return v;
+}
+
 const emailAddress = req("NEXT_PUBLIC_PROFILE_EMAIL", process.env.NEXT_PUBLIC_PROFILE_EMAIL);
 
+const firstName = req("NEXT_PUBLIC_PROFILE_FIRST_NAME", process.env.NEXT_PUBLIC_PROFILE_FIRST_NAME);
+const middleName = process.env.NEXT_PUBLIC_PROFILE_MIDDLE_NAME || "";
+const surname = req("NEXT_PUBLIC_PROFILE_SURNAME", process.env.NEXT_PUBLIC_PROFILE_SURNAME);
+const fullName = [firstName, middleName, surname].filter(Boolean).join(" ");
+
 export const socialLinks = {
-  github: req("NEXT_PUBLIC_SOCIAL_GITHUB", process.env.NEXT_PUBLIC_SOCIAL_GITHUB),
-  linkedin: req("NEXT_PUBLIC_SOCIAL_LINKEDIN", process.env.NEXT_PUBLIC_SOCIAL_LINKEDIN),
+  github: reqUrl("NEXT_PUBLIC_SOCIAL_GITHUB", process.env.NEXT_PUBLIC_SOCIAL_GITHUB),
+  linkedin: reqUrl("NEXT_PUBLIC_SOCIAL_LINKEDIN", process.env.NEXT_PUBLIC_SOCIAL_LINKEDIN),
   email: `mailto:${emailAddress}`,
-  calendly: req("NEXT_PUBLIC_SOCIAL_CALENDLY", process.env.NEXT_PUBLIC_SOCIAL_CALENDLY),
+  calendly: reqUrl("NEXT_PUBLIC_SOCIAL_CALENDLY", process.env.NEXT_PUBLIC_SOCIAL_CALENDLY),
 };
 
 export const profile = {
-  name: req("NEXT_PUBLIC_PROFILE_NAME", process.env.NEXT_PUBLIC_PROFILE_NAME),
-  firstName: req("NEXT_PUBLIC_PROFILE_FIRST_NAME", process.env.NEXT_PUBLIC_PROFILE_FIRST_NAME),
-  middleName: process.env.NEXT_PUBLIC_PROFILE_MIDDLE_NAME || "",
-  surname: req("NEXT_PUBLIC_PROFILE_SURNAME", process.env.NEXT_PUBLIC_PROFILE_SURNAME),
+  name: fullName,
+  firstName,
+  middleName,
+  surname,
   title: "Software Engineer",
   focus: "Systems • Monitoring • Operations",
   location: req("NEXT_PUBLIC_PROFILE_LOCATION", process.env.NEXT_PUBLIC_PROFILE_LOCATION),
@@ -43,5 +58,5 @@ export const profile = {
     "Ghana",
     "Accra",
   ],
-  siteUrl: req("NEXT_PUBLIC_SITE_URL", process.env.NEXT_PUBLIC_SITE_URL),
+  siteUrl: reqUrl("NEXT_PUBLIC_SITE_URL", process.env.NEXT_PUBLIC_SITE_URL),
 };
