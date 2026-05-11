@@ -1,27 +1,34 @@
-const emailAddress =  "joseph@attakorah.com";
+function req(name: string, value: string | undefined): string {
+  if (!value) {
+    throw new Error(`Missing required env var: ${name}`);
+  }
+  return value;
+}
+
+const emailAddress = req("NEXT_PUBLIC_PROFILE_EMAIL", process.env.NEXT_PUBLIC_PROFILE_EMAIL);
 
 export const socialLinks = {
-  github: "https://github.com/jizzel",
-  linkedin: "https://www.linkedin.com/in/jaa24",
+  github: req("NEXT_PUBLIC_SOCIAL_GITHUB", process.env.NEXT_PUBLIC_SOCIAL_GITHUB),
+  linkedin: req("NEXT_PUBLIC_SOCIAL_LINKEDIN", process.env.NEXT_PUBLIC_SOCIAL_LINKEDIN),
   email: `mailto:${emailAddress}`,
-  calendly: "https://calendly.com/juxluvjoe/30min",
+  calendly: req("NEXT_PUBLIC_SOCIAL_CALENDLY", process.env.NEXT_PUBLIC_SOCIAL_CALENDLY),
 };
 
 export const profile = {
-  name: "Joseph Afriyie Attakorah",
-  firstName: "Joseph",
-  middleName: "Afriyie",
-  surname: "Attakorah",
+  name: req("NEXT_PUBLIC_PROFILE_NAME", process.env.NEXT_PUBLIC_PROFILE_NAME),
+  firstName: req("NEXT_PUBLIC_PROFILE_FIRST_NAME", process.env.NEXT_PUBLIC_PROFILE_FIRST_NAME),
+  middleName: process.env.NEXT_PUBLIC_PROFILE_MIDDLE_NAME || "",
+  surname: req("NEXT_PUBLIC_PROFILE_SURNAME", process.env.NEXT_PUBLIC_PROFILE_SURNAME),
   title: "Software Engineer",
   focus: "Systems • Monitoring • Operations",
-  location: "Accra, Ghana",
+  location: req("NEXT_PUBLIC_PROFILE_LOCATION", process.env.NEXT_PUBLIC_PROFILE_LOCATION),
   tagline: "Building systems that turn operational complexity into clarity.",
   availability: "Available for remote collaboration worldwide",
-  phone: "+233547665651",
+  phone: req("NEXT_PUBLIC_PROFILE_PHONE", process.env.NEXT_PUBLIC_PROFILE_PHONE),
   email: emailAddress,
 
   // Business Card specific
-  profileImage: "/images/profile.jpg",
+  profileImage: req("NEXT_PUBLIC_PROFILE_IMAGE", process.env.NEXT_PUBLIC_PROFILE_IMAGE),
 
   // SEO & Meta
   description: "Building software that automates operations. Systems, monitoring, and workflow automation.",
@@ -36,5 +43,5 @@ export const profile = {
     "Ghana",
     "Accra",
   ],
-  siteUrl: "https://attakorah.com",
+  siteUrl: req("NEXT_PUBLIC_SITE_URL", process.env.NEXT_PUBLIC_SITE_URL),
 };

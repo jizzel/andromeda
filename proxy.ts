@@ -4,9 +4,12 @@ export function proxy(request: NextRequest) {
   const nonceBytes = crypto.getRandomValues(new Uint8Array(16));
   const nonce = Buffer.from(nonceBytes).toString("base64");
 
+  const isDev = process.env.NODE_ENV !== "production";
+  const devScriptSrc = isDev ? " 'unsafe-eval'" : "";
+
   const csp = [
     `default-src 'self'`,
-    `script-src 'self' 'nonce-${nonce}' https://assets.calendly.com https://va.vercel-scripts.com https://vercel.live`,
+    `script-src 'self' 'nonce-${nonce}'${devScriptSrc} https://assets.calendly.com https://va.vercel-scripts.com https://vercel.live`,
     `style-src 'self' 'unsafe-inline' https://assets.calendly.com https://vercel.live`,
     `img-src 'self' data: blob: https://attakorah.com https://images.unsplash.com https://res.cloudinary.com https://lh3.googleusercontent.com https://*.calendly.com https://vercel.live https://vercel.com`,
     `font-src 'self' data: https://vercel.live https://assets.vercel.com`,
