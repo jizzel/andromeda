@@ -53,7 +53,7 @@ export const metadata: Metadata = {
     title: `${profile.surname} - ${profile.title}`,
     description: profile.description,
     images: [`${profile.siteUrl}/images/og-image.jpg`],
-    creator: "@jizzel", // Update with actual Twitter handle
+    creator: "@Attah_Kay_",
   },
 
   // Robots
