@@ -70,6 +70,7 @@ export function TrackerPageWrapper({ proposalId }: TrackerPageWrapperProps) {
       clientName={proposal.client.name}
       proposalTitle={proposal.title}
       config={proposal.tracker}
+      timeline={proposal.timeline}
     />
   );
 }

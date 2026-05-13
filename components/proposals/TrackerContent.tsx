@@ -23,6 +23,7 @@ import { useAnalytics } from "@/lib/hooks/useAnalytics";
 import { formatDate } from "@/lib/dates";
 import type {
   ProjectTrackerConfig,
+  ProposalTimelineItem,
   TrackerMilestoneState,
   TrackerPhase,
   TrackerStatus,
@@ -35,6 +36,7 @@ interface TrackerContentProps {
   clientName: string;
   proposalTitle: string;
   config: ProjectTrackerConfig;
+  timeline?: ProposalTimelineItem[];
 }
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -74,7 +76,7 @@ const STATUS_META: Record<TrackerStatus, { label: string; classes: string; icon:
   },
 };
 
-export function TrackerContent({ proposalId, accessCode, clientName, proposalTitle, config }: TrackerContentProps) {
+export function TrackerContent({ proposalId, accessCode, clientName, proposalTitle, config, timeline }: TrackerContentProps) {
   const { trackProposalTrackerPhaseViewed } = useAnalytics();
   const [phases, setPhases] = useState<TrackerPhase[]>([]);
   const [states, setStates] = useState<TrackerMilestoneState[]>([]);
@@ -108,6 +110,25 @@ export function TrackerContent({ proposalId, accessCode, clientName, proposalTit
   const stateIndex = useMemo(() => {
     const map = new Map<string, TrackerMilestoneState>();
     for (const s of states) map.set(`${s.phaseId}::${s.milestoneId}`, s);
+    return map;
+  }, [states]);
+
+  const durationByPhaseId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const item of timeline ?? []) {
+      if (item.phaseId) map.set(item.phaseId, item.duration);
+    }
+    return map;
+  }, [timeline]);
+
+  const startedAtByPhaseId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const s of states) {
+      const stamp = s.startedAt || s.completedAt;
+      if (!stamp) continue;
+      const current = map.get(s.phaseId);
+      if (!current || stamp < current) map.set(s.phaseId, stamp);
+    }
     return map;
   }, [states]);
 
@@ -284,8 +305,19 @@ export function TrackerContent({ proposalId, accessCode, clientName, proposalTit
                     {phase.title}
                   </h2>
                   {phase.description && (
-                    <p className="text-sm text-[var(--andromeda-text-secondary)] mb-4">{phase.description}</p>
+                    <p className="text-sm text-[var(--andromeda-text-secondary)] mb-2">{phase.description}</p>
                   )}
+                  {(() => {
+                    const startedAt = startedAtByPhaseId.get(phase.id);
+                    const estimated = durationByPhaseId.get(phase.id);
+                    if (!startedAt && !estimated) return null;
+                    return (
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--andromeda-text-secondary)] mb-4">
+                        {startedAt && <span>Started {formatDate(startedAt)}</span>}
+                        {estimated && <span>Estimated: {estimated}</span>}
+                      </div>
+                    );
+                  })()}
                   <div className="flex items-center gap-3 mb-6">
                     <div className="flex-1 h-1.5 rounded-full bg-[var(--andromeda-text-secondary)]/15 overflow-hidden">
                       <motion.div

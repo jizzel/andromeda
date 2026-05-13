@@ -23,26 +23,15 @@ const websiteProject: TrackerTemplate = {
       icon: "rocket",
       milestones: [
         { id: "kickoff-call", label: "Project initiation (kickoff, tools/access setup)" },
-        { id: "deeper-discovery", label: "Deeper discovery and analysis" },
         { id: "asset-gathering", label: "Content & asset gathering" },
+        { id: "deeper-discovery", label: "Deeper discovery and analysis" },
         { id: "domain-registration", label: "Domain name registration" },
-      ],
-    },
-    {
-      id: "design-development",
-      title: "Design & Development",
-      description: "Designing and building the site.",
-      icon: "palette",
-      milestones: [
-        { id: "design-concepts", label: "Design concepts" },
-        { id: "client-review-feedback", label: "Client review & feedback" },
-        { id: "development-build", label: "Development / build" },
-        { id: "stage-deployment", label: "Stage deployment" },
+        { id: "project-planning", label: "Project planning" },
       ],
     },
     {
       id: "testing-review",
-      title: "Testing & Review",
+      title: "Review & Revisions",
       description: "Quality assurance and final approval.",
       icon: "check-circle",
       milestones: [
@@ -54,14 +43,14 @@ const websiteProject: TrackerTemplate = {
     },
     {
       id: "deployment-delivery",
-      title: "Deployment & Delivery",
+      title: "Launch",
       description: "Going live and handing over.",
       icon: "globe",
       milestones: [
         { id: "go-live", label: "Deployment / go-live" },
         { id: "handover-docs", label: "Handover & documentation" },
         { id: "post-launch-check", label: "Post-launch check" },
-        {id: "training-support", label: "Training & support"}
+        { id: "training-support", label: "Training & support" },
       ],
     },
   ],
@@ -116,11 +105,32 @@ export function composeTracker(templateIds: string[]): TrackerPhase[] {
 
 export function resolveTrackerPhases(config: ProjectTrackerConfig): TrackerPhase[] {
   const composed = composeTracker(config.templates);
-  const withAdditions = [...composed, ...(config.additions ?? [])];
-  const excluded = new Set(config.exclude ?? []);
-  if (excluded.size === 0) return withAdditions;
+  const ordered: TrackerPhase[] = [...composed];
+  const trailing: TrackerPhase[] = [];
+  // Per-anchor offset so multiple additions targeting the same anchor stay in
+  // their declared order: the first goes at anchor+1, the second at anchor+2, etc.
+  const offsetByAnchor = new Map<string, number>();
 
-  return withAdditions
+  for (const addition of config.additions ?? []) {
+    if (!addition.insertAfter) {
+      trailing.push(addition);
+      continue;
+    }
+    const anchorIdx = ordered.findIndex((p) => p.id === addition.insertAfter);
+    if (anchorIdx === -1) {
+      trailing.push(addition);
+      continue;
+    }
+    const offset = (offsetByAnchor.get(addition.insertAfter) ?? 0) + 1;
+    offsetByAnchor.set(addition.insertAfter, offset);
+    ordered.splice(anchorIdx + offset, 0, addition);
+  }
+
+  const all = [...ordered, ...trailing];
+  const excluded = new Set(config.exclude ?? []);
+  if (excluded.size === 0) return all;
+
+  return all
     .map((phase) => ({
       ...phase,
       milestones: phase.milestones.filter((m) => !excluded.has(m.id)),
