@@ -1,10 +1,12 @@
 import { Resend } from "resend";
 import { MilestoneUpdateEmail } from "@/emails/MilestoneUpdate";
+import { profile } from "@/constants/profile";
 
 interface SendMilestoneEmailArgs {
   to: string;
   clientName: string;
   proposalId: string;
+  projectTitle: string;
   phaseTitle: string;
   milestoneLabel: string;
   note?: string;
@@ -21,17 +23,20 @@ export async function sendMilestoneEmail(args: SendMilestoneEmailArgs): Promise<
 
   const resend = new Resend(apiKey);
   const trackerUrl = `${siteUrl.replace(/\/$/, "")}/proposal/${args.proposalId}/tracker`;
+  const senderName = `${profile.firstName} ${profile.surname}`.trim();
 
   const result = await resend.emails.send({
     from,
     to: args.to,
-    subject: `Project update: ${args.milestoneLabel}`,
+    subject: `${args.projectTitle} — ${args.milestoneLabel}`,
     react: MilestoneUpdateEmail({
       clientName: args.clientName,
+      projectTitle: args.projectTitle,
       phaseTitle: args.phaseTitle,
       milestoneLabel: args.milestoneLabel,
       note: args.note,
       trackerUrl,
+      senderName,
     }),
   });
 

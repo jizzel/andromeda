@@ -68,6 +68,7 @@ export async function POST(request: NextRequest) {
       to: clientEmail,
       clientName: proposal.data.client.name,
       proposalId,
+      projectTitle: proposal.data.title,
       phaseTitle: phase.title,
       milestoneLabel: milestone.label,
       note: row.state.note,
