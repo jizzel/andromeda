@@ -23,7 +23,7 @@ export async function sendMilestoneEmail(args: SendMilestoneEmailArgs): Promise<
 
   const resend = new Resend(apiKey);
   const trackerUrl = `${siteUrl.replace(/\/$/, "")}/proposal/${args.proposalId}/tracker`;
-  const senderName = `${profile.firstName} ${profile.surname}`.trim();
+  const senderName = profile.name;
 
   const result = await resend.emails.send({
     from,

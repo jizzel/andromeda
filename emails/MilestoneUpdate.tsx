@@ -31,7 +31,7 @@ export function MilestoneUpdateEmail({
   trackerUrl,
   senderName,
 }: MilestoneUpdateEmailProps) {
-  const firstName = clientName.split(" ")[0] || clientName;
+  const firstName = clientName.trim().split(" ")[0] || clientName;
   const preview = `${milestoneLabel} is complete — here's your update on ${projectTitle}.`;
 
   return (
