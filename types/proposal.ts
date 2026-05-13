@@ -73,6 +73,8 @@ export interface ProposalTimelineItem {
   phase: string;
   duration: string;
   description: string;
+  /** Optional link to a TrackerPhase id so the tracker can show this duration estimate. */
+  phaseId?: string;
 }
 
 export interface ProposalRequirement {
@@ -178,6 +180,11 @@ export interface TrackerPhase {
   description?: string;
   icon?: string;
   milestones: TrackerMilestone[];
+  /**
+   * When this phase comes from `ProjectTrackerConfig.additions`, place it
+   * immediately after the template phase with this id. Defaults to "end".
+   */
+  insertAfter?: string;
 }
 
 export interface TrackerTemplate {
