@@ -49,17 +49,6 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   "share-2": Share2,
 };
 
-function phaseStartedAt(phaseId: string, states: TrackerMilestoneState[]): string | undefined {
-  let earliest: string | undefined;
-  for (const s of states) {
-    if (s.phaseId !== phaseId) continue;
-    const stamp = s.startedAt || s.completedAt;
-    if (!stamp) continue;
-    if (!earliest || stamp < earliest) earliest = stamp;
-  }
-  return earliest;
-}
-
 function getPhaseIcon(name?: string) {
   return name && iconMap[name] ? iconMap[name] : ListChecks;
 }
@@ -131,6 +120,17 @@ export function TrackerContent({ proposalId, accessCode, clientName, proposalTit
     }
     return map;
   }, [timeline]);
+
+  const startedAtByPhaseId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const s of states) {
+      const stamp = s.startedAt || s.completedAt;
+      if (!stamp) continue;
+      const current = map.get(s.phaseId);
+      if (!current || stamp < current) map.set(s.phaseId, stamp);
+    }
+    return map;
+  }, [states]);
 
   const { totalMilestones, doneMilestones, currentPhase, currentPhaseIndex, lastUpdatedAt } = useMemo(() => {
     let total = 0;
@@ -308,7 +308,7 @@ export function TrackerContent({ proposalId, accessCode, clientName, proposalTit
                     <p className="text-sm text-[var(--andromeda-text-secondary)] mb-2">{phase.description}</p>
                   )}
                   {(() => {
-                    const startedAt = phaseStartedAt(phase.id, states);
+                    const startedAt = startedAtByPhaseId.get(phase.id);
                     const estimated = durationByPhaseId.get(phase.id);
                     if (!startedAt && !estimated) return null;
                     return (

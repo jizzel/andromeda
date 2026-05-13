@@ -107,6 +107,9 @@ export function resolveTrackerPhases(config: ProjectTrackerConfig): TrackerPhase
   const composed = composeTracker(config.templates);
   const ordered: TrackerPhase[] = [...composed];
   const trailing: TrackerPhase[] = [];
+  // Per-anchor offset so multiple additions targeting the same anchor stay in
+  // their declared order: the first goes at anchor+1, the second at anchor+2, etc.
+  const offsetByAnchor = new Map<string, number>();
 
   for (const addition of config.additions ?? []) {
     if (!addition.insertAfter) {
@@ -116,9 +119,11 @@ export function resolveTrackerPhases(config: ProjectTrackerConfig): TrackerPhase
     const anchorIdx = ordered.findIndex((p) => p.id === addition.insertAfter);
     if (anchorIdx === -1) {
       trailing.push(addition);
-    } else {
-      ordered.splice(anchorIdx + 1, 0, addition);
+      continue;
     }
+    const offset = (offsetByAnchor.get(addition.insertAfter) ?? 0) + 1;
+    offsetByAnchor.set(addition.insertAfter, offset);
+    ordered.splice(anchorIdx + offset, 0, addition);
   }
 
   const all = [...ordered, ...trailing];
