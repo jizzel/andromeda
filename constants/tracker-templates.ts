@@ -25,7 +25,7 @@ const websiteProject: TrackerTemplate = {
         { id: "kickoff-call", label: "Project initiation (kickoff, tools/access setup)" },
         { id: "asset-gathering", label: "Content & asset gathering" },
         { id: "deeper-discovery", label: "Deeper discovery and analysis" },
-        { id: "domain-registration", label: "Domain name registration" },
+        { id: "domain-registration", label: "Domain name registration/DNS setup" },
         { id: "project-planning", label: "Project planning" },
       ],
     },
