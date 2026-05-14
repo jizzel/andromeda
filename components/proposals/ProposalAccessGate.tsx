@@ -12,15 +12,48 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+type ProposalAccessGateLabel = "proposal" | "tracker" | "assets";
+
+interface AccessGateCopy {
+  title: string;
+  subtitle: string;
+  button: string;
+  footerNoun: string;
+}
+
+const LABEL_COPY: Record<ProposalAccessGateLabel, AccessGateCopy> = {
+  proposal: {
+    title: "Protected Proposal",
+    subtitle: "Enter your access code to view this proposal",
+    button: "Access Proposal",
+    footerNoun: "proposal",
+  },
+  tracker: {
+    title: "Protected Tracker",
+    subtitle: "Enter your access code to view your project tracker",
+    button: "View Tracker",
+    footerNoun: "tracker",
+  },
+  assets: {
+    title: "Protected Assets",
+    subtitle: "Enter your access code to view your asset checklist",
+    button: "View Assets",
+    footerNoun: "asset checklist",
+  },
+};
+
 interface ProposalAccessGateProps {
   proposalId: string;
   onAccessGranted: (proposalData: unknown, expiryDate?: string, accessCode?: string) => void;
+  label?: ProposalAccessGateLabel;
 }
 
 export function ProposalAccessGate({
   proposalId,
   onAccessGranted,
+  label = "proposal",
 }: ProposalAccessGateProps) {
+  const copy = LABEL_COPY[label];
   const [accessCode, setAccessCode] = useState("");
   const [showAccessCode, setShowAccessCode] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,10 +102,10 @@ export function ProposalAccessGate({
 
         {/* Title */}
         <h1 className="text-2xl md:text-3xl font-bold text-center text-[var(--andromeda-text-primary)] mb-3">
-          Protected Proposal
+          {copy.title}
         </h1>
         <p className="text-center text-[var(--andromeda-text-secondary)] mb-8">
-          Enter your access code to view this proposal
+          {copy.subtitle}
         </p>
 
         {/* Form */}
@@ -132,7 +165,7 @@ export function ProposalAccessGate({
               </>
             ) : (
               <>
-                Access Proposal
+                {copy.button}
                 <ArrowRight className="w-4 h-4 ml-2" />
               </>
             )}
@@ -141,8 +174,8 @@ export function ProposalAccessGate({
 
         {/* Footer Note */}
         <p className="text-center text-xs text-[var(--andromeda-text-secondary)]/60 mt-8">
-          This proposal contains confidential information intended only for the
-          recipient. If you received this link in error, please disregard.
+          This {copy.footerNoun} contains confidential information intended only
+          for the recipient. If you received this link in error, please disregard.
         </p>
       </motion.div>
     </div>
