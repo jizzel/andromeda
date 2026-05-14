@@ -124,10 +124,14 @@ export interface ProposalInspirations {
   items?: ProposalInspiration[];
 }
 
+export type AssetItemPriority = "required" | "recommended" | "optional";
+
 export interface AssetCategoryItem {
   id: string;
   label: string;
   note?: string;
+  /** Defaults to "required" when missing. */
+  priority?: AssetItemPriority;
 }
 
 export interface AssetCategory {
