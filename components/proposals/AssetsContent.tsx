@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   FileText,
@@ -49,7 +49,8 @@ function getIcon(name?: string) {
   return name && iconMap[name] ? iconMap[name] : FileText;
 }
 
-const VALID_PRIORITIES: ReadonlySet<AssetItemPriority> = new Set(["required", "recommended", "optional"]);
+const ASSET_PRIORITIES: readonly AssetItemPriority[] = ["required", "recommended", "optional"];
+const VALID_PRIORITIES: ReadonlySet<AssetItemPriority> = new Set(ASSET_PRIORITIES);
 
 function priorityOf(item: AssetCategoryItem): AssetItemPriority {
   return item.priority && VALID_PRIORITIES.has(item.priority) ? item.priority : "required";
@@ -161,9 +162,14 @@ export function AssetsContent({ proposalId, accessCode, assets, clientName }: As
   const progressPercent = totalItems > 0 ? Math.round((checkedCount / totalItems) * 100) : 0;
 
   // Required-only progress: the metric Joseph actually cares about (can work start?)
-  const allItems = assets.categories.flatMap((cat) => cat.items);
-  const requiredItems = allItems.filter((i) => priorityOf(i) === "required");
-  const requiredCheckedCount = requiredItems.filter((i) => checkedIds.has(i.id)).length;
+  const requiredItems = useMemo(
+    () => assets.categories.flatMap((cat) => cat.items).filter((i) => priorityOf(i) === "required"),
+    [assets.categories]
+  );
+  const requiredCheckedCount = useMemo(
+    () => requiredItems.filter((i) => checkedIds.has(i.id)).length,
+    [requiredItems, checkedIds]
+  );
 
   return (
     <main className="min-h-screen bg-[var(--andromeda-primary)]">
@@ -279,7 +285,7 @@ export function AssetsContent({ proposalId, accessCode, assets, clientName }: As
                 },
                 { required: 0, recommended: 0, optional: 0 } as Record<AssetItemPriority, number>
               );
-              const summaryParts = (["required", "recommended", "optional"] as const)
+              const summaryParts = ASSET_PRIORITIES
                 .filter((p) => counts[p] > 0)
                 .map((p) => `${counts[p]} ${p}`);
               return (
