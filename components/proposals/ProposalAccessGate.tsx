@@ -14,12 +14,14 @@ import { Button } from "@/components/ui/button";
 
 type ProposalAccessGateLabel = "proposal" | "tracker" | "assets";
 
-const LABEL_COPY: Record<ProposalAccessGateLabel, {
+interface AccessGateCopy {
   title: string;
   subtitle: string;
   button: string;
   footerNoun: string;
-}> = {
+}
+
+const LABEL_COPY: Record<ProposalAccessGateLabel, AccessGateCopy> = {
   proposal: {
     title: "Protected Proposal",
     subtitle: "Enter your access code to view this proposal",
