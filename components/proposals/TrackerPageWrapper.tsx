@@ -51,6 +51,7 @@ export function TrackerPageWrapper({ proposalId }: TrackerPageWrapperProps) {
     return (
       <ProposalAccessGate
         proposalId={proposalId}
+        label="tracker"
         onAccessGranted={(data, _expiry, code) => {
           setProposal(data as ProposalDataUnion);
           setAccessCode(code ?? "");
