@@ -22,7 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ScrollReveal } from "@/components/animations/ScrollReveal";
 import { useAnalytics } from "@/lib/hooks/useAnalytics";
-import type { AssetRequest } from "@/types/proposal";
+import type { AssetCategoryItem, AssetItemPriority, AssetRequest } from "@/types/proposal";
 import Link from "next/link";
 
 interface AssetsContentProps {
@@ -48,6 +48,27 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 function getIcon(name?: string) {
   return name && iconMap[name] ? iconMap[name] : FileText;
 }
+
+const VALID_PRIORITIES: ReadonlySet<AssetItemPriority> = new Set(["required", "recommended", "optional"]);
+
+function priorityOf(item: AssetCategoryItem): AssetItemPriority {
+  return item.priority && VALID_PRIORITIES.has(item.priority) ? item.priority : "required";
+}
+
+const PRIORITY_PILL: Record<AssetItemPriority, { label: string; classes: string }> = {
+  required: {
+    label: "Required",
+    classes: "bg-[var(--andromeda-accent-beige)]/15 text-[var(--andromeda-accent-beige)] border-[var(--andromeda-accent-beige)]/40",
+  },
+  recommended: {
+    label: "Recommended",
+    classes: "bg-white/5 text-[var(--andromeda-text-secondary)] border-white/15 light:bg-black/5 light:border-black/15",
+  },
+  optional: {
+    label: "Optional",
+    classes: "bg-transparent text-[var(--andromeda-text-secondary)]/70 border-white/10 light:border-black/10",
+  },
+};
 
 export function AssetsContent({ proposalId, accessCode, assets, clientName }: AssetsContentProps) {
   const { trackProposalAssetItemToggled, trackProposalUploadFolderOpened } = useAnalytics();
@@ -139,6 +160,11 @@ export function AssetsContent({ proposalId, accessCode, assets, clientName }: As
   const checkedCount = checkedIds.size;
   const progressPercent = totalItems > 0 ? Math.round((checkedCount / totalItems) * 100) : 0;
 
+  // Required-only progress: the metric Joseph actually cares about (can work start?)
+  const allItems = assets.categories.flatMap((cat) => cat.items);
+  const requiredItems = allItems.filter((i) => priorityOf(i) === "required");
+  const requiredCheckedCount = requiredItems.filter((i) => checkedIds.has(i.id)).length;
+
   return (
     <main className="min-h-screen bg-[var(--andromeda-primary)]">
       {/* Hero */}
@@ -217,6 +243,14 @@ export function AssetsContent({ proposalId, accessCode, assets, clientName }: As
                   transition={{ duration: 0.4, ease: "easeOut" }}
                 />
               </div>
+              {!loading && requiredItems.length > 0 && (
+                <p className="text-xs text-[var(--andromeda-text-secondary)] mt-2">
+                  Required: {requiredCheckedCount} of {requiredItems.length} complete
+                  {requiredCheckedCount === requiredItems.length && (
+                    <span className="ml-2 text-[var(--andromeda-accent-beige)]">— ready to start work</span>
+                  )}
+                </p>
+              )}
               {syncError && (
                 <motion.div
                   initial={{ opacity: 0 }}
@@ -238,6 +272,16 @@ export function AssetsContent({ proposalId, accessCode, assets, clientName }: As
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {assets.categories.map((category, catIndex) => {
               const Icon = getIcon(category.icon);
+              const counts = category.items.reduce(
+                (acc, item) => {
+                  acc[priorityOf(item)] += 1;
+                  return acc;
+                },
+                { required: 0, recommended: 0, optional: 0 } as Record<AssetItemPriority, number>
+              );
+              const summaryParts = (["required", "recommended", "optional"] as const)
+                .filter((p) => counts[p] > 0)
+                .map((p) => `${counts[p]} ${p}`);
               return (
                 <ScrollReveal key={category.id} delay={0.1 * (catIndex + 1)}>
                   <motion.div
@@ -279,11 +323,19 @@ export function AssetsContent({ proposalId, accessCode, assets, clientName }: As
                       </div>
                     )}
 
+                    {summaryParts.length > 1 && (
+                      <p className="text-xs text-[var(--andromeda-text-secondary)]/70 mb-3">
+                        {summaryParts.join(" • ")}
+                      </p>
+                    )}
+
                     {/* Checklist items */}
                     <ul className="space-y-2.5 flex-1">
                       {category.items.map((item) => {
                         const isChecked = checkedIds.has(item.id);
                         const isPending = pendingToggles.has(item.id);
+                        const priority = priorityOf(item);
+                        const pill = PRIORITY_PILL[priority];
                         return (
                           <li key={item.id}>
                             <button
@@ -299,7 +351,7 @@ export function AssetsContent({ proposalId, accessCode, assets, clientName }: As
                                 )}
                               </span>
                               <span
-                                className={`text-sm leading-snug transition-colors ${
+                                className={`flex-1 text-sm leading-snug transition-colors ${
                                   isChecked
                                     ? "line-through text-[var(--andromeda-text-secondary)]/50"
                                     : "text-[var(--andromeda-text-secondary)] group-hover:text-[var(--andromeda-text-primary)]"
@@ -312,6 +364,13 @@ export function AssetsContent({ proposalId, accessCode, assets, clientName }: As
                                   </span>
                                 )}
                               </span>
+                              {priority !== "required" && (
+                                <span
+                                  className={`shrink-0 mt-0.5 text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded border ${pill.classes}`}
+                                >
+                                  {pill.label}
+                                </span>
+                              )}
                             </button>
                           </li>
                         );
