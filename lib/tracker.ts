@@ -10,7 +10,9 @@ import type {
   TrackerMilestoneState,
 } from "@/types/proposal";
 
-const AUTO_DONE_ON_ACCEPTED = "proposal-sent-accepted";
+// "proposal-sent" is filled in manually on the sheet (its date predates anything
+// the app can observe), so only "proposal-accepted" auto-completes on first seed.
+const AUTO_DONE_ON_ACCEPTED = "proposal-accepted";
 const AUTO_DONE_ON_ASSETS_READY = "service-agreement-signed";
 
 const milestoneKey = (phaseId: string, milestoneId: string) => `${phaseId}::${milestoneId}`;
