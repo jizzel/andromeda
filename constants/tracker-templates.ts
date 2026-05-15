@@ -11,7 +11,8 @@ const websiteProject: TrackerTemplate = {
       icon: "file-signature",
       milestones: [
         { id: "discovery-call", label: "Initial discovery" },
-        { id: "proposal-sent-accepted", label: "Proposal sent & accepted" },
+        { id: "proposal-sent", label: "Proposal sent" },
+        { id: "proposal-accepted", label: "Proposal accepted" },
         { id: "service-agreement-signed", label: "Service agreement signed" },
         { id: "initial-payment-received", label: "Initial payment received" },
       ],
