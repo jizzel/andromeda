@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   FileSignature,
   Rocket,
@@ -17,10 +17,12 @@ import {
   Clock,
   CheckCircle2,
   Ban,
+  Loader2,
 } from "lucide-react";
 import { ScrollReveal } from "@/components/animations/ScrollReveal";
 import { useAnalytics } from "@/lib/hooks/useAnalytics";
 import { formatDate } from "@/lib/dates";
+import { profile } from "@/constants/profile";
 import type {
   ProjectTrackerConfig,
   ProposalTimelineItem,
@@ -84,6 +86,11 @@ export function TrackerContent({ proposalId, accessCode, clientName, proposalTit
   const [error, setError] = useState<string | null>(null);
   const phaseRefs = useRef<Map<string, HTMLElement>>(new Map());
   const seenPhasesRef = useRef<Set<string>>(new Set());
+  // Approval flow state: which milestone (if any) has its confirmation modal open,
+  // whether the POST is in flight, and any inline error from the last attempt.
+  const [pendingApproval, setPendingApproval] = useState<{ phase: TrackerPhase; milestoneId: string; milestoneLabel: string } | null>(null);
+  const [approving, setApproving] = useState(false);
+  const [approveError, setApproveError] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -171,6 +178,51 @@ export function TrackerContent({ proposalId, accessCode, clientName, proposalTit
   }, [phases, stateIndex]);
 
   const overallPercent = totalMilestones > 0 ? Math.round((doneMilestones / totalMilestones) * 100) : 0;
+
+  async function submitApproval() {
+    if (!pendingApproval) return;
+    setApproving(true);
+    setApproveError(null);
+    try {
+      const res = await fetch("/api/proposal/tracker/approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          proposalId,
+          accessCode,
+          phaseId: pendingApproval.phase.id,
+          milestoneId: pendingApproval.milestoneId,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setApproveError(data.error || "Couldn't record your approval. Please try again.");
+        return;
+      }
+      // Optimistically reflect the approval in local state so the UI updates without a refetch.
+      const approvedAt = data.approvedAt as string;
+      setStates((prev) => {
+        const others = prev.filter(
+          (s) => !(s.phaseId === pendingApproval.phase.id && s.milestoneId === pendingApproval.milestoneId)
+        );
+        return [
+          ...others,
+          {
+            phaseId: pendingApproval.phase.id,
+            milestoneId: pendingApproval.milestoneId,
+            status: "done",
+            completedAt: approvedAt,
+            updatedAt: approvedAt,
+          },
+        ];
+      });
+      setPendingApproval(null);
+    } catch {
+      setApproveError("Connection error. Please try again.");
+    } finally {
+      setApproving(false);
+    }
+  }
 
   // Phase view analytics — fire once per phase when visible
   useEffect(() => {
@@ -372,6 +424,27 @@ export function TrackerContent({ proposalId, accessCode, clientName, proposalTit
                               {meta.label}
                             </span>
                           </div>
+                          {milestone.clientApprovable && status !== "done" && (
+                            <div className="mt-3 pt-3 border-t border-[var(--andromeda-accent-beige)]/10">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setPendingApproval({
+                                    phase,
+                                    milestoneId: milestone.id,
+                                    milestoneLabel: milestone.label,
+                                  })
+                                }
+                                className="inline-flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-md bg-[var(--andromeda-accent-beige)] text-[var(--andromeda-primary)] hover:bg-[var(--andromeda-accent-beige)]/90 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--andromeda-accent-beige)]/50"
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                Mark as approved
+                              </button>
+                              <p className="text-[11px] text-[var(--andromeda-text-secondary)]/70 mt-2">
+                                This step needs your approval before we move forward.
+                              </p>
+                            </div>
+                          )}
                         </li>
                       );
                     })}
@@ -400,6 +473,86 @@ export function TrackerContent({ proposalId, accessCode, clientName, proposalTit
           </Link>
         </div>
       </section>
+
+      <AnimatePresence>
+        {pendingApproval && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={() => {
+              if (!approving) {
+                setPendingApproval(null);
+                setApproveError(null);
+              }
+            }}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="approval-dialog-title"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.18 }}
+              className="w-full max-w-md rounded-xl border border-[var(--andromeda-accent-beige)]/20 bg-[var(--andromeda-secondary)] p-6 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2
+                id="approval-dialog-title"
+                className="text-lg font-semibold text-[var(--andromeda-text-primary)] mb-2"
+              >
+                Confirm approval
+              </h2>
+              <p className="text-sm text-[var(--andromeda-text-secondary)] mb-4">
+                You&apos;re marking <strong className="text-[var(--andromeda-text-primary)]">{pendingApproval.milestoneLabel}</strong> as approved on{" "}
+                <em>{pendingApproval.phase.title}</em>. {profile.firstName} will be notified that you&apos;ve approved this milestone.
+              </p>
+              <p className="text-xs text-[var(--andromeda-text-secondary)]/70 mb-6">
+                If you approved by mistake, message {profile.firstName} and they can roll it back.
+              </p>
+              {approveError && (
+                <div className="flex items-center gap-2 text-sm text-red-400 mb-4">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{approveError}</span>
+                </div>
+              )}
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPendingApproval(null);
+                    setApproveError(null);
+                  }}
+                  disabled={approving}
+                  className="px-4 py-2 text-sm text-[var(--andromeda-text-secondary)] hover:text-[var(--andromeda-text-primary)] disabled:opacity-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={submitApproval}
+                  disabled={approving}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-[var(--andromeda-accent-beige)] text-[var(--andromeda-primary)] text-sm font-semibold hover:bg-[var(--andromeda-accent-beige)]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {approving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Recording…
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4" />
+                      Confirm approval
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }

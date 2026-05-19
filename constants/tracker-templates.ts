@@ -39,7 +39,7 @@ const websiteProject: TrackerTemplate = {
         { id: "qa-cross-device", label: "QA / cross-device testing" },
         { id: "client-review-round", label: "Client review round" },
         { id: "revisions-fixes", label: "Revisions & fixes" },
-        { id: "final-approval", label: "Final approval" },
+        { id: "final-approval", label: "Final approval", clientApprovable: true },
       ],
     },
     {
