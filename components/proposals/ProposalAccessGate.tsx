@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-type ProposalAccessGateLabel = "proposal" | "tracker" | "assets";
+type ProposalAccessGateLabel = "proposal" | "tracker" | "assets" | "brief";
 
 interface AccessGateCopy {
   title: string;
@@ -40,18 +40,33 @@ const LABEL_COPY: Record<ProposalAccessGateLabel, AccessGateCopy> = {
     button: "View Assets",
     footerNoun: "asset checklist",
   },
+  brief: {
+    title: "Protected Brief",
+    subtitle: "Enter your access code to view the creative brief",
+    button: "Open Brief",
+    footerNoun: "brief",
+  },
 };
 
 interface ProposalAccessGateProps {
   proposalId: string;
   onAccessGranted: (proposalData: unknown, expiryDate?: string, accessCode?: string) => void;
   label?: ProposalAccessGateLabel;
+  /** Defaults to the proposal verify route. Used by the creative brief gate to point at `/api/brief/verify`. */
+  verifyUrl?: string;
+  /** Field name for the resource id in the request body. Defaults to "proposalId". */
+  idBodyKey?: string;
+  /** Field name for the payload in a successful response. Defaults to "proposal". */
+  responseDataKey?: string;
 }
 
 export function ProposalAccessGate({
   proposalId,
   onAccessGranted,
   label = "proposal",
+  verifyUrl = "/api/proposal/verify",
+  idBodyKey = "proposalId",
+  responseDataKey = "proposal",
 }: ProposalAccessGateProps) {
   const copy = LABEL_COPY[label];
   const [accessCode, setAccessCode] = useState("");
@@ -65,16 +80,16 @@ export function ProposalAccessGate({
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/proposal/verify", {
+      const response = await fetch(verifyUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ proposalId, accessCode }),
+        body: JSON.stringify({ [idBodyKey]: proposalId, accessCode }),
       });
 
       const data = await response.json();
 
-      if (data.success && data.proposal) {
-        onAccessGranted(data.proposal, data.expiryDate, accessCode.trim());
+      if (data.success && data[responseDataKey]) {
+        onAccessGranted(data[responseDataKey], data.expiryDate, accessCode.trim());
       } else {
         setError(data.error || "Invalid access code");
       }
