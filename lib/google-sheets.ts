@@ -132,8 +132,13 @@ async function verifyAccessGated<T>(
     if (!record) return { success: false, error: messages.notFound };
     if (!record.isActive) return { success: false, error: messages.inactive };
 
+    // Fail closed on unparseable expiry dates: a malformed cell is a data
+    // integrity problem, not a "the row never expires" signal. Treat invalid
+    // dates as expired so the access is denied rather than silently granted.
     const expiryDate = new Date(record.expiryDate);
-    if (new Date() > expiryDate) return { success: false, error: messages.expired };
+    if (isNaN(expiryDate.getTime()) || new Date() > expiryDate) {
+      return { success: false, error: messages.expired };
+    }
 
     if (record.accessCode.toLowerCase() !== accessCode.toLowerCase()) {
       return { success: false, error: "Invalid access code" };
