@@ -41,6 +41,10 @@ interface ProposalAccessedEvent {
   proposal_id: string;
 }
 
+interface BriefAccessedEvent {
+  brief_id: string;
+}
+
 interface ProposalPackageSelectedEvent {
   proposal_id: string;
   package_id: string;
@@ -131,6 +135,7 @@ export const useAnalytics = () => {
   const trackProposalUploadFolderOpened = (data: ProposalUploadFolderOpenedEvent) => emit("proposal_upload_folder_opened", data);
   const trackProposalTrackerOpened = (data: ProposalTrackerOpenedEvent) => emit("proposal_tracker_opened", data);
   const trackProposalTrackerPhaseViewed = (data: ProposalTrackerPhaseViewedEvent) => emit("proposal_tracker_phase_viewed", data);
+  const trackBriefAccessed = (data: BriefAccessedEvent) => emit("brief_accessed", data);
 
   return {
     trackBusinessCardOpened,
@@ -151,5 +156,6 @@ export const useAnalytics = () => {
     trackProposalUploadFolderOpened,
     trackProposalTrackerOpened,
     trackProposalTrackerPhaseViewed,
+    trackBriefAccessed,
   };
 };

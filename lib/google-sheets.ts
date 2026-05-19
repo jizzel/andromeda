@@ -7,6 +7,7 @@ import type {
   TrackerMilestoneState,
   TrackerStatus,
 } from "@/types/proposal";
+import type { CreativeBriefData } from "@/types/brief";
 
 // Re-declare types here to avoid circular dependency with lib/content
 type PostCategory = "System Design" | "Monitoring" | "Automation" | "Research";
@@ -49,37 +50,48 @@ function getGoogleSheetsClient() {
 
 const SPREADSHEET_ID = process.env.GOOGLE_PROPOSALS_SHEET_ID;
 const SHEET_NAME = "Proposals";
+const BRIEF_SHEET_NAME = "CreativeBrief";
 const BLOG_SHEET_NAME = "BlogPosts";
 
-// Column mapping for the Google Sheet
+// Column mapping for access-gated sheet rows (Proposals + CreativeBrief share this shape).
 // Expected columns: id, accessCode, expiryDate, isActive, data (JSON string)
 const COLUMNS = {
   ID: 0,
   ACCESS_CODE: 1,
   EXPIRY_DATE: 2,
   IS_ACTIVE: 3,
-  DATA: 4, // JSON string containing full ProposalData
+  DATA: 4,
 };
 
-export interface ProposalRecord {
+export interface AccessGatedRecord<T> {
   id: string;
   accessCode: string;
   expiryDate: string;
   isActive: boolean;
-  data: ProposalData;
+  data: T;
+}
+
+export type ProposalRecord = AccessGatedRecord<ProposalData>;
+export type BriefRecord = AccessGatedRecord<CreativeBriefData>;
+
+// Generic copy used by the verify wrappers below. The "noun" lets each surface
+// (proposal / brief / future) produce error messages clients can act on.
+interface AccessVerifyMessages {
+  notFound: string;
+  inactive: string;
+  expired: string;
 }
 
 /**
- * Fetch all proposals from Google Sheets
+ * Fetch all access-gated rows from a sheet tab whose columns match the shape
+ * `id | accessCode | expiryDate | isActive | data(JSON)`.
  */
-export async function getAllProposals(): Promise<ProposalRecord[]> {
+async function fetchAccessGatedRows<T>(sheetName: string): Promise<AccessGatedRecord<T>[]> {
   const sheets = getGoogleSheetsClient();
-
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEET_NAME}!A2:E`, // Skip header row
+    range: `${sheetName}!A2:E`,
   });
-
   const rows = response.data.values || [];
 
   return rows
@@ -91,14 +103,59 @@ export async function getAllProposals(): Promise<ProposalRecord[]> {
           accessCode: row[COLUMNS.ACCESS_CODE]?.trim(),
           expiryDate: row[COLUMNS.EXPIRY_DATE]?.trim(),
           isActive: row[COLUMNS.IS_ACTIVE]?.trim().toLowerCase() === "true",
-          data: JSON.parse(row[COLUMNS.DATA]) as ProposalData,
-        };
+          data: JSON.parse(row[COLUMNS.DATA]) as T,
+        } satisfies AccessGatedRecord<T>;
       } catch (error) {
-        console.error(`Failed to parse proposal data for row with ID ${row[COLUMNS.ID]}:`, error);
+        console.error(`Failed to parse data for ${sheetName} row with ID ${row[COLUMNS.ID]}:`, error);
         return null;
       }
     })
-    .filter((p): p is ProposalRecord => p !== null);
+    .filter((r): r is AccessGatedRecord<T> => r !== null);
+}
+
+async function findAccessGatedRecordById<T>(
+  sheetName: string,
+  id: string
+): Promise<AccessGatedRecord<T> | null> {
+  const all = await fetchAccessGatedRows<T>(sheetName);
+  return all.find((r) => r.id === id) || null;
+}
+
+async function verifyAccessGated<T>(
+  sheetName: string,
+  id: string,
+  accessCode: string,
+  messages: AccessVerifyMessages
+): Promise<{ success: true; data: T; expiryDate: string } | { success: false; error: string }> {
+  try {
+    const record = await findAccessGatedRecordById<T>(sheetName, id);
+    if (!record) return { success: false, error: messages.notFound };
+    if (!record.isActive) return { success: false, error: messages.inactive };
+
+    // Fail closed on unparseable expiry dates: a malformed cell is a data
+    // integrity problem, not a "the row never expires" signal. Treat invalid
+    // dates as expired so the access is denied rather than silently granted.
+    const expiryDate = new Date(record.expiryDate);
+    if (isNaN(expiryDate.getTime()) || new Date() > expiryDate) {
+      return { success: false, error: messages.expired };
+    }
+
+    if (record.accessCode.toLowerCase() !== accessCode.toLowerCase()) {
+      return { success: false, error: "Invalid access code" };
+    }
+
+    return { success: true, data: record.data, expiryDate: record.expiryDate };
+  } catch (error) {
+    console.error(`Error verifying ${sheetName} access:`, error);
+    return { success: false, error: "Unable to verify access. Please try again." };
+  }
+}
+
+/**
+ * Fetch all proposals from Google Sheets
+ */
+export async function getAllProposals(): Promise<ProposalRecord[]> {
+  return fetchAccessGatedRows<ProposalData>(SHEET_NAME);
 }
 
 /**
@@ -107,46 +164,46 @@ export async function getAllProposals(): Promise<ProposalRecord[]> {
 export async function getProposalById(
   proposalId: string
 ): Promise<ProposalRecord | null> {
-  const proposals = await getAllProposals();
-  return proposals.find((p) => p.id === proposalId) || null;
+  return findAccessGatedRecordById<ProposalData>(SHEET_NAME, proposalId);
 }
 
 /**
  * Verify access code for a proposal
- * Returns the proposal data if valid, null otherwise
  */
 export async function verifyProposalAccess(
   proposalId: string,
   accessCode: string
 ): Promise<{ success: boolean; proposal?: ProposalData; expiryDate?: string; error?: string }> {
-  try {
-    const proposal = await getProposalById(proposalId);
+  const result = await verifyAccessGated<ProposalData>(SHEET_NAME, proposalId, accessCode, {
+    notFound: "Proposal not found",
+    inactive: "This proposal is no longer available",
+    expired: "This proposal has expired",
+  });
+  if (!result.success) return { success: false, error: result.error };
+  return { success: true, proposal: result.data, expiryDate: result.expiryDate };
+}
 
-    if (!proposal) {
-      return { success: false, error: "Proposal not found" };
-    }
+/**
+ * Find a creative brief by its ID
+ */
+export async function getBriefById(briefId: string): Promise<BriefRecord | null> {
+  return findAccessGatedRecordById<CreativeBriefData>(BRIEF_SHEET_NAME, briefId);
+}
 
-    if (!proposal.isActive) {
-      return { success: false, error: "This proposal is no longer available" };
-    }
-
-    // Check expiry date
-    const expiryDate = new Date(proposal.expiryDate);
-    const now = new Date();
-    if (now > expiryDate) {
-      return { success: false, error: "This proposal has expired" };
-    }
-
-    // Verify access code (case-insensitive comparison)
-    if (proposal.accessCode.toLowerCase() !== accessCode.toLowerCase()) {
-      return { success: false, error: "Invalid access code" };
-    }
-
-    return { success: true, proposal: proposal.data, expiryDate: proposal.expiryDate };
-  } catch (error) {
-    console.error("Error verifying proposal access:", error);
-    return { success: false, error: "Unable to verify access. Please try again." };
-  }
+/**
+ * Verify access code for a creative brief
+ */
+export async function verifyBriefAccess(
+  briefId: string,
+  accessCode: string
+): Promise<{ success: boolean; brief?: CreativeBriefData; expiryDate?: string; error?: string }> {
+  const result = await verifyAccessGated<CreativeBriefData>(BRIEF_SHEET_NAME, briefId, accessCode, {
+    notFound: "Brief not found",
+    inactive: "This brief is no longer available",
+    expired: "This brief has expired",
+  });
+  if (!result.success) return { success: false, error: result.error };
+  return { success: true, brief: result.data, expiryDate: result.expiryDate };
 }
 
 // Blog Posts from Google Sheets
