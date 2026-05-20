@@ -176,6 +176,12 @@ export interface TrackerMilestone {
   id: string;
   label: string;
   description?: string;
+  /**
+   * When true, the client can mark this milestone as `done` themselves from
+   * the tracker page. Used for milestones that require the client's action
+   * (e.g. final approval). Defaults to false.
+   */
+  clientApprovable?: boolean;
 }
 
 export interface TrackerPhase {
