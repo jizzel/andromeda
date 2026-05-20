@@ -16,10 +16,10 @@ interface SendMilestoneEmailArgs {
 export async function sendMilestoneEmail(args: SendMilestoneEmailArgs): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.NOTIFICATION_FROM_EMAIL;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://attakorah.com";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
 
-  if (!apiKey || !from) {
-    throw new Error("Missing RESEND_API_KEY or NOTIFICATION_FROM_EMAIL env vars");
+  if (!apiKey || !from || !siteUrl) {
+    throw new Error("Missing RESEND_API_KEY, NOTIFICATION_FROM_EMAIL, or NEXT_PUBLIC_SITE_URL env vars");
   }
 
   const resend = new Resend(apiKey);
@@ -58,10 +58,10 @@ interface SendClientApprovalNoticeArgs {
 export async function sendClientApprovalNotice(args: SendClientApprovalNoticeArgs): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.NOTIFICATION_FROM_EMAIL;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://attakorah.com";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
 
-  if (!apiKey || !from) {
-    throw new Error("Missing RESEND_API_KEY or NOTIFICATION_FROM_EMAIL env vars");
+  if (!apiKey || !from || !siteUrl) {
+    throw new Error("Missing RESEND_API_KEY, NOTIFICATION_FROM_EMAIL, or NEXT_PUBLIC_SITE_URL env vars");
   }
 
   const resend = new Resend(apiKey);
