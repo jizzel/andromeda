@@ -10,8 +10,8 @@ import { resolveTrackerPhases } from "@/constants/tracker-templates";
 import { sendWeeklyUpdate } from "@/lib/email";
 import type { TrackerMilestoneState } from "@/types/proposal";
 
-// Vercel Cron Jobs schedule: `0 20 * * 5` → Friday 20:00 UTC.
-// That's 8pm Ghana time (UTC+0). If/when clients in other time zones are
+// Vercel Cron Jobs schedule: `30 16 * * 5` → Friday 16:30 UTC.
+// That's 4:30pm Ghana time (UTC+0). If/when clients in other time zones are
 // added, the schedule should be per-client or moved to a queue model.
 
 interface SendResult {
