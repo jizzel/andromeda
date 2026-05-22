@@ -500,6 +500,35 @@ export async function getTrackerStates(proposalId: string): Promise<TrackerMiles
   }
 }
 
+/**
+ * Fetch all tracker states in one sheet read, grouped by proposalId. Use this
+ * when you'd otherwise call `getTrackerStates` for many proposals in a loop
+ * (e.g. the weekly-update cron).
+ */
+export async function getAllTrackerStatesByProposal(): Promise<Map<string, TrackerMilestoneState[]>> {
+  const out = new Map<string, TrackerMilestoneState[]>();
+  try {
+    const sheets = getGoogleSheetsClient();
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${TRACKER_SHEET_NAME}!A2:I`,
+    });
+    const rows = response.data.values || [];
+    for (const row of rows) {
+      const proposalId = row[0]?.trim();
+      if (!proposalId) continue;
+      const state = rowToTrackerState(row);
+      if (!state.phaseId || !state.milestoneId) continue;
+      const existing = out.get(proposalId);
+      if (existing) existing.push(state);
+      else out.set(proposalId, [state]);
+    }
+  } catch (error) {
+    console.error("Failed to fetch all tracker states:", error);
+  }
+  return out;
+}
+
 export async function getTrackerRow(
   proposalId: string,
   phaseId: string,
@@ -609,5 +638,134 @@ export async function getTrackerSheetId(
   sheets: ReturnType<typeof getGoogleSheetsClient>
 ): Promise<number | null> {
   return getSheetId(sheets, TRACKER_SHEET_NAME, trackerSheetIdCache);
+}
+
+// Weekly update tabs.
+// WeeklyNotes columns: A: proposalId | B: weekEndingDate (YYYY-MM-DD) | C: note
+// WeeklyUpdatesSent columns: A: proposalId | B: weekEndingDate | C: sentAt
+const WEEKLY_NOTES_SHEET_NAME = "WeeklyNotes";
+const WEEKLY_SENT_SHEET_NAME = "WeeklyUpdatesSent";
+
+/**
+ * Returns the weekly note for a given proposal and week-ending date, or null
+ * if no row exists. `weekEndingDate` is a YYYY-MM-DD string.
+ */
+export async function getWeeklyNote(
+  proposalId: string,
+  weekEndingDate: string
+): Promise<string | null> {
+  try {
+    const sheets = getGoogleSheetsClient();
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${WEEKLY_NOTES_SHEET_NAME}!A2:C`,
+    });
+    const rows = response.data.values || [];
+    const row = rows.find(
+      (r) => r[0]?.trim() === proposalId && r[1]?.trim() === weekEndingDate
+    );
+    const note = row?.[2]?.trim();
+    return note || null;
+  } catch (error) {
+    console.error("Failed to fetch weekly note:", error);
+    return null;
+  }
+}
+
+/**
+ * Returns true if a weekly update has already been sent for the given proposal + week.
+ */
+export async function hasWeeklyUpdateBeenSent(
+  proposalId: string,
+  weekEndingDate: string
+): Promise<boolean> {
+  try {
+    const sheets = getGoogleSheetsClient();
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${WEEKLY_SENT_SHEET_NAME}!A2:C`,
+    });
+    const rows = response.data.values || [];
+    return rows.some(
+      (r) => r[0]?.trim() === proposalId && r[1]?.trim() === weekEndingDate
+    );
+  } catch (error) {
+    // If the tab doesn't exist yet, treat as "not sent" so the first run can proceed.
+    console.error("Failed to check weekly update sent state:", error);
+    return false;
+  }
+}
+
+/**
+ * Append a row to WeeklyUpdatesSent marking that a weekly update has been delivered.
+ */
+export async function markWeeklyUpdateSent(
+  proposalId: string,
+  weekEndingDate: string
+): Promise<void> {
+  const sheets = getGoogleSheetsClient();
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${WEEKLY_SENT_SHEET_NAME}!A:C`,
+    valueInputOption: "RAW",
+    requestBody: {
+      values: [[proposalId, weekEndingDate, new Date().toISOString()]],
+    },
+  });
+}
+
+/**
+ * Fetch all WeeklyNotes rows in one sheet read, keyed by `${proposalId}::${weekEndingDate}`.
+ * Use this in the cron to avoid one network read per proposal.
+ */
+export async function getAllWeeklyNotes(): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  try {
+    const sheets = getGoogleSheetsClient();
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${WEEKLY_NOTES_SHEET_NAME}!A2:C`,
+    });
+    const rows = response.data.values || [];
+    for (const row of rows) {
+      const proposalId = row[0]?.trim();
+      const weekEndingDate = row[1]?.trim();
+      const note = row[2]?.trim();
+      if (proposalId && weekEndingDate && note) {
+        out.set(`${proposalId}::${weekEndingDate}`, note);
+      }
+    }
+  } catch (error) {
+    // Missing tab is fine — empty map means "no notes anywhere."
+    console.error("Failed to fetch weekly notes:", error);
+  }
+  return out;
+}
+
+/**
+ * Fetch all WeeklyUpdatesSent rows in one sheet read, as a Set of
+ * `${proposalId}::${weekEndingDate}` keys for fast membership checks.
+ */
+export async function getAllWeeklyUpdatesSent(): Promise<Set<string>> {
+  const out = new Set<string>();
+  try {
+    const sheets = getGoogleSheetsClient();
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${WEEKLY_SENT_SHEET_NAME}!A2:C`,
+    });
+    const rows = response.data.values || [];
+    for (const row of rows) {
+      const proposalId = row[0]?.trim();
+      const weekEndingDate = row[1]?.trim();
+      if (proposalId && weekEndingDate) {
+        out.add(`${proposalId}::${weekEndingDate}`);
+      }
+    }
+  } catch (error) {
+    // Missing tab → empty set → all proposals are "not sent yet." First run is fine.
+    console.error("Failed to fetch weekly updates sent:", error);
+  }
+  return out;
 }
 
