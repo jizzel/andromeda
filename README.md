@@ -110,6 +110,7 @@ GOOGLE_PROPOSALS_SHEET_ID=
 RESEND_API_KEY=
 NOTIFICATION_FROM_EMAIL=             # e.g. notifications@attakorah.com (verified in Resend)
 TRACKER_WEBHOOK_SECRET=              # Shared secret with the Apps Script onEdit trigger
+CRON_SECRET=                         # Bearer secret for the Friday weekly-update Vercel Cron
 ```
 
 The profile vars are validated at module load (`constants/profile.ts`) — the build fails loudly rather than rendering with blanks. Without the Sheets/email vars, proposal verification and sheet-based posts silently return empty; the site still boots.
