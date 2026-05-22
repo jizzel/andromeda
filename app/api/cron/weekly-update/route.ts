@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   getAllProposals,
-  getTrackerStates,
-  getWeeklyNote,
-  hasWeeklyUpdateBeenSent,
+  getAllTrackerStatesByProposal,
+  getAllWeeklyNotes,
+  getAllWeeklyUpdatesSent,
   markWeeklyUpdateSent,
 } from "@/lib/google-sheets";
 import { resolveTrackerPhases } from "@/constants/tracker-templates";
@@ -35,34 +35,72 @@ export async function GET(request: NextRequest) {
   const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const dateRange = `${friendlyDate(weekStart)} – ${friendlyDate(now)}`;
 
-  let proposals;
+  // Batch-fetch everything we need in parallel, one sheet read per dataset.
+  // Each proposal then processes against in-memory data — no per-proposal I/O
+  // until the (parallel) send + idempotency-stamp at the end.
+  let proposals: Awaited<ReturnType<typeof getAllProposals>>;
+  let statesByProposal: Map<string, TrackerMilestoneState[]>;
+  let notesByKey: Map<string, string>;
+  let sentKeys: Set<string>;
   try {
-    proposals = await getAllProposals();
+    [proposals, statesByProposal, notesByKey, sentKeys] = await Promise.all([
+      getAllProposals(),
+      getAllTrackerStatesByProposal(),
+      getAllWeeklyNotes(),
+      getAllWeeklyUpdatesSent(),
+    ]);
   } catch (error) {
-    console.error("Weekly update cron: failed to read proposals", error);
+    console.error("Weekly update cron: failed to fetch batched sheet data", error);
     return NextResponse.json(
-      { success: false, error: "Failed to read proposals" },
+      { success: false, error: "Failed to read sheet data" },
       { status: 500 }
     );
   }
 
-  const results: SendResult[] = [];
-
-  for (const proposal of proposals) {
-    const result = await processProposal(proposal, weekEndingDate, dateRange, weekStart, now);
-    results.push(result);
-  }
+  // Process all proposals in parallel. processProposal is now self-contained
+  // (in-memory filters + at most one Resend send + one append for the
+  // idempotency stamp), so concurrency is bounded by Resend's rate limits
+  // and Sheets API append limits — both comfortable for the proposal count
+  // this site will realistically see.
+  const results = await Promise.all(
+    proposals.map((proposal) =>
+      processProposal({
+        proposal,
+        weekEndingDate,
+        dateRange,
+        weekStart,
+        now,
+        states: statesByProposal.get(proposal.id) ?? [],
+        note: notesByKey.get(`${proposal.id}::${weekEndingDate}`),
+        alreadySent: sentKeys.has(`${proposal.id}::${weekEndingDate}`),
+      })
+    )
+  );
 
   return NextResponse.json({ success: true, weekEndingDate, results });
 }
 
-async function processProposal(
-  proposal: Awaited<ReturnType<typeof getAllProposals>>[number],
-  weekEndingDate: string,
-  dateRange: string,
-  weekStart: Date,
-  now: Date
-): Promise<SendResult> {
+interface ProcessProposalArgs {
+  proposal: Awaited<ReturnType<typeof getAllProposals>>[number];
+  weekEndingDate: string;
+  dateRange: string;
+  weekStart: Date;
+  now: Date;
+  states: TrackerMilestoneState[];
+  note: string | undefined;
+  alreadySent: boolean;
+}
+
+async function processProposal({
+  proposal,
+  weekEndingDate,
+  dateRange,
+  weekStart,
+  now,
+  states,
+  note,
+  alreadySent,
+}: ProcessProposalArgs): Promise<SendResult> {
   const { id: proposalId, data } = proposal;
 
   if (!data.trackerReady || !data.tracker) {
@@ -74,9 +112,6 @@ async function processProposal(
   if (!proposal.isActive) {
     return { proposalId, status: "skipped", reason: "proposal-inactive" };
   }
-
-  // Idempotency guard — re-running the cron for the same week is a no-op.
-  const alreadySent = await hasWeeklyUpdateBeenSent(proposalId, weekEndingDate);
   if (alreadySent) {
     return { proposalId, status: "skipped", reason: "already-sent-this-week" };
   }
@@ -86,7 +121,6 @@ async function processProposal(
     return { proposalId, status: "skipped", reason: "no-phases-resolved" };
   }
 
-  const states = await getTrackerStates(proposalId);
   const stateByKey = new Map<string, TrackerMilestoneState>();
   for (const s of states) stateByKey.set(`${s.phaseId}::${s.milestoneId}`, s);
 
@@ -121,8 +155,6 @@ async function processProposal(
   if (completed.length === 0 && inProgress.length === 0) {
     return { proposalId, status: "skipped", reason: "no-activity-this-week" };
   }
-
-  const note = (await getWeeklyNote(proposalId, weekEndingDate)) ?? undefined;
 
   try {
     await sendWeeklyUpdate({
