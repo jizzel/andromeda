@@ -14,6 +14,11 @@ import type { TrackerMilestoneState } from "@/types/proposal";
 // That's 4:30pm Ghana time (UTC+0). If/when clients in other time zones are
 // added, the schedule should be per-client or moved to a queue model.
 
+// Day of the week the report covers. Surfaced in the email as
+// "Week ending {WEEKLY_REPORT_DAY}, {date}". If the schedule above is ever
+// changed, update this constant to match — they're a paired contract.
+const WEEKLY_REPORT_DAY = "Friday";
+
 interface SendResult {
   proposalId: string;
   status: "sent" | "skipped";
@@ -30,19 +35,19 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  const now = new Date();
-  const weekEndingDate = isoDate(now);
-  // Data window: rolling 7 days back from the cron fire time. This is what
-  // decides whether a milestone's `completedAt` qualifies as "this week's"
-  // work — and intentionally includes weekend completions so they aren't
-  // silently dropped.
-  const dataWindowStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  // Display range: the email's framing for the client, e.g. "Friday, 22 May".
-  // The cron fires on Friday so `now` is already the natural end of the
-  // work week — the weekday is hardcoded into the formatter rather than
-  // derived from `now.getDay()` because a late/replayed cron run shouldn't
-  // mislabel the week.
-  const dateRange = friendlyDate(now);
+  // The cron is scheduled for Friday 16:30 UTC but Vercel may retry late or a
+  // human may replay manually mid-week. Snap to the most recent Friday 16:30
+  // UTC so the data window, the displayed date, and the idempotency key all
+  // anchor to the *intended* report time rather than the actual execution time.
+  const reportDate = mostRecentFridayAt1630Utc(new Date());
+  const weekEndingDate = isoDate(reportDate);
+  // Data window: rolling 7 days back from the intended Friday. Includes
+  // weekend completions so they aren't silently dropped between reports.
+  const dataWindowStart = new Date(reportDate.getTime() - 7 * 24 * 60 * 60 * 1000);
+  // Display range: the email's framing for the client, e.g. "22 May".
+  // Paired with the WEEKLY_REPORT_DAY constant below so the email reads
+  // "Week ending Friday, 22 May" without hardcoding the weekday in the template.
+  const dateRange = friendlyDate(reportDate);
 
   // Batch-fetch everything we need in parallel, one sheet read per dataset.
   // Each proposal then processes against in-memory data — no per-proposal I/O
@@ -77,8 +82,9 @@ export async function GET(request: NextRequest) {
         proposal,
         weekEndingDate,
         dateRange,
+        weekEndingDay: WEEKLY_REPORT_DAY,
         dataWindowStart,
-        now,
+        reportDate,
         states: statesByProposal.get(proposal.id) ?? [],
         note: notesByKey.get(`${proposal.id}::${weekEndingDate}`),
         alreadySent: sentKeys.has(`${proposal.id}::${weekEndingDate}`),
@@ -93,8 +99,12 @@ interface ProcessProposalArgs {
   proposal: Awaited<ReturnType<typeof getAllProposals>>[number];
   weekEndingDate: string;
   dateRange: string;
+  weekEndingDay: string;
   dataWindowStart: Date;
-  now: Date;
+  /** The intended Friday 16:30 UTC — used as the upper bound for completedAt
+   *  filtering. Distinct from `new Date()` to keep the data window stable on
+   *  late or replayed cron runs. */
+  reportDate: Date;
   states: TrackerMilestoneState[];
   note: string | undefined;
   alreadySent: boolean;
@@ -104,8 +114,9 @@ async function processProposal({
   proposal,
   weekEndingDate,
   dateRange,
+  weekEndingDay,
   dataWindowStart,
-  now,
+  reportDate,
   states,
   note,
   alreadySent,
@@ -147,7 +158,7 @@ async function processProposal({
         const completedAt = state?.completedAt;
         if (completedAt) {
           const t = new Date(completedAt).getTime();
-          if (!isNaN(t) && t >= dataWindowStart.getTime() && t <= now.getTime()) {
+          if (!isNaN(t) && t >= dataWindowStart.getTime() && t <= reportDate.getTime()) {
             completed.push({ label: milestone.label, date: friendlyDate(new Date(completedAt)) });
           }
         }
@@ -172,6 +183,7 @@ async function processProposal({
       proposalId,
       projectTitle: data.title,
       dateRange,
+      weekEndingDay,
       weekEndingDate,
       completed,
       inProgress,
@@ -192,4 +204,22 @@ function isoDate(d: Date): string {
 
 function friendlyDate(d: Date): string {
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+}
+
+/**
+ * Snap a date to the most recent Friday 16:30 UTC. Used so the report's data
+ * window, displayed date, and idempotency key stay stable regardless of when
+ * the cron actually executes (Vercel retries, manual replay, etc.).
+ *
+ * If the input is Friday before 16:30 UTC, snaps forward to that same Friday
+ * 16:30 UTC — the window will then include data up to ~6 days back from the
+ * intended report time, which is correct for "Week ending Friday."
+ */
+function mostRecentFridayAt1630Utc(from: Date): Date {
+  // UTC days: 0=Sun, 1=Mon, …, 5=Fri, 6=Sat.
+  // Days since most recent Friday: Fri→0, Sat→1, Sun→2, Mon→3, …, Thu→6.
+  const daysSinceFriday = (from.getUTCDay() + 2) % 7;
+  const snapped = new Date(from.getTime() - daysSinceFriday * 24 * 60 * 60 * 1000);
+  snapped.setUTCHours(16, 30, 0, 0);
+  return snapped;
 }

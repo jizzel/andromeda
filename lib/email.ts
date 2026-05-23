@@ -58,6 +58,9 @@ interface SendWeeklyUpdateArgs {
   proposalId: string;
   projectTitle: string;
   dateRange: string;
+  /** Day of the week the report covers, e.g. "Friday". Decoupled from cron
+   *  schedule so the email template doesn't bake in scheduling assumptions. */
+  weekEndingDay: string;
   weekEndingDate: string;
   completed: WeeklyUpdateItem[];
   inProgress: WeeklyUpdateItem[];
@@ -86,6 +89,7 @@ export async function sendWeeklyUpdate(args: SendWeeklyUpdateArgs): Promise<void
       clientName: args.clientName,
       projectTitle: args.projectTitle,
       dateRange: args.dateRange,
+      weekEndingDay: args.weekEndingDay,
       completed: args.completed,
       inProgress: args.inProgress,
       comingUp: args.comingUp,
