@@ -161,10 +161,13 @@ async function processProposal({
 
       if (status === "done") {
         // Only include in "completed this week" if completedAt is in the last 7 days.
+        // Window is `(dataWindowStart, reportDate]` — strict lower bound, inclusive
+        // upper. A milestone completed exactly at the previous week's reportDate
+        // belongs to *that* week's report (it matches `<=` there), not this one.
         const completedAt = state?.completedAt;
         if (completedAt) {
           const t = new Date(completedAt).getTime();
-          if (!isNaN(t) && t >= dataWindowStart.getTime() && t <= reportDate.getTime()) {
+          if (!isNaN(t) && t > dataWindowStart.getTime() && t <= reportDate.getTime()) {
             completed.push({ label: milestone.label, date: friendlyDate(new Date(completedAt)) });
           }
         }

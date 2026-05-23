@@ -14,9 +14,18 @@ export function formatDate(dateString: string): string {
   });
 }
 
-/** Short human format, e.g. "22 May". Used in compact contexts like emails. */
+/**
+ * Short human format, e.g. "22 May". Used in compact contexts like emails.
+ *
+ * Anchored to UTC: this helper is called from server-side code (cron, emails)
+ * whose output should not depend on the host machine's timezone. Vercel
+ * currently runs serverless functions in UTC, but that's not contractually
+ * guaranteed — explicit `timeZone: "UTC"` makes the contract local to this
+ * function. For client-side display, see `formatDate` which respects the
+ * viewer's local timezone.
+ */
 export function friendlyDate(d: Date): string {
-  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
 }
 
 /** YYYY-MM-DD in UTC. Stable key for Sheet rows that need a day identifier. */
