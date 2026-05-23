@@ -32,8 +32,17 @@ export async function GET(request: NextRequest) {
 
   const now = new Date();
   const weekEndingDate = isoDate(now);
-  const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const dateRange = `${friendlyDate(weekStart)} – ${friendlyDate(now)}`;
+  // Data window: rolling 7 days back from the cron fire time. This is what
+  // decides whether a milestone's `completedAt` qualifies as "this week's"
+  // work — and intentionally includes weekend completions so they aren't
+  // silently dropped.
+  const dataWindowStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  // Display range: the email's framing for the client, e.g. "Friday, 22 May".
+  // The cron fires on Friday so `now` is already the natural end of the
+  // work week — the weekday is hardcoded into the formatter rather than
+  // derived from `now.getDay()` because a late/replayed cron run shouldn't
+  // mislabel the week.
+  const dateRange = friendlyDate(now);
 
   // Batch-fetch everything we need in parallel, one sheet read per dataset.
   // Each proposal then processes against in-memory data — no per-proposal I/O
@@ -68,7 +77,7 @@ export async function GET(request: NextRequest) {
         proposal,
         weekEndingDate,
         dateRange,
-        weekStart,
+        dataWindowStart,
         now,
         states: statesByProposal.get(proposal.id) ?? [],
         note: notesByKey.get(`${proposal.id}::${weekEndingDate}`),
@@ -84,7 +93,7 @@ interface ProcessProposalArgs {
   proposal: Awaited<ReturnType<typeof getAllProposals>>[number];
   weekEndingDate: string;
   dateRange: string;
-  weekStart: Date;
+  dataWindowStart: Date;
   now: Date;
   states: TrackerMilestoneState[];
   note: string | undefined;
@@ -95,7 +104,7 @@ async function processProposal({
   proposal,
   weekEndingDate,
   dateRange,
-  weekStart,
+  dataWindowStart,
   now,
   states,
   note,
@@ -138,7 +147,7 @@ async function processProposal({
         const completedAt = state?.completedAt;
         if (completedAt) {
           const t = new Date(completedAt).getTime();
-          if (!isNaN(t) && t >= weekStart.getTime() && t <= now.getTime()) {
+          if (!isNaN(t) && t >= dataWindowStart.getTime() && t <= now.getTime()) {
             completed.push({ label: milestone.label, date: friendlyDate(new Date(completedAt)) });
           }
         }

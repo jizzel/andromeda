@@ -52,7 +52,7 @@ export function WeeklyUpdateEmail({
         <Container style={container}>
           <Text style={eyebrow}>Weekly update</Text>
           <Heading style={heading}>{projectTitle}</Heading>
-          <Text style={subheading}>{dateRange}</Text>
+          <Text style={subheading}>Week ending Friday, {dateRange}</Text>
 
           <Text style={paragraph}>Hi {firstName},</Text>
           <Text style={paragraph}>
