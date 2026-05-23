@@ -12,12 +12,12 @@ import {
   daysBefore,
   friendlyDate,
   isoDate,
-  mostRecentFridayAt1630Utc,
+  mostRecentFridayReportTime,
 } from "@/lib/dates";
 import type { TrackerMilestoneState } from "@/types/proposal";
 
-// Vercel Cron Jobs schedule: `30 16 * * 5` → Friday 16:30 UTC.
-// That's 4:30pm Ghana time (UTC+0). If/when clients in other time zones are
+// Vercel Cron Jobs schedule: `0 18 * * 5` → Friday 18:00 UTC.
+// That's 6:00pm Ghana time (UTC+0). If/when clients in other time zones are
 // added, the schedule should be per-client or moved to a queue model.
 
 // Day of the week the report covers. Surfaced in the email as
@@ -41,11 +41,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  // The cron is scheduled for Friday 16:30 UTC but Vercel may retry late or a
-  // human may replay manually mid-week. Snap to the most recent Friday 16:30
-  // UTC so the data window, the displayed date, and the idempotency key all
-  // anchor to the *intended* report time rather than the actual execution time.
-  const reportDate = mostRecentFridayAt1630Utc(new Date());
+  // The cron is scheduled for Friday at WEEKLY_REPORT_TIME_UTC (see `lib/dates.ts`)
+  // but Vercel may retry late or a human may replay manually mid-week. Snap to
+  // the most recent Friday at the report time so the data window, the displayed
+  // date, and the idempotency key all anchor to the *intended* report time
+  // rather than the actual execution time.
+  const reportDate = mostRecentFridayReportTime(new Date());
   const weekEndingDate = isoDate(reportDate);
   // Data window: rolling 7 days back from the intended Friday. Includes
   // weekend completions so they aren't silently dropped between reports.
