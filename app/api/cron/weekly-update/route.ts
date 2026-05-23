@@ -8,11 +8,22 @@ import {
 } from "@/lib/google-sheets";
 import { resolveTrackerPhases } from "@/constants/tracker-templates";
 import { sendWeeklyUpdate } from "@/lib/email";
+import {
+  daysBefore,
+  friendlyDate,
+  isoDate,
+  mostRecentFridayReportTime,
+} from "@/lib/dates";
 import type { TrackerMilestoneState } from "@/types/proposal";
 
-// Vercel Cron Jobs schedule: `30 16 * * 5` → Friday 16:30 UTC.
-// That's 4:30pm Ghana time (UTC+0). If/when clients in other time zones are
+// Vercel Cron Jobs schedule: `0 18 * * 5` → Friday 18:00 UTC.
+// That's 6:00pm Ghana time (UTC+0). If/when clients in other time zones are
 // added, the schedule should be per-client or moved to a queue model.
+
+// Day of the week the report covers. Surfaced in the email as
+// "Week ending {WEEKLY_REPORT_DAY}, {date}". If the schedule above is ever
+// changed, update this constant to match — they're a paired contract.
+const WEEKLY_REPORT_DAY = "Friday";
 
 interface SendResult {
   proposalId: string;
@@ -30,10 +41,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  const now = new Date();
-  const weekEndingDate = isoDate(now);
-  const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const dateRange = `${friendlyDate(weekStart)} – ${friendlyDate(now)}`;
+  // The cron is scheduled for Friday at WEEKLY_REPORT_TIME_UTC (see `lib/dates.ts`)
+  // but Vercel may retry late or a human may replay manually mid-week. Snap to
+  // the most recent Friday at the report time so the data window, the displayed
+  // date, and the idempotency key all anchor to the *intended* report time
+  // rather than the actual execution time.
+  const reportDate = mostRecentFridayReportTime(new Date());
+  const weekEndingDate = isoDate(reportDate);
+  // Data window: rolling 7 days back from the intended Friday. Includes
+  // weekend completions so they aren't silently dropped between reports.
+  const dataWindowStart = daysBefore(reportDate, 7);
+  // Display range: the email's framing for the client, e.g. "22 May".
+  // Paired with the WEEKLY_REPORT_DAY constant below so the email reads
+  // "Week ending Friday, 22 May" without hardcoding the weekday in the template.
+  const dateRange = friendlyDate(reportDate);
 
   // Batch-fetch everything we need in parallel, one sheet read per dataset.
   // Each proposal then processes against in-memory data — no per-proposal I/O
@@ -68,8 +89,9 @@ export async function GET(request: NextRequest) {
         proposal,
         weekEndingDate,
         dateRange,
-        weekStart,
-        now,
+        weekEndingDay: WEEKLY_REPORT_DAY,
+        dataWindowStart,
+        reportDate,
         states: statesByProposal.get(proposal.id) ?? [],
         note: notesByKey.get(`${proposal.id}::${weekEndingDate}`),
         alreadySent: sentKeys.has(`${proposal.id}::${weekEndingDate}`),
@@ -84,8 +106,12 @@ interface ProcessProposalArgs {
   proposal: Awaited<ReturnType<typeof getAllProposals>>[number];
   weekEndingDate: string;
   dateRange: string;
-  weekStart: Date;
-  now: Date;
+  weekEndingDay: string;
+  dataWindowStart: Date;
+  /** The intended Friday 16:30 UTC — used as the upper bound for completedAt
+   *  filtering. Distinct from `new Date()` to keep the data window stable on
+   *  late or replayed cron runs. */
+  reportDate: Date;
   states: TrackerMilestoneState[];
   note: string | undefined;
   alreadySent: boolean;
@@ -95,8 +121,9 @@ async function processProposal({
   proposal,
   weekEndingDate,
   dateRange,
-  weekStart,
-  now,
+  weekEndingDay,
+  dataWindowStart,
+  reportDate,
   states,
   note,
   alreadySent,
@@ -135,10 +162,13 @@ async function processProposal({
 
       if (status === "done") {
         // Only include in "completed this week" if completedAt is in the last 7 days.
+        // Window is `(dataWindowStart, reportDate]` — strict lower bound, inclusive
+        // upper. A milestone completed exactly at the previous week's reportDate
+        // belongs to *that* week's report (it matches `<=` there), not this one.
         const completedAt = state?.completedAt;
         if (completedAt) {
           const t = new Date(completedAt).getTime();
-          if (!isNaN(t) && t >= weekStart.getTime() && t <= now.getTime()) {
+          if (!isNaN(t) && t > dataWindowStart.getTime() && t <= reportDate.getTime()) {
             completed.push({ label: milestone.label, date: friendlyDate(new Date(completedAt)) });
           }
         }
@@ -163,6 +193,7 @@ async function processProposal({
       proposalId,
       projectTitle: data.title,
       dateRange,
+      weekEndingDay,
       weekEndingDate,
       completed,
       inProgress,
@@ -177,10 +208,3 @@ async function processProposal({
   }
 }
 
-function isoDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
-
-function friendlyDate(d: Date): string {
-  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-}

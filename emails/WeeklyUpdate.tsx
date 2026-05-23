@@ -22,6 +22,9 @@ interface WeeklyUpdateEmailProps {
   clientName: string;
   projectTitle: string;
   dateRange: string;
+  /** Day of the week the report covers, e.g. "Friday". Decoupled from cron
+   *  schedule so the email template doesn't bake in scheduling assumptions. */
+  weekEndingDay: string;
   completed: WeeklyUpdateItem[];
   inProgress: WeeklyUpdateItem[];
   comingUp: WeeklyUpdateItem[];
@@ -34,6 +37,7 @@ export function WeeklyUpdateEmail({
   clientName,
   projectTitle,
   dateRange,
+  weekEndingDay,
   completed,
   inProgress,
   comingUp,
@@ -52,7 +56,7 @@ export function WeeklyUpdateEmail({
         <Container style={container}>
           <Text style={eyebrow}>Weekly update</Text>
           <Heading style={heading}>{projectTitle}</Heading>
-          <Text style={subheading}>{dateRange}</Text>
+          <Text style={subheading}>Week ending {weekEndingDay}, {dateRange}</Text>
 
           <Text style={paragraph}>Hi {firstName},</Text>
           <Text style={paragraph}>
