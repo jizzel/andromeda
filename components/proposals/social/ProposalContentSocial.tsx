@@ -115,7 +115,7 @@ export function ProposalContentSocial({
         clientName={proposal.client.name}
         isExpired={isExpired}
         initialAcceptance={initialAcceptance}
-        packages={proposal.packages}
+        packages={proposal.packages ?? []}
         selectedPackageId={selectedPackageId}
         selectedPlanId={null}
       />
