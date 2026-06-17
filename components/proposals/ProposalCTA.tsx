@@ -80,25 +80,27 @@ export function ProposalCTA({
               </Button>
             </motion.div>
 
-            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Button
-                asChild
-                size="lg"
-                variant="outline"
-                className="border-[var(--andromeda-accent-beige)]/50 text-[var(--andromeda-text-primary)] hover:bg-[var(--andromeda-accent-beige)]/10 px-8 py-6 text-base"
-              >
-                <a
-                  href={pdfUrl}
-                  download
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => trackCTAClicked({ type: "download", location: "proposal_cta" })}
+            {pdfUrl && (
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <Button
+                  asChild
+                  size="lg"
+                  variant="outline"
+                  className="border-[var(--andromeda-accent-beige)]/50 text-[var(--andromeda-text-primary)] hover:bg-[var(--andromeda-accent-beige)]/10 px-8 py-6 text-base"
                 >
-                  <FileDown className="w-5 h-5 mr-2" />
-                  Download Proposal
-                </a>
-              </Button>
-            </motion.div>
+                  <a
+                    href={pdfUrl}
+                    download
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => trackCTAClicked({ type: "download", location: "proposal_cta" })}
+                  >
+                    <FileDown className="w-5 h-5 mr-2" />
+                    Download Proposal
+                  </a>
+                </Button>
+              </motion.div>
+            )}
 
             {assetsReady && proposalId && (
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>

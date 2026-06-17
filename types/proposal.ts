@@ -364,8 +364,59 @@ export interface ProposalDataChurch extends Omit<ProposalData, 'phases' | 'packa
   criticalFactorsSubtitle?: string;
 }
 
+// Social-media-engagement proposal type (Ridge Medical Centre and similar
+// recurring SMM retainers). Differs from website projects in that work is
+// continuous monthly cycles, not phased milestones, and pricing is monthly
+// subscription per tier rather than milestone-based payment plans.
+export interface ContentPillar {
+  id: string;
+  title: string;
+  description?: string;
+  items: string[];
+  icon?: string;
+}
+
+export interface ScopeArea {
+  id: string;
+  title: string;
+  items: string[];
+  icon?: string;
+}
+
+export interface AddOn {
+  id: string;
+  title: string;
+  description?: string;
+  pricingNote?: string;
+}
+
+export interface DigitalPresenceCrossSell {
+  title?: string;
+  intro: string;
+  opportunities: string[];
+  note?: string;
+}
+
+export interface EngagementTerms {
+  minimumMonths: number;
+  recommendedRange: string;
+  note?: string;
+}
+
+export interface ProposalDataSocial extends Omit<
+  ProposalData,
+  'phases' | 'paymentPlans' | 'paymentClarification' | 'hosting' | 'maintenance' | 'inspirations' | 'phase2Preview'
+> {
+  proposalType: 'social-media-engagement';
+  contentPillars: ContentPillar[];
+  scopeOfServices: ScopeArea[];
+  addOns?: AddOn[];
+  crossSell?: DigitalPresenceCrossSell;
+  engagement: EngagementTerms;
+}
+
 // Union type for all proposal types
-export type ProposalDataUnion = ProposalData | ProposalDataChurch;
+export type ProposalDataUnion = ProposalData | ProposalDataChurch | ProposalDataSocial;
 
 // API response types
 export interface VerifyAccessResponse {

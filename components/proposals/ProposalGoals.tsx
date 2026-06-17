@@ -1,7 +1,7 @@
 "use client";
 
 import { ScrollReveal } from "@/components/animations/ScrollReveal";
-import { Globe, Search, Info, Phone, Layers, LucideIcon } from "lucide-react";
+import { Globe, Search, Info, Phone, Layers, MessageSquare, LucideIcon } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface Goal {
@@ -21,6 +21,7 @@ const iconMap: Record<string, LucideIcon> = {
   Info,
   Phone,
   Layers,
+  MessageSquare,
 };
 
 export function ProposalGoals({ goals }: ProposalGoalsProps) {

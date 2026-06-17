@@ -94,10 +94,52 @@ const socialMedia: TrackerTemplate = {
   ],
 };
 
+// Recurring SMM retainer template (Ridge Medical Centre and similar). One
+// onboarding phase plus one phase per contracted month. The 3-month minimum
+// is pre-built; extend for longer engagements via per-proposal additions.
+function makeMonthPhase(monthNumber: number): TrackerPhase {
+  return {
+    id: `smm-month-${monthNumber}`,
+    title: `Month ${monthNumber}`,
+    description: `Strategy, production, publishing, and reporting for Month ${monthNumber}.`,
+    icon: "rocket",
+    milestones: [
+      { id: `smm-month-${monthNumber}-strategy`, label: "Strategy & content calendar delivered" },
+      { id: `smm-month-${monthNumber}-session`, label: "Content production session held" },
+      { id: `smm-month-${monthNumber}-published`, label: "Posts published & community managed" },
+      { id: `smm-month-${monthNumber}-report`, label: "Monthly performance report sent" },
+    ],
+  };
+}
+
+const smmMonthlyEngagement: TrackerTemplate = {
+  id: "smm-monthly-engagement",
+  name: "Social Media Monthly Engagement",
+  phases: [
+    {
+      id: "smm-onboarding",
+      title: "Onboarding",
+      description: "Account access, brand assets, and first strategy alignment.",
+      icon: "file-signature",
+      milestones: [
+        { id: "smm-brand-assets-received", label: "Brand assets received (logo, colours, voice notes)" },
+        { id: "smm-staff-photos-received", label: "Doctor headshots & bios received" },
+        { id: "smm-social-access-granted", label: "Social account access granted" },
+        { id: "smm-approval-workflow-agreed", label: "Content approval workflow agreed" },
+        { id: "smm-kickoff-call", label: "Kickoff strategy call held" },
+      ],
+    },
+    makeMonthPhase(1),
+    makeMonthPhase(2),
+    makeMonthPhase(3),
+  ],
+};
+
 export const trackerTemplates: Record<string, TrackerTemplate> = {
   [websiteProject.id]: websiteProject,
   [googleBusiness.id]: googleBusiness,
   [socialMedia.id]: socialMedia,
+  [smmMonthlyEngagement.id]: smmMonthlyEngagement,
 };
 
 export function composeTracker(templateIds: string[]): TrackerPhase[] {

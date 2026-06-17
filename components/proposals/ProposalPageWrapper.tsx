@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { ProposalData, ProposalDataUnion, ProposalDataChurch, ProposalAcceptance } from "@/types/proposal";
+import type { ProposalData, ProposalDataUnion, ProposalDataChurch, ProposalDataSocial, ProposalAcceptance } from "@/types/proposal";
 import { ProposalAccessGate } from "./ProposalAccessGate";
 import { ProposalContent } from "./ProposalContent";
 import { ProposalContentChurch } from "./ProposalContentChurch";
+import { ProposalContentSocial } from "./social/ProposalContentSocial";
 import { useAnalytics } from "@/lib/hooks/useAnalytics";
 
 interface ProposalPageWrapperProps {
@@ -74,6 +75,19 @@ export function ProposalPageWrapper({ proposalId }: ProposalPageWrapperProps) {
     return (
       <ProposalContentChurch
         proposal={proposal as ProposalDataChurch}
+        expiryDate={expiryDate}
+        proposalId={proposalId}
+        accessCode={accessCode}
+        isExpired={isExpired}
+        initialAcceptance={initialAcceptance}
+      />
+    );
+  }
+
+  if ('proposalType' in proposal && proposal.proposalType === 'social-media-engagement') {
+    return (
+      <ProposalContentSocial
+        proposal={proposal as ProposalDataSocial}
         expiryDate={expiryDate}
         proposalId={proposalId}
         accessCode={accessCode}
