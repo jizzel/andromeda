@@ -507,7 +507,7 @@ export function TrackerContent({ proposalId, accessCode, clientName, proposalTit
               </h2>
               <p className="text-sm text-[var(--andromeda-text-secondary)] mb-4">
                 You&apos;re marking <strong className="text-[var(--andromeda-text-primary)]">{pendingApproval.milestoneLabel}</strong> as approved on{" "}
-                <em>{pendingApproval.phase.title}</em>. {profile.firstName} will be notified that you&apos;ve approved this milestone.
+                <em>{pendingApproval.phase.title}</em>. {profile.firstName}{" "}will be notified that you&apos;ve approved this milestone.
               </p>
               <p className="text-xs text-[var(--andromeda-text-secondary)]/70 mb-6">
                 If you approved by mistake, message {profile.firstName} and they can roll it back.
