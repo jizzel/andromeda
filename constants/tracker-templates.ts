@@ -83,12 +83,14 @@ const socialMedia: TrackerTemplate = {
     {
       id: "social-media",
       title: "Social Media Setup & Management",
-      description: "Establishing and running social presence.",
+      description: "Setting up profiles and running the first month of active management.",
       icon: "share-2",
       milestones: [
-        { id: "social-placeholder-1", label: "Milestone 1 (TBD)" },
-        { id: "social-placeholder-2", label: "Milestone 2 (TBD)" },
-        { id: "social-placeholder-3", label: "Milestone 3 (TBD)" },
+        { id: "social-profile-setup", label: "Profile setup (accounts created, bios written, branding applied)" },
+        { id: "social-meta-business-suite", label: "Meta Business Suite connected" },
+        { id: "social-content-strategy", label: "Content strategy & posting cadence agreed" },
+        { id: "social-starter-posts", label: "Starter posts published across hotel and restaurant" },
+        { id: "social-first-month-management", label: "First month of active management & engagement" },
       ],
     },
   ],
