@@ -39,7 +39,7 @@ export function ProposalTimeline({ timeline, totalDuration = "4-8 weeks", note =
           ) : (
             <>
               <p className="text-lg text-[var(--andromeda-text-secondary)] text-center mb-4">
-                Estimated delivery: <span className="text-[var(--andromeda-accent-beige)] font-semibold">{totalDuration}</span> from contract signing
+                Estimated delivery: <span className="text-[var(--andromeda-accent-beige)] font-semibold">{totalDuration}</span> from agreement date
               </p>
               <p className="text-sm text-[var(--andromeda-text-secondary)] text-center mb-12">
                 Assuming timely content delivery
