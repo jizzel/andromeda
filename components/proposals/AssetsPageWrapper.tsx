@@ -60,7 +60,7 @@ export function AssetsPageWrapper({ proposalId }: AssetsPageWrapperProps) {
     );
   }
 
-  if (!proposal.assets) {
+  if (!proposal.assets || !proposal.assetsReady) {
     return <AssetsNotAvailable proposalId={proposalId} />;
   }
 

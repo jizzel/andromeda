@@ -121,7 +121,13 @@ export function ProposalContent({ proposal, expiryDate, proposalId, accessCode, 
         exclusions={proposal.exclusions}
       />
 
-      {hasInspirations && <ProposalInspirations inspirations={allInspirations} />}
+      {hasInspirations && (
+        <ProposalInspirations
+          inspirations={allInspirations}
+          heading={proposal.inspirations?.heading}
+          subheading={proposal.inspirations?.subheading}
+        />
+      )}
 
       <ProposalCTA
         expiryDate={expiryDate}

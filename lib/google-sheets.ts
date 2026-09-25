@@ -125,7 +125,13 @@ async function verifyAccessGated<T>(
   sheetName: string,
   id: string,
   accessCode: string,
-  messages: AccessVerifyMessages
+  messages: AccessVerifyMessages,
+  /**
+   * Called only when the row's expiry date has passed (and the access code
+   * matched). Returning true grants access anyway. Used to keep accepted
+   * engagements reachable after the proposal offer window closes.
+   */
+  allowPastExpiry?: () => Promise<boolean>
 ): Promise<{ success: true; data: T; expiryDate: string } | { success: false; error: string }> {
   try {
     const record = await findAccessGatedRecordById<T>(sheetName, id);
@@ -134,14 +140,23 @@ async function verifyAccessGated<T>(
 
     // Fail closed on unparseable expiry dates: a malformed cell is a data
     // integrity problem, not a "the row never expires" signal. Treat invalid
-    // dates as expired so the access is denied rather than silently granted.
+    // dates as expired so the access is denied rather than silently granted —
+    // `allowPastExpiry` does not rescue a malformed date.
     const expiryDate = new Date(record.expiryDate);
-    if (isNaN(expiryDate.getTime()) || new Date() > expiryDate) {
+    if (isNaN(expiryDate.getTime())) {
+      return { success: false, error: messages.expired };
+    }
+    const pastExpiry = new Date() > expiryDate;
+    if (pastExpiry && !allowPastExpiry) {
       return { success: false, error: messages.expired };
     }
 
     if (record.accessCode.toLowerCase() !== accessCode.toLowerCase()) {
       return { success: false, error: "Invalid access code" };
+    }
+
+    if (pastExpiry && !(await allowPastExpiry!())) {
+      return { success: false, error: messages.expired };
     }
 
     return { success: true, data: record.data, expiryDate: record.expiryDate };
@@ -179,6 +194,33 @@ export async function verifyProposalAccess(
     inactive: "This proposal is no longer available",
     expired: "This proposal has expired",
   });
+  if (!result.success) return { success: false, error: result.error };
+  return { success: true, proposal: result.data, expiryDate: result.expiryDate };
+}
+
+/**
+ * Verify access for an ongoing engagement (proposal page, assets, tracker).
+ *
+ * `expiryDate` closes the proposal *offer*, not the engagement: once the
+ * client has accepted, access continues past expiry. `isActive = false` still
+ * revokes everything. Use `verifyProposalAccess` for actions that belong to
+ * the offer itself (submitting an acceptance or counter).
+ */
+export async function verifyEngagementAccess(
+  proposalId: string,
+  accessCode: string
+): Promise<{ success: boolean; proposal?: ProposalData; expiryDate?: string; error?: string }> {
+  const result = await verifyAccessGated<ProposalData>(
+    SHEET_NAME,
+    proposalId,
+    accessCode,
+    {
+      notFound: "Proposal not found",
+      inactive: "This proposal is no longer available",
+      expired: "This proposal has expired",
+    },
+    async () => (await getProposalAcceptance(proposalId))?.status === "accepted"
+  );
   if (!result.success) return { success: false, error: result.error };
   return { success: true, proposal: result.data, expiryDate: result.expiryDate };
 }

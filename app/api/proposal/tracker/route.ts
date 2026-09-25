@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyProposalAccess } from "@/lib/google-sheets";
+import { verifyEngagementAccess } from "@/lib/google-sheets";
 import { getOrSeedTracker } from "@/lib/tracker";
 import { resolveTrackerPhases } from "@/constants/tracker-templates";
 
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const verification = await verifyProposalAccess(proposalId, accessCode);
+  const verification = await verifyEngagementAccess(proposalId, accessCode);
   if (!verification.success || !verification.proposal) {
     return NextResponse.json({ success: false, error: verification.error }, { status: 401 });
   }

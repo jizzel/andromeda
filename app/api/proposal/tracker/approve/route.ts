@@ -3,7 +3,7 @@ import {
   getProposalById,
   getTrackerRow,
   setTrackerMilestone,
-  verifyProposalAccess,
+  verifyEngagementAccess,
 } from "@/lib/google-sheets";
 import { resolveTrackerPhases } from "@/constants/tracker-templates";
 import { sendClientApprovalNotice } from "@/lib/email";
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const verification = await verifyProposalAccess(proposalId, accessCode);
+  const verification = await verifyEngagementAccess(proposalId, accessCode);
   if (!verification.success) {
     return NextResponse.json({ success: false, error: verification.error }, { status: 401 });
   }

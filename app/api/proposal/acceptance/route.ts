@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   verifyProposalAccess,
+  verifyEngagementAccess,
   getProposalAcceptance,
   setProposalAcceptance,
 } from "@/lib/google-sheets";
@@ -18,7 +19,9 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const verification = await verifyProposalAccess(proposalId, accessCode);
+  // Read-only: an accepted client can still see their acceptance after the
+  // offer expires. Submitting (POST) stays on the stricter offer check.
+  const verification = await verifyEngagementAccess(proposalId, accessCode);
   if (!verification.success) {
     return NextResponse.json({ success: false, error: verification.error }, { status: 401 });
   }

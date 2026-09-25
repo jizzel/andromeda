@@ -118,6 +118,10 @@ export interface ProposalInspiration {
 }
 
 export interface ProposalInspirations {
+  /** Section heading. Defaults to "Design Inspirations". */
+  heading?: string;
+  /** Section subheading. Defaults to the design-reference copy. */
+  subheading?: string;
   hotel?: ProposalInspiration[];
   restaurant?: ProposalInspiration[];
   website?: ProposalInspiration[];

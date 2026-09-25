@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyProposalAccess } from "@/lib/google-sheets";
+import { verifyEngagementAccess } from "@/lib/google-sheets";
 import type { VerifyAccessResponse } from "@/types/proposal";
 
 export async function POST(request: NextRequest): Promise<NextResponse<VerifyAccessResponse>> {
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<VerifyAcc
     }
 
     // Verify access
-    const result = await verifyProposalAccess(proposalId, accessCode.trim());
+    const result = await verifyEngagementAccess(proposalId, accessCode.trim());
 
     if (!result.success) {
       return NextResponse.json(
