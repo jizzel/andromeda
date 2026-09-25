@@ -17,6 +17,7 @@ import { ProposalCTA } from "@/components/proposals/ProposalCTA";
 import { ProposalAcceptance } from "@/components/proposals/ProposalAcceptance";
 import type { ProposalInspiration, ProposalAcceptance as AcceptanceData } from "@/types/proposal";
 import { useAnalytics } from "@/lib/hooks/useAnalytics";
+import { useProposalDocument } from "@/components/proposals/ProposalDocumentContext";
 
 interface ProposalContentProps {
   proposal: ProposalData;
@@ -42,7 +43,10 @@ export function ProposalContent({ proposal, expiryDate, proposalId, accessCode, 
     initialAcceptance?.paymentPlanId ?? null
   );
 
-  const locked = !!initialAcceptance;
+  // Lock selection once a response is on record — including one submitted
+  // this session, which `initialAcceptance` (mount-time only) doesn't reflect.
+  const { recordedAcceptance } = useProposalDocument();
+  const locked = !!(recordedAcceptance ?? initialAcceptance);
 
   const handlePackageSelect = useCallback((id: string) => {
     setSelectedPackageId(id);
@@ -126,6 +130,7 @@ export function ProposalContent({ proposal, expiryDate, proposalId, accessCode, 
           inspirations={allInspirations}
           heading={proposal.inspirations?.heading}
           subheading={proposal.inspirations?.subheading}
+          footnote={proposal.inspirations?.footnote ?? (proposal.inspirations?.heading ? null : undefined)}
         />
       )}
 

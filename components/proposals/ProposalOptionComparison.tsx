@@ -5,12 +5,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Check, X, AlertCircle, ChevronDown, Server, Cloud, Clock } from "lucide-react";
 import { ScrollReveal } from "@/components/animations/ScrollReveal";
 import type { ProposalOption } from "@/types/proposal";
+import { useProposalDocument } from "./ProposalDocumentContext";
 
 interface ProposalOptionComparisonProps {
   options: ProposalOption[];
 }
 
 export function ProposalOptionComparison({ options }: ProposalOptionComparisonProps) {
+  const { printMode } = useProposalDocument();
   const [expandedOptions, setExpandedOptions] = useState<Record<string, boolean>>({});
 
   const toggleExpanded = (optionId: string) => {
@@ -151,23 +153,25 @@ export function ProposalOptionComparison({ options }: ProposalOptionComparisonPr
                 <div className="border-t border-white/10 light:border-black/10 pt-6">
                   <button
                     onClick={() => toggleExpanded(option.id)}
+                    disabled={printMode}
                     className="w-full flex items-center justify-between text-left hover:opacity-80 transition-opacity"
                   >
                     <h4 className="text-sm font-semibold text-[var(--andromeda-text-primary)]">
                       Cost Breakdown
                     </h4>
                     <motion.div
-                      animate={{ rotate: expandedOptions[option.id] ? 180 : 0 }}
+                      animate={{ rotate: expandedOptions[option.id] || printMode ? 180 : 0 }}
                       transition={{ duration: 0.2 }}
+                      className={printMode ? "hidden" : undefined}
                     >
                       <ChevronDown size={18} className="text-[var(--andromeda-text-secondary)]" />
                     </motion.div>
                   </button>
 
                   <AnimatePresence>
-                    {expandedOptions[option.id] && (
+                    {(expandedOptions[option.id] || printMode) && (
                       <motion.div
-                        initial={{ height: 0, opacity: 0 }}
+                        initial={printMode ? false : { height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
                         transition={{ duration: 0.3 }}

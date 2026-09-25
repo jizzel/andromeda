@@ -2,6 +2,9 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
+/* `light:` utilities are used across the proposal components; without this
+   variant Tailwind silently drops them (e.g. `light:border-black/10`). */
+@custom-variant light (&:is(.light *));
 
 @theme inline {
   --color-background: var(--background);
@@ -404,4 +407,118 @@
 
 .hljs-addition {
   background: rgba(34, 197, 94, 0.1);
+}
+
+/* ==========================================================================
+   Print / PDF
+   Used by the browser print dialog ("Print / Save as PDF") and by the headless
+   PDF export (`lib/pdf.ts`, which renders /proposal/[id]/print with print
+   media). Structural changes (expanding collapsed sections, hiding forms)
+   happen in components via `useProposalDocument().printMode`; everything
+   visual lives here.
+   ========================================================================== */
+@page {
+  size: A4;
+  margin: 12mm;
+}
+
+@media print {
+  /* One consistent light palette regardless of the viewer's theme. */
+  :root,
+  html.dark,
+  html.light {
+    --andromeda-primary: #FFFFFF;
+    --andromeda-secondary: #F4F4F2;
+    --andromeda-accent-beige: #8B7355;
+    --andromeda-highlight: #2E6BA8;
+    --andromeda-text-primary: #1A1A1A;
+    --andromeda-text-secondary: #555555;
+    --andromeda-error: #D32F2F;
+    --andromeda-success: #388E3C;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    transition: none;
+  }
+
+  /* framer-motion leaves off-screen content at inline `opacity: 0` / offset
+     transforms (ScrollReveal, whileInView). Tailwind v4 translate/rotate/scale
+     utilities use their own properties, so only motion's inline transforms
+     are affected. */
+  main [style*="opacity"] {
+    opacity: 1 !important;
+  }
+  main [style*="transform"] {
+    transform: none !important;
+  }
+
+  main {
+    min-height: auto !important;
+  }
+
+  /* Tighter vertical rhythm than the screen layout. */
+  main section:not(.print-cover) {
+    padding-top: 2rem !important;
+    padding-bottom: 2rem !important;
+  }
+
+  /* The hero becomes a full cover page (A4 height minus the @page margins). */
+  .print-cover {
+    height: calc(297mm - 24mm) !important;
+    min-height: 0 !important;
+    break-after: page;
+  }
+  /* The headless export prints at `scale: 0.8` (lib/pdf.ts), which also shrinks
+     CSS lengths — compensate so the cover still fills the page. Keep in sync. */
+  .pdf-document .print-cover {
+    height: calc((297mm - 24mm) / 0.8) !important;
+  }
+
+  .print-avoid-break {
+    break-inside: avoid;
+  }
+
+  /* Keep section headings with what follows. Headings sit inside ScrollReveal
+     wrappers, so the wrapper needs the rule, not just the h2. */
+  main h2,
+  main h3,
+  main div:has(> h2) {
+    break-after: avoid;
+  }
+  main div:has(> h2) {
+    break-inside: avoid;
+  }
+
+  /* Some sections hard-code pale 200/300 text shades tuned for the dark theme;
+     on paper they vanish against the tinted boxes. Map them to dark equivalents. */
+  main [class*="text-red-200"],
+  main [class*="text-red-300"],
+  main [class*="text-rose-300"] {
+    color: #B91C1C !important;
+  }
+  main [class*="text-amber-200"],
+  main [class*="text-amber-300"],
+  main [class*="text-yellow-300"],
+  main [class*="text-orange-300"] {
+    color: #B45309 !important;
+  }
+  main [class*="text-green-200"],
+  main [class*="text-green-300"],
+  main [class*="text-emerald-300"] {
+    color: #15803D !important;
+  }
+  main [class*="text-blue-300"] {
+    color: #1D4ED8 !important;
+  }
+
+  /* Hover lift / blur decorations don't belong on paper. */
+  main .blur-3xl {
+    display: none;
+  }
 }

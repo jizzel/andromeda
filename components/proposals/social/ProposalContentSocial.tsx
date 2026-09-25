@@ -15,6 +15,7 @@ import { AddOnsSection } from "./AddOnsSection";
 import { EngagementTermsSection } from "./EngagementTermsSection";
 import { CrossSellSection } from "./CrossSellSection";
 import { useAnalytics } from "@/lib/hooks/useAnalytics";
+import { useProposalDocument } from "@/components/proposals/ProposalDocumentContext";
 
 interface ProposalContentSocialProps {
   proposal: ProposalDataSocial;
@@ -39,7 +40,10 @@ export function ProposalContentSocial({
     initialAcceptance?.packageId ?? null
   );
 
-  const locked = !!initialAcceptance;
+  // Lock selection once a response is on record — including one submitted
+  // this session, which `initialAcceptance` (mount-time only) doesn't reflect.
+  const { recordedAcceptance } = useProposalDocument();
+  const locked = !!(recordedAcceptance ?? initialAcceptance);
 
   const handlePackageSelect = useCallback(
     (id: string) => {

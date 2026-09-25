@@ -2,12 +2,14 @@
 
 import { ScrollReveal } from "@/components/animations/ScrollReveal";
 import { motion } from "framer-motion";
-import { Calendar, Mail, Clock, ArrowRight, FileDown, FolderOpen, ListChecks } from "lucide-react";
+import { useState } from "react";
+import { Calendar, Mail, Clock, ArrowRight, FileDown, FolderOpen, ListChecks, Printer, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/dates";
 import { openCalendlyPopup } from "@/lib/calendly";
 import { useAnalytics } from "@/lib/hooks/useAnalytics";
 import Link from "next/link";
+import { useProposalDocument } from "./ProposalDocumentContext";
 
 interface ProposalCTAProps {
   expiryDate?: string;
@@ -29,8 +31,79 @@ export function ProposalCTA({
   assetsReady,
   trackerReady,
 }: ProposalCTAProps) {
-  const { trackCTAClicked, trackProposalAssetsOpened, trackProposalTrackerOpened } = useAnalytics();
+  const { trackProposalAssetsOpened, trackProposalTrackerOpened, trackProposalPdfDownloaded } = useAnalytics();
+  const { printMode, accessCode, recordedAcceptance, requestPrint } = useProposalDocument();
+  const [pdfState, setPdfState] = useState<"idle" | "loading" | "error">("idle");
   const formattedExpiry = expiryDate ? formatDate(expiryDate) : null;
+  const acceptedAt =
+    recordedAcceptance?.status === "accepted" && recordedAcceptance.acceptedAt
+      ? formatDate(recordedAcceptance.acceptedAt)
+      : null;
+  const canGeneratePdf = !pdfUrl && !!proposalId && !!accessCode;
+
+  const downloadPdf = async () => {
+    if (!proposalId || !accessCode || pdfState === "loading") return;
+    setPdfState("loading");
+    try {
+      const res = await fetch("/api/proposal/pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ proposalId, accessCode }),
+      });
+      if (!res.ok) throw new Error(`PDF request failed: ${res.status}`);
+      const blob = await res.blob();
+      const filename =
+        res.headers.get("Content-Disposition")?.match(/filename="([^"]+)"/)?.[1] ?? "proposal.pdf";
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setPdfState("idle");
+      trackProposalPdfDownloaded({ proposal_id: proposalId, method: "generated" });
+    } catch {
+      setPdfState("error");
+    }
+  };
+
+  const printProposal = () => {
+    if (proposalId) trackProposalPdfDownloaded({ proposal_id: proposalId, method: "print" });
+    requestPrint?.();
+  };
+
+  // Static closing block for the printed/PDF document — no buttons.
+  if (printMode) {
+    return (
+      <section
+        id="next-steps"
+        className="print-avoid-break relative w-full py-12 px-6 bg-[var(--andromeda-secondary)]"
+        aria-labelledby="cta-heading"
+      >
+        <div className="max-w-3xl mx-auto text-center">
+          <h2 id="cta-heading" className="text-2xl font-bold mb-4 text-[var(--andromeda-text-primary)]">
+            Next Steps
+          </h2>
+          {acceptedAt ? (
+            <p className="text-base font-medium text-[var(--andromeda-accent-beige)] mb-4">
+              Proposal accepted on {acceptedAt}
+            </p>
+          ) : formattedExpiry ? (
+            <p className="text-base font-medium text-[var(--andromeda-accent-beige)] mb-4">
+              This proposal is valid until {formattedExpiry}
+            </p>
+          ) : null}
+          <p className="text-sm text-[var(--andromeda-text-secondary)]">
+            Questions or next steps: {contactEmail}
+            {contactPhone ? ` · ${contactPhone}` : ""}
+          </p>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section
       id="next-steps"
@@ -93,7 +166,7 @@ export function ProposalCTA({
                     download
                     target="_blank"
                     rel="noopener noreferrer"
-                    onClick={() => trackCTAClicked({ type: "download", location: "proposal_cta" })}
+                    onClick={() => proposalId && trackProposalPdfDownloaded({ proposal_id: proposalId, method: "static" })}
                   >
                     <FileDown className="w-5 h-5 mr-2" />
                     Download Proposal
@@ -141,6 +214,50 @@ export function ProposalCTA({
             )}
           </div>
         </ScrollReveal>
+
+        {/* Document actions */}
+        {(canGeneratePdf || requestPrint) && (
+          <ScrollReveal delay={0.25}>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10 -mt-4">
+              {canGeneratePdf && (
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={downloadPdf}
+                  disabled={pdfState === "loading"}
+                  className="border-[var(--andromeda-accent-beige)]/50 text-[var(--andromeda-text-primary)] hover:bg-[var(--andromeda-accent-beige)]/10 px-6 py-5 text-sm"
+                >
+                  {pdfState === "loading" ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Preparing PDF…
+                    </>
+                  ) : (
+                    <>
+                      <FileDown className="w-4 h-4 mr-2" />
+                      Download PDF
+                    </>
+                  )}
+                </Button>
+              )}
+              {requestPrint && (
+                <button
+                  type="button"
+                  onClick={printProposal}
+                  className="flex items-center gap-2 text-sm text-[var(--andromeda-text-secondary)] hover:text-[var(--andromeda-accent-beige)] transition-colors"
+                >
+                  <Printer className="w-4 h-4" />
+                  Print / Save as PDF
+                </button>
+              )}
+            </div>
+            {pdfState === "error" && (
+              <p role="alert" className="text-sm text-[var(--andromeda-error)] -mt-6 mb-10">
+                The PDF couldn&apos;t be generated right now. Please use &ldquo;Print / Save as PDF&rdquo; instead.
+              </p>
+            )}
+          </ScrollReveal>
+        )}
 
         {/* Contact Info */}
         <ScrollReveal delay={0.3}>

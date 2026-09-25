@@ -23,7 +23,7 @@ export function ProposalHero({ title, subtitle, clientName, backgroundImage, iss
   };
 
   return (
-    <section className="relative w-full h-screen min-h-[600px] flex items-center justify-center overflow-hidden">
+    <section className="print-cover relative w-full h-screen min-h-[600px] flex items-center justify-center overflow-hidden">
       {/* Background Image */}
       <div className="absolute inset-0 z-0">
         <Image
@@ -96,7 +96,7 @@ export function ProposalHero({ title, subtitle, clientName, backgroundImage, iss
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.6, delay: 1 }}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 text-white/60 hover:text-white transition-colors cursor-pointer"
+        className="print:hidden absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 text-white/60 hover:text-white transition-colors cursor-pointer"
         aria-label="Scroll to content"
       >
         <span className="text-sm tracking-wider uppercase">Scroll</span>
