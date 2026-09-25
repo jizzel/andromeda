@@ -14,9 +14,15 @@ interface Inspiration {
 
 interface ProposalInspirationsProps {
   inspirations: Inspiration[];
+  heading?: string;
+  subheading?: string;
 }
 
-export function ProposalInspirations({ inspirations }: ProposalInspirationsProps) {
+export function ProposalInspirations({
+  inspirations,
+  heading = "Design Inspirations",
+  subheading = "Reference sites that capture the aesthetic direction for your digital presence",
+}: ProposalInspirationsProps) {
   return (
     <section
       id="inspirations"
@@ -29,10 +35,10 @@ export function ProposalInspirations({ inspirations }: ProposalInspirationsProps
             id="inspirations-heading"
             className="text-3xl md:text-4xl font-bold mb-4 text-center text-[var(--andromeda-text-primary)]"
           >
-            Design Inspirations
+            {heading}
           </h2>
           <p className="text-lg text-[var(--andromeda-text-secondary)] text-center mb-12 max-w-2xl mx-auto">
-            Reference sites that capture the aesthetic direction for your digital presence
+            {subheading}
           </p>
         </ScrollReveal>
 
