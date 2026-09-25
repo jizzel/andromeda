@@ -17,7 +17,9 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
 
-  const isMinimalUI = MINIMAL_UI_ROUTES.includes(pathname);
+  // The headless PDF route (/proposal/[id]/print) renders the document only.
+  const isPrintRoute = /^\/proposal\/[^/]+\/print$/.test(pathname);
+  const isMinimalUI = MINIMAL_UI_ROUTES.includes(pathname) || isPrintRoute;
 
   useEffect(() => {
     const id = setTimeout(() => setMounted(true), 0);
@@ -27,17 +29,21 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
       {mounted && !isMinimalUI && (
-        <>
+        <div className="print:hidden">
           <IdentityAnchor />
           <HomeButton />
           <ThemeToggle />
           <FloatingBusinessCardButton />
           <FloatingContactButton />
           <BusinessCard />
-        </>
+        </div>
       )}
       {children}
-      {!isMinimalUI && <SiteFooter />}
+      {!isMinimalUI && (
+        <div className="print:hidden">
+          <SiteFooter />
+        </div>
+      )}
     </>
   );
 }

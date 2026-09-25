@@ -4,6 +4,7 @@ import { ScrollReveal } from "@/components/animations/ScrollReveal";
 import { motion } from "framer-motion";
 import { Check, Sparkles, Clock, CalendarDays } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useProposalDocument } from "./ProposalDocumentContext";
 
 interface PaymentStructure {
   milestone: string;
@@ -36,8 +37,11 @@ const badgeIcons: Record<string, typeof Sparkles> = {
   "Maximum Flexibility": CalendarDays,
 };
 
-export function ProposalPaymentPlans({ plans, clarification, selectedId, onSelect, locked }: ProposalPaymentPlansProps) {
-  const interactive = !!onSelect && !locked;
+export function ProposalPaymentPlans({ plans, clarification, selectedId: liveSelectedId, onSelect, locked }: ProposalPaymentPlansProps) {
+  const { printMode, recordedAcceptance } = useProposalDocument();
+  // Printed output marks only the selection recorded on the sheet, never an unsaved click.
+  const selectedId = printMode ? (recordedAcceptance?.paymentPlanId ?? null) : liveSelectedId;
+  const interactive = !!onSelect && !locked && !printMode;
   return (
     <section
       id="payment-plans"
@@ -57,7 +61,7 @@ export function ProposalPaymentPlans({ plans, clarification, selectedId, onSelec
           </p>
         </ScrollReveal>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className={`grid grid-cols-1 lg:grid-cols-3 gap-6 ${plans.length > 1 ? "print:grid-cols-2" : ""}`}>
           {plans.map((plan, index) => {
             const BadgeIcon = badgeIcons[plan.badge] || Sparkles;
             const isHighlighted = plan.badge === "Best Value";
@@ -75,7 +79,7 @@ export function ProposalPaymentPlans({ plans, clarification, selectedId, onSelec
                   tabIndex={interactive ? 0 : undefined}
                   onKeyDown={(e) => interactive && (e.key === "Enter" || e.key === " ") && onSelect(plan.id)}
                   aria-pressed={interactive ? isSelected : undefined}
-                  className={`relative h-full rounded-xl p-6 flex flex-col transition-all duration-200 ${
+                  className={`print-avoid-break relative h-full rounded-xl p-6 flex flex-col transition-all duration-200 ${
                     interactive ? "cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--andromeda-accent-beige)]/50" : ""
                   } ${
                     isSelected
@@ -94,6 +98,12 @@ export function ProposalPaymentPlans({ plans, clarification, selectedId, onSelec
                     >
                       <Check size={12} className="text-[var(--andromeda-primary)]" strokeWidth={3} />
                     </motion.div>
+                  )}
+
+                  {isSelected && printMode && (
+                    <span className="absolute top-4 right-12 text-xs font-semibold uppercase tracking-wider text-[var(--andromeda-accent-beige)]">
+                      Selected
+                    </span>
                   )}
 
                   {/* Badge */}

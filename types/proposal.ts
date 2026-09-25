@@ -122,6 +122,12 @@ export interface ProposalInspirations {
   heading?: string;
   /** Section subheading. Defaults to the design-reference copy. */
   subheading?: string;
+  /**
+   * Closing note under the cards. When set, it is always used ("" hides the
+   * note). When omitted, the design-reference note shows only if `heading` is
+   * not customised.
+   */
+  footnote?: string;
   hotel?: ProposalInspiration[];
   restaurant?: ProposalInspiration[];
   website?: ProposalInspiration[];

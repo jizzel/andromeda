@@ -4,6 +4,7 @@ import { ScrollReveal } from "@/components/animations/ScrollReveal";
 import { motion } from "framer-motion";
 import { ExternalLink } from "lucide-react";
 import Image from "next/image";
+import { useProposalDocument } from "./ProposalDocumentContext";
 
 interface Inspiration {
   name: string;
@@ -16,13 +17,17 @@ interface ProposalInspirationsProps {
   inspirations: Inspiration[];
   heading?: string;
   subheading?: string;
+  /** Closing note under the cards. `null` hides it. */
+  footnote?: string | null;
 }
 
 export function ProposalInspirations({
   inspirations,
   heading = "Design Inspirations",
   subheading = "Reference sites that capture the aesthetic direction for your digital presence",
+  footnote = "These references guide our design direction while creating a unique identity for your brand.",
 }: ProposalInspirationsProps) {
+  const { printMode } = useProposalDocument();
   return (
     <section
       id="inspirations"
@@ -51,7 +56,7 @@ export function ProposalInspirations({
                 rel="noopener noreferrer"
                 whileHover={{ y: -4 }}
                 transition={{ duration: 0.2 }}
-                className="group block rounded-xl overflow-hidden bg-[var(--andromeda-primary)] border border-white/10 light:border-black/10"
+                className="print-avoid-break group block rounded-xl overflow-hidden bg-[var(--andromeda-primary)] border border-white/10 light:border-black/10"
               >
                 {/* Image Preview */}
                 <div className="relative h-48 overflow-hidden">
@@ -61,6 +66,7 @@ export function ProposalInspirations({
                     fill
                     sizes="(max-width: 768px) 100vw, 50vw"
                     className="object-cover transition-transform duration-500 group-hover:scale-105"
+                    loading={printMode ? "eager" : undefined}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[var(--andromeda-primary)] via-transparent to-transparent opacity-60" />
 
@@ -91,11 +97,13 @@ export function ProposalInspirations({
           ))}
         </div>
 
-        <ScrollReveal delay={0.5}>
-          <p className="text-center text-sm text-[var(--andromeda-text-secondary)] mt-8">
-            These references guide our design direction while creating a unique identity for your brand.
-          </p>
-        </ScrollReveal>
+        {footnote && (
+          <ScrollReveal delay={0.5}>
+            <p className="text-center text-sm text-[var(--andromeda-text-secondary)] mt-8">
+              {footnote}
+            </p>
+          </ScrollReveal>
+        )}
       </div>
     </section>
   );

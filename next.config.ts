@@ -1,6 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Headless Chromium for the proposal PDF export (lib/pdf.ts): keep these out of
+  // the bundle, and make sure the compressed Chromium binary ships with the route.
+  serverExternalPackages: ['@sparticuz/chromium', 'puppeteer-core'],
+  outputFileTracingIncludes: {
+    '/api/proposal/pdf': ['./node_modules/@sparticuz/chromium/bin/**'],
+  },
   async redirects() {
     return [
       {

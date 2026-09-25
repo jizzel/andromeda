@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import type { ProposalData, ProposalDataUnion, ProposalDataChurch, ProposalDataSocial, ProposalAcceptance } from "@/types/proposal";
+import { useState, useEffect, useCallback } from "react";
+import { flushSync } from "react-dom";
+import type { ProposalDataUnion, ProposalAcceptance } from "@/types/proposal";
 import { ProposalAccessGate } from "./ProposalAccessGate";
-import { ProposalContent } from "./ProposalContent";
-import { ProposalContentChurch } from "./ProposalContentChurch";
-import { ProposalContentSocial } from "./social/ProposalContentSocial";
+import { ProposalShell } from "./ProposalShell";
+import { ProposalDocumentProvider } from "./ProposalDocumentContext";
 import { useAnalytics } from "@/lib/hooks/useAnalytics";
 
 interface ProposalPageWrapperProps {
@@ -17,8 +17,29 @@ export function ProposalPageWrapper({ proposalId }: ProposalPageWrapperProps) {
   const [proposal, setProposal] = useState<ProposalDataUnion | null>(null);
   const [expiryDate, setExpiryDate] = useState<string | undefined>(undefined);
   const [accessCode, setAccessCode] = useState<string>("");
+  // `initialAcceptance` seeds the shells once on mount; `recordedAcceptance`
+  // tracks what's on the sheet, including responses submitted this session,
+  // so printing after accepting reflects the new selection without a reload.
   const [initialAcceptance, setInitialAcceptance] = useState<ProposalAcceptance | null>(null);
+  const [recordedAcceptance, setRecordedAcceptance] = useState<ProposalAcceptance | null>(null);
   const [acceptanceLoaded, setAcceptanceLoaded] = useState(false);
+  const [printMode, setPrintMode] = useState(false);
+
+  // Print mode while the browser print dialog is open — whether opened from
+  // the "Print / Save as PDF" button or Ctrl/Cmd+P. flushSync makes React
+  // render expanded content before the browser snapshots the page.
+  useEffect(() => {
+    const onBeforePrint = () => flushSync(() => setPrintMode(true));
+    const onAfterPrint = () => setPrintMode(false);
+    window.addEventListener("beforeprint", onBeforePrint);
+    window.addEventListener("afterprint", onAfterPrint);
+    return () => {
+      window.removeEventListener("beforeprint", onBeforePrint);
+      window.removeEventListener("afterprint", onAfterPrint);
+    };
+  }, []);
+
+  const requestPrint = useCallback(() => window.print(), []);
 
   // Load acceptance state once access is granted, before rendering content
   useEffect(() => {
@@ -31,6 +52,7 @@ export function ProposalPageWrapper({ proposalId }: ProposalPageWrapperProps) {
         const data = await res.json();
         if (data.success && data.acceptance) {
           setInitialAcceptance(data.acceptance);
+          setRecordedAcceptance(data.acceptance);
         }
       } catch {
         // Non-blocking — content renders with null acceptance
@@ -71,40 +93,25 @@ export function ProposalPageWrapper({ proposalId }: ProposalPageWrapperProps) {
 
   const isExpired = expiryDate ? new Date() > new Date(expiryDate) : false;
 
-  if ('proposalType' in proposal && proposal.proposalType === 'church-asset-management') {
-    return (
-      <ProposalContentChurch
-        proposal={proposal as ProposalDataChurch}
-        expiryDate={expiryDate}
-        proposalId={proposalId}
-        accessCode={accessCode}
-        isExpired={isExpired}
-        initialAcceptance={initialAcceptance}
-      />
-    );
-  }
-
-  if ('proposalType' in proposal && proposal.proposalType === 'social-media-engagement') {
-    return (
-      <ProposalContentSocial
-        proposal={proposal as ProposalDataSocial}
-        expiryDate={expiryDate}
-        proposalId={proposalId}
-        accessCode={accessCode}
-        isExpired={isExpired}
-        initialAcceptance={initialAcceptance}
-      />
-    );
-  }
-
   return (
-    <ProposalContent
-      proposal={proposal as ProposalData}
-      expiryDate={expiryDate}
-      proposalId={proposalId}
-      accessCode={accessCode}
-      isExpired={isExpired}
-      initialAcceptance={initialAcceptance}
-    />
+    <ProposalDocumentProvider
+      value={{
+        printMode,
+        proposalId,
+        accessCode,
+        recordedAcceptance,
+        requestPrint,
+        onAcceptanceRecorded: setRecordedAcceptance,
+      }}
+    >
+      <ProposalShell
+        proposal={proposal}
+        expiryDate={expiryDate}
+        proposalId={proposalId}
+        accessCode={accessCode}
+        isExpired={isExpired}
+        initialAcceptance={initialAcceptance}
+      />
+    </ProposalDocumentProvider>
   );
 }

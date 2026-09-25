@@ -4,6 +4,7 @@ import { ScrollReveal } from "@/components/animations/ScrollReveal";
 import { motion } from "framer-motion";
 import { Check, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useProposalDocument } from "./ProposalDocumentContext";
 
 interface Package {
   id: string;
@@ -21,8 +22,11 @@ interface ProposalPricingProps {
   locked?: boolean;
 }
 
-export function ProposalPricing({ packages, selectedId, onSelect, locked }: ProposalPricingProps) {
-  const interactive = !!onSelect && !locked;
+export function ProposalPricing({ packages, selectedId: liveSelectedId, onSelect, locked }: ProposalPricingProps) {
+  const { printMode, recordedAcceptance } = useProposalDocument();
+  // Printed output marks only the selection recorded on the sheet, never an unsaved click.
+  const selectedId = printMode ? (recordedAcceptance?.packageId ?? null) : liveSelectedId;
+  const interactive = !!onSelect && !locked && !printMode;
   return (
     <section
       id="pricing"
@@ -42,7 +46,7 @@ export function ProposalPricing({ packages, selectedId, onSelect, locked }: Prop
           </p>
         </ScrollReveal>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="print-avoid-break grid grid-cols-1 md:grid-cols-2 gap-8">
           {packages.map((pkg, index) => {
             const isSelected = selectedId === pkg.id;
             const dimmed = interactive && selectedId !== null && selectedId !== undefined && !isSelected;
@@ -57,7 +61,7 @@ export function ProposalPricing({ packages, selectedId, onSelect, locked }: Prop
                   tabIndex={interactive ? 0 : undefined}
                   onKeyDown={(e) => interactive && (e.key === "Enter" || e.key === " ") && onSelect(pkg.id)}
                   aria-pressed={interactive ? isSelected : undefined}
-                  className={`relative h-full rounded-xl p-8 transition-all duration-200 ${
+                  className={`print-avoid-break relative h-full rounded-xl p-8 transition-all duration-200 ${
                     interactive ? "cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--andromeda-accent-beige)]/50" : ""
                   } ${
                     isSelected
@@ -76,6 +80,12 @@ export function ProposalPricing({ packages, selectedId, onSelect, locked }: Prop
                     >
                       <Check size={12} className="text-[var(--andromeda-primary)]" strokeWidth={3} />
                     </motion.div>
+                  )}
+
+                  {isSelected && printMode && (
+                    <span className="absolute top-4 right-12 text-xs font-semibold uppercase tracking-wider text-[var(--andromeda-accent-beige)]">
+                      Selected
+                    </span>
                   )}
 
                   {/* Recommended Badge */}

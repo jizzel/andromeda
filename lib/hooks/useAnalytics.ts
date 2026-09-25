@@ -82,6 +82,12 @@ interface ProposalTrackerOpenedEvent {
   proposal_id: string;
 }
 
+interface ProposalPdfDownloadedEvent {
+  proposal_id: string;
+  /** generated = server PDF, print = browser print dialog, static = hand-maintained pdfUrl */
+  method: "generated" | "print" | "static";
+}
+
 interface ProposalTrackerPhaseViewedEvent {
   proposal_id: string;
   phase_id: string;
@@ -134,6 +140,7 @@ export const useAnalytics = () => {
   const trackProposalAssetItemToggled = (data: ProposalAssetItemToggledEvent) => emit("proposal_asset_item_toggled", data);
   const trackProposalUploadFolderOpened = (data: ProposalUploadFolderOpenedEvent) => emit("proposal_upload_folder_opened", data);
   const trackProposalTrackerOpened = (data: ProposalTrackerOpenedEvent) => emit("proposal_tracker_opened", data);
+  const trackProposalPdfDownloaded = (data: ProposalPdfDownloadedEvent) => emit("proposal_pdf_downloaded", data);
   const trackProposalTrackerPhaseViewed = (data: ProposalTrackerPhaseViewedEvent) => emit("proposal_tracker_phase_viewed", data);
   const trackBriefAccessed = (data: BriefAccessedEvent) => emit("brief_accessed", data);
 
@@ -155,6 +162,7 @@ export const useAnalytics = () => {
     trackProposalAssetItemToggled,
     trackProposalUploadFolderOpened,
     trackProposalTrackerOpened,
+    trackProposalPdfDownloaded,
     trackProposalTrackerPhaseViewed,
     trackBriefAccessed,
   };

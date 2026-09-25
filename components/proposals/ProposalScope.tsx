@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Check, AlertCircle } from "lucide-react";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
+import { useProposalDocument } from "./ProposalDocumentContext";
 
 interface PhaseOption {
   id: string;
@@ -36,7 +37,10 @@ interface ProposalScopeProps {
 }
 
 function PhaseCard({ phase, index }: { phase: Phase; index: number }) {
+  const { printMode } = useProposalDocument();
   const [isExpanded, setIsExpanded] = useState(false);
+  // Printed/PDF output always shows full details; the toggle is screen-only.
+  const showDetails = isExpanded || printMode;
 
   return (
     <ScrollReveal delay={0.1 * (index + 1)}>
@@ -53,6 +57,7 @@ function PhaseCard({ phase, index }: { phase: Phase; index: number }) {
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
             className="object-cover"
+            loading={printMode ? "eager" : undefined}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[var(--andromeda-primary)] via-transparent to-transparent" />
           <div className="absolute bottom-4 left-4">
@@ -62,7 +67,9 @@ function PhaseCard({ phase, index }: { phase: Phase; index: number }) {
           </div>
           {phase.price && (
             <div className="absolute bottom-4 right-4">
-              <span className="text-lg font-bold text-white">{phase.price}</span>
+              <span className="text-lg font-bold text-white light:text-[var(--andromeda-text-primary)] print:text-[var(--andromeda-text-primary)]">
+                {phase.price}
+              </span>
             </div>
           )}
         </div>
@@ -77,24 +84,26 @@ function PhaseCard({ phase, index }: { phase: Phase; index: number }) {
           </p>
 
           {/* Expand Toggle */}
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="flex items-center gap-2 text-[var(--andromeda-accent-beige)] hover:text-[var(--andromeda-accent-beige)]/80 transition-colors text-sm font-medium"
-          >
-            <span>{isExpanded ? "Hide Details" : "View Details"}</span>
-            <motion.div
-              animate={{ rotate: isExpanded ? 180 : 0 }}
-              transition={{ duration: 0.2 }}
+          {!printMode && (
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="flex items-center gap-2 text-[var(--andromeda-accent-beige)] hover:text-[var(--andromeda-accent-beige)]/80 transition-colors text-sm font-medium"
             >
-              <ChevronDown size={16} />
-            </motion.div>
-          </button>
+              <span>{isExpanded ? "Hide Details" : "View Details"}</span>
+              <motion.div
+                animate={{ rotate: isExpanded ? 180 : 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <ChevronDown size={16} />
+              </motion.div>
+            </button>
+          )}
 
           {/* Expanded Content */}
           <AnimatePresence>
-            {isExpanded && (
+            {showDetails && (
               <motion.div
-                initial={{ height: 0, opacity: 0 }}
+                initial={printMode ? false : { height: 0, opacity: 0 }}
                 animate={{ height: "auto", opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
                 transition={{ duration: 0.3 }}

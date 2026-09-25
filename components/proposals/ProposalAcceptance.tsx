@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useProposalDocument } from "./ProposalDocumentContext";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   CheckCircle2,
@@ -50,6 +51,7 @@ export function ProposalAcceptance({
   const [error, setError] = useState<string | null>(null);
 
   const { trackProposalResponseSubmitted } = useAnalytics();
+  const { printMode, onAcceptanceRecorded } = useProposalDocument();
   const locked = !!acceptance;
   const hasPackages = !!(packages && packages.length > 0);
   const hasPlans = !!(paymentPlans && paymentPlans.length > 0);
@@ -83,13 +85,15 @@ export function ProposalAcceptance({
           package_id: selectedPackageId ?? undefined,
           payment_plan_id: selectedPlanId ?? undefined,
         });
-        setAcceptance({
+        const recorded: AcceptanceData = {
           status: responseMode,
           counterNote: responseMode === "counter" ? counterNote.trim() : undefined,
           packageId: selectedPackageId ?? undefined,
           paymentPlanId: selectedPlanId ?? undefined,
           acceptedAt: new Date().toISOString(),
-        });
+        };
+        setAcceptance(recorded);
+        onAcceptanceRecorded?.(recorded);
       } else {
         setError(data.error || "Something went wrong. Please try again.");
       }
@@ -104,6 +108,11 @@ export function ProposalAcceptance({
   const selectedPlan = paymentPlans?.find((p) => p.id === (acceptance?.paymentPlanId ?? selectedPlanId));
 
   // Already submitted — show confirmation state
+  // The printed/PDF document is the offer itself; the response form and
+  // confirmation are screen-only. The recorded selection shows on the pricing
+  // cards and the accepted date in the CTA block.
+  if (printMode) return null;
+
   if (acceptance) {
     return (
       <section className="w-full py-16 px-6">
