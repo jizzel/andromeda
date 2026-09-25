@@ -2,6 +2,10 @@ import { Resend } from "resend";
 import { MilestoneUpdateEmail } from "@/emails/MilestoneUpdate";
 import { ClientApprovalNoticeEmail } from "@/emails/ClientApprovalNotice";
 import { WeeklyUpdateEmail } from "@/emails/WeeklyUpdate";
+import {
+  ProposalResponseNoticeEmail,
+  type ProposalResponseKind,
+} from "@/emails/ProposalResponseNotice";
 import { profile } from "@/constants/profile";
 
 interface SendMilestoneEmailArgs {
@@ -137,6 +141,52 @@ export async function sendClientApprovalNotice(args: SendClientApprovalNoticeArg
       milestoneLabel: args.milestoneLabel,
       approvedAt: args.approvedAt,
       trackerUrl,
+    }),
+  });
+
+  if (result.error) {
+    throw new Error(`Resend send failed: ${result.error.message}`);
+  }
+}
+
+interface SendProposalResponseNoticeArgs {
+  kind: ProposalResponseKind;
+  clientName: string;
+  proposalId: string;
+  projectTitle: string;
+  packageName?: string;
+  paymentPlanName?: string;
+  counterNote?: string;
+  submittedAt: string;
+}
+
+export async function sendProposalResponseNotice(args: SendProposalResponseNoticeArgs): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.NOTIFICATION_FROM_EMAIL;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+
+  if (!apiKey || !from || !siteUrl) {
+    throw new Error("Missing RESEND_API_KEY, NOTIFICATION_FROM_EMAIL, or NEXT_PUBLIC_SITE_URL env vars");
+  }
+
+  const resend = new Resend(apiKey);
+  const proposalUrl = `${siteUrl.replace(/\/$/, "")}/proposal/${args.proposalId}`;
+  const tag = args.kind === "accepted" ? "[Accepted]" : "[Counter]";
+
+  const result = await resend.emails.send({
+    from,
+    to: profile.email,
+    subject: `${tag} ${args.projectTitle} — ${args.clientName}`,
+    react: ProposalResponseNoticeEmail({
+      recipientName: profile.firstName,
+      kind: args.kind,
+      clientName: args.clientName,
+      projectTitle: args.projectTitle,
+      packageName: args.packageName,
+      paymentPlanName: args.paymentPlanName,
+      counterNote: args.counterNote,
+      submittedAt: args.submittedAt,
+      proposalUrl,
     }),
   });
 

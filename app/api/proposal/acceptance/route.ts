@@ -4,6 +4,7 @@ import {
   getProposalAcceptance,
   setProposalAcceptance,
 } from "@/lib/google-sheets";
+import { sendProposalResponseNotice } from "@/lib/email";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -66,12 +67,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const trimmedNote = status === "counter" ? counterNote.trim() : undefined;
+    const trimmedPackageId = packageId?.trim() || undefined;
+    const trimmedPlanId = paymentPlanId?.trim() || undefined;
+
     await setProposalAcceptance(proposalId, {
       status,
-      counterNote: status === "counter" ? counterNote.trim() : undefined,
-      packageId: packageId?.trim() || undefined,
-      paymentPlanId: paymentPlanId?.trim() || undefined,
+      counterNote: trimmedNote,
+      packageId: trimmedPackageId,
+      paymentPlanId: trimmedPlanId,
     });
+
+    // Joseph-facing notification. Best-effort — if email fails, the response
+    // is still recorded; we log and return success.
+    const proposal = verification.proposal;
+    if (proposal) {
+      try {
+        await sendProposalResponseNotice({
+          kind: status === "accepted" ? "accepted" : existing?.status === "counter" ? "counter-updated" : "counter",
+          clientName: proposal.client.name,
+          proposalId,
+          projectTitle: proposal.title,
+          packageName: proposal.packages?.find((p) => p.id === trimmedPackageId)?.name ?? trimmedPackageId,
+          paymentPlanName: proposal.paymentPlans?.find((p) => p.id === trimmedPlanId)?.name ?? trimmedPlanId,
+          counterNote: trimmedNote,
+          submittedAt: new Date().toISOString(),
+        });
+      } catch (error) {
+        console.error("Proposal response notice email failed:", error);
+      }
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
