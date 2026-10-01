@@ -4,8 +4,12 @@ const nextConfig: NextConfig = {
   // Headless Chromium for the proposal PDF export (lib/pdf.ts): keep these out of
   // the bundle, and make sure the compressed Chromium binary ships with the route.
   serverExternalPackages: ['@sparticuz/chromium', 'puppeteer-core'],
+  // Every route that renders PDFs runs as its own function on Vercel, so each
+  // needs the binary: the client export (/api/proposal/pdf) and the admin
+  // export (/api/admin/proposals/[id]/pdf). A glob, because `[id]` would be
+  // read as a character class.
   outputFileTracingIncludes: {
-    '/api/proposal/pdf': ['./node_modules/@sparticuz/chromium/bin/**'],
+    '/api/**/pdf': ['./node_modules/@sparticuz/chromium/bin/**'],
   },
   async redirects() {
     return [

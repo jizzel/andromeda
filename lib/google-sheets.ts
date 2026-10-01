@@ -316,8 +316,7 @@ export async function getBlogPostBySlug(slug: string): Promise<SheetBlogPost | n
 // Columns: A: proposalId | B: itemId | C: checked | D: checkedAt
 const ASSETS_SHEET_NAME = "ProposalAssets";
 
-// Acceptance — stored in "ProposalAcceptance" tab
-// Columns: A: proposalId | B: status | C: counterNote | D: acceptedAt
+// Acceptance — stored in "ProposalAcceptance" tab (columns documented at getProposalAcceptance)
 const ACCEPTANCE_SHEET_NAME = "ProposalAcceptance";
 
 export async function getCheckedAssetItems(proposalId: string): Promise<string[]> {
@@ -336,6 +335,28 @@ export async function getCheckedAssetItems(proposalId: string): Promise<string[]
     console.error("Failed to fetch asset checklist:", error);
     return [];
   }
+}
+
+/**
+ * Checked asset item ids per proposal in one read (admin dashboard). Throws on
+ * failure: an empty result would misreport progress as zero.
+ */
+export async function getAllCheckedAssetsByProposal(): Promise<Map<string, Set<string>>> {
+  const out = new Map<string, Set<string>>();
+  const sheets = getGoogleSheetsClient();
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${ASSETS_SHEET_NAME}!A2:D`,
+  });
+  for (const row of response.data.values || []) {
+    const proposalId = row[0]?.trim();
+    const itemId = row[1]?.trim();
+    if (!proposalId || !itemId || row[2]?.trim().toLowerCase() !== "true") continue;
+    const set = out.get(proposalId) ?? new Set<string>();
+    set.add(itemId);
+    out.set(proposalId, set);
+  }
+  return out;
 }
 
 async function getSheetId(
@@ -424,18 +445,40 @@ export async function getProposalAcceptance(proposalId: string): Promise<Proposa
     const rows = response.data.values || [];
     const row = rows.find((r) => r[0]?.trim() === proposalId);
     if (!row) return null;
-    return {
-      status: (row[1]?.trim() || "pending") as AcceptanceStatus,
-      counterNote: row[2]?.trim() || undefined,
-      acceptedAt: row[3]?.trim() || "",
-      packageId: row[4]?.trim() || undefined,
-      paymentPlanId: row[5]?.trim() || undefined,
-      proposalVersion: row[6]?.trim() || undefined,
-    };
+    return rowToAcceptance(row);
   } catch (error) {
     console.error("Failed to fetch proposal acceptance:", error);
     return null;
   }
+}
+
+function rowToAcceptance(row: string[]): ProposalAcceptance {
+  return {
+    status: (row[1]?.trim() || "pending") as AcceptanceStatus,
+    counterNote: row[2]?.trim() || undefined,
+    acceptedAt: row[3]?.trim() || "",
+    packageId: row[4]?.trim() || undefined,
+    paymentPlanId: row[5]?.trim() || undefined,
+    proposalVersion: row[6]?.trim() || undefined,
+  };
+}
+
+/**
+ * Every proposal's response in one read (admin dashboard). Throws on failure:
+ * an empty result would misreport accepted proposals as unanswered.
+ */
+export async function getAllAcceptances(): Promise<Map<string, ProposalAcceptance>> {
+  const out = new Map<string, ProposalAcceptance>();
+  const sheets = getGoogleSheetsClient();
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${ACCEPTANCE_SHEET_NAME}!A2:G`,
+  });
+  for (const row of response.data.values || []) {
+    const proposalId = row[0]?.trim();
+    if (proposalId) out.set(proposalId, rowToAcceptance(row));
+  }
+  return out;
 }
 
 const acceptanceSheetIdCache = { value: null as number | null };
@@ -488,6 +531,38 @@ export async function getAcceptanceSheetId(
   return getSheetId(sheets, ACCEPTANCE_SHEET_NAME, acceptanceSheetIdCache);
 }
 
+// Tabs the app writes to but that older spreadsheets won't have yet are created
+// on first use (with their header row) instead of failing with an invalid-range
+// error. Cached per instance once confirmed. Creation races between instances
+// are tolerated: "already exists" means another instance won.
+const ensuredTabs = new Set<string>();
+
+async function ensureTab(
+  sheets: ReturnType<typeof getGoogleSheetsClient>,
+  title: string,
+  headers: string[]
+): Promise<void> {
+  if (ensuredTabs.has(title)) return;
+  const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID, fields: "sheets.properties.title" });
+  if (!meta.data.sheets?.some((s) => s.properties?.title === title)) {
+    try {
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId: SPREADSHEET_ID,
+        requestBody: { requests: [{ addSheet: { properties: { title } } }] },
+      });
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${title}!A1`,
+        valueInputOption: "RAW",
+        requestBody: { values: [headers] },
+      });
+    } catch (error) {
+      if (!String((error as Error)?.message ?? error).includes("already exists")) throw error;
+    }
+  }
+  ensuredTabs.add(title);
+}
+
 // Proposal snapshots — "ProposalSnapshots" tab, append-only.
 // Columns: A:proposalId | B:proposalVersion | C:capturedAt | D:reason | E…Z:data
 // One row per (proposalId, proposalVersion): the exact terms a response was made against.
@@ -495,6 +570,7 @@ export async function getAcceptanceSheetId(
 // Sheets rejects any single cell over 50,000 characters; concatenate E onward to
 // read it back (`getProposalSnapshot`).
 const SNAPSHOT_SHEET_NAME = "ProposalSnapshots";
+const SNAPSHOT_HEADERS = ["proposalId", "proposalVersion", "capturedAt", "reason", "data"];
 const SNAPSHOT_CHUNK_CHARS = 49_000; // headroom under the 50k cell limit
 const SNAPSHOT_MAX_CHUNKS = 22; // columns E–Z ≈ 1.07M characters
 
@@ -516,6 +592,7 @@ export async function saveProposalSnapshot(
   canonicalJson: string
 ): Promise<SnapshotResult> {
   const sheets = getGoogleSheetsClient();
+  await ensureTab(sheets, SNAPSHOT_SHEET_NAME, SNAPSHOT_HEADERS);
   const existing = await sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
     range: `${SNAPSHOT_SHEET_NAME}!A2:B`,
@@ -621,28 +698,34 @@ export async function getTrackerStates(proposalId: string): Promise<TrackerMiles
  * when you'd otherwise call `getTrackerStates` for many proposals in a loop
  * (e.g. the weekly-update cron).
  */
-export async function getAllTrackerStatesByProposal(): Promise<Map<string, TrackerMilestoneState[]>> {
+/** All tracker rows grouped by proposal, in one read. Throws on failure. */
+export async function readAllTrackerStatesByProposal(): Promise<Map<string, TrackerMilestoneState[]>> {
   const out = new Map<string, TrackerMilestoneState[]>();
-  try {
-    const sheets = getGoogleSheetsClient();
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${TRACKER_SHEET_NAME}!A2:I`,
-    });
-    const rows = response.data.values || [];
-    for (const row of rows) {
-      const proposalId = row[0]?.trim();
-      if (!proposalId) continue;
-      const state = rowToTrackerState(row);
-      if (!state.phaseId || !state.milestoneId) continue;
-      const existing = out.get(proposalId);
-      if (existing) existing.push(state);
-      else out.set(proposalId, [state]);
-    }
-  } catch (error) {
-    console.error("Failed to fetch all tracker states:", error);
+  const sheets = getGoogleSheetsClient();
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${TRACKER_SHEET_NAME}!A2:I`,
+  });
+  for (const row of response.data.values || []) {
+    const proposalId = row[0]?.trim();
+    if (!proposalId) continue;
+    const state = rowToTrackerState(row);
+    if (!state.phaseId || !state.milestoneId) continue;
+    const existing = out.get(proposalId);
+    if (existing) existing.push(state);
+    else out.set(proposalId, [state]);
   }
   return out;
+}
+
+/** Lenient variant for the weekly cron: a failed read yields no states (no emails) rather than an error. */
+export async function getAllTrackerStatesByProposal(): Promise<Map<string, TrackerMilestoneState[]>> {
+  try {
+    return await readAllTrackerStatesByProposal();
+  } catch (error) {
+    console.error("Failed to fetch all tracker states:", error);
+    return new Map();
+  }
 }
 
 export async function getTrackerRow(
@@ -885,3 +968,83 @@ export async function getAllWeeklyUpdatesSent(): Promise<Set<string>> {
   return out;
 }
 
+
+// Admin sign-in ledger — "AdminSignIns" tab, append-only event log.
+// Columns: A:nonce | B:at | C:event (issued | failed | matched) | D:ip | E:userAgent
+//
+// Attempt limits and single use must hold across server instances, and Sheets
+// has no compare-and-swap — so nothing is ever read-then-updated here. Each
+// attempt appends its own row (INSERT_ROWS, so concurrent appends can't
+// overwrite each other), and Sheets serialises appends, so row order is a
+// total order of attempts. Each request then decides from that order alone:
+// it counts only if it is among the first `maxAttempts` attempts, and a
+// matching code wins only if no earlier attempt already matched. Doubles as an
+// audit log of admin sign-ins.
+const ADMIN_SIGNIN_SHEET_NAME = "AdminSignIns";
+const ADMIN_SIGNIN_HEADERS = ["nonce", "at", "event", "ip", "userAgent"];
+
+export async function recordAdminSignInChallenge(nonce: string, ip: string, userAgent: string): Promise<void> {
+  const sheets = getGoogleSheetsClient();
+  await ensureTab(sheets, ADMIN_SIGNIN_SHEET_NAME, ADMIN_SIGNIN_HEADERS);
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${ADMIN_SIGNIN_SHEET_NAME}!A:E`,
+    valueInputOption: "RAW",
+    insertDataOption: "INSERT_ROWS",
+    requestBody: { values: [[nonce, new Date().toISOString(), "issued", ip, userAgent.slice(0, 300)]] },
+  });
+}
+
+export type AdminSignInAttempt =
+  /** `attemptNumber`: this attempt's 1-based position among the challenge's attempts. */
+  | { status: "ok"; attemptNumber: number }
+  | { status: "unknown" | "used" | "locked" };
+
+function appendedRow(updatedRange: string | null | undefined): number | null {
+  const match = updatedRange?.match(/!A(\d+)/);
+  return match ? Number(match[1]) : null;
+}
+
+/**
+ * Logs one verification attempt and returns its outcome, decided by the
+ * attempt's position in the log (see the tab comment above): `unknown` if the
+ * challenge was never issued, `used` if an earlier attempt already redeemed
+ * it, `locked` if this attempt is beyond `maxAttempts`, else `ok`.
+ */
+export async function registerAdminSignInAttempt(
+  nonce: string,
+  maxAttempts: number,
+  matched: boolean,
+  ip: string,
+  userAgent: string
+): Promise<AdminSignInAttempt> {
+  const sheets = getGoogleSheetsClient();
+  await ensureTab(sheets, ADMIN_SIGNIN_SHEET_NAME, ADMIN_SIGNIN_HEADERS);
+  const appended = await sheets.spreadsheets.values.append({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${ADMIN_SIGNIN_SHEET_NAME}!A:E`,
+    valueInputOption: "RAW",
+    insertDataOption: "INSERT_ROWS",
+    requestBody: {
+      values: [[nonce, new Date().toISOString(), matched ? "matched" : "failed", ip, userAgent.slice(0, 300)]],
+    },
+  });
+  const ownRow = appendedRow(appended.data.updates?.updatedRange);
+  if (ownRow === null) throw new Error("Sign-in ledger append returned no row");
+
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${ADMIN_SIGNIN_SHEET_NAME}!A2:C`,
+  });
+  const events = (response.data.values || [])
+    .map((r, i) => ({ row: i + 2, nonce: r[0]?.trim(), event: r[2]?.trim() }))
+    .filter((e) => e.nonce === nonce);
+
+  if (!events.some((e) => e.event === "issued")) return { status: "unknown" };
+  const attempts = events.filter((e) => e.event === "failed" || e.event === "matched");
+  const position = attempts.findIndex((e) => e.row === ownRow);
+  if (position === -1) throw new Error("Sign-in ledger row not found after append");
+  if (attempts.slice(0, position).some((e) => e.event === "matched")) return { status: "used" };
+  if (position >= maxAttempts) return { status: "locked" };
+  return { status: "ok", attemptNumber: position + 1 };
+}
