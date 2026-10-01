@@ -489,13 +489,24 @@ export async function getAcceptanceSheetId(
 }
 
 // Proposal snapshots — "ProposalSnapshots" tab, append-only.
-// Columns: A:proposalId | B:proposalVersion | C:capturedAt | D:reason | E:data (canonical JSON)
+// Columns: A:proposalId | B:proposalVersion | C:capturedAt | D:reason | E…Z:data
 // One row per (proposalId, proposalVersion): the exact terms a response was made against.
+// `data` is the canonical JSON split into consecutive cells (E, F, G, …) because
+// Sheets rejects any single cell over 50,000 characters; concatenate E onward to
+// read it back (`getProposalSnapshot`).
 const SNAPSHOT_SHEET_NAME = "ProposalSnapshots";
-// Sheets rejects cells over 50,000 characters; keep headroom.
-const SNAPSHOT_MAX_CHARS = 49_000;
+const SNAPSHOT_CHUNK_CHARS = 49_000; // headroom under the 50k cell limit
+const SNAPSHOT_MAX_CHUNKS = 22; // columns E–Z ≈ 1.07M characters
 
 export type SnapshotReason = "accepted" | "changes_requested";
+/** `too_large`: terms exceed E–Z even when split; only the row (with hash) was written. */
+export type SnapshotResult = "stored" | "duplicate" | "too_large";
+
+function chunk(text: string, size: number): string[] {
+  const parts: string[] = [];
+  for (let i = 0; i < text.length; i += size) parts.push(text.slice(i, i + size));
+  return parts.length ? parts : [""];
+}
 
 /** Records the terms for a version once; repeat calls for the same version are no-ops. */
 export async function saveProposalSnapshot(
@@ -503,29 +514,50 @@ export async function saveProposalSnapshot(
   proposalVersion: string,
   reason: SnapshotReason,
   canonicalJson: string
-): Promise<void> {
+): Promise<SnapshotResult> {
   const sheets = getGoogleSheetsClient();
   const existing = await sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
     range: `${SNAPSHOT_SHEET_NAME}!A2:B`,
   });
   const rows = existing.data.values || [];
-  if (rows.some((r) => r[0]?.trim() === proposalId && r[1]?.trim() === proposalVersion)) return;
+  if (rows.some((r) => r[0]?.trim() === proposalId && r[1]?.trim() === proposalVersion)) return "duplicate";
 
-  let data = canonicalJson;
-  if (data.length > SNAPSHOT_MAX_CHARS) {
+  let parts = chunk(canonicalJson, SNAPSHOT_CHUNK_CHARS);
+  let result: SnapshotResult = "stored";
+  if (parts.length > SNAPSHOT_MAX_CHUNKS) {
     console.error(
-      `Proposal snapshot for ${proposalId}@${proposalVersion} is ${data.length} chars — over the Sheets cell limit; storing hash only`
+      `Proposal snapshot for ${proposalId}@${proposalVersion} is ${canonicalJson.length} chars — beyond ${SNAPSHOT_MAX_CHUNKS} cells; storing hash only`
     );
-    data = "[too large]";
+    parts = ["[too large]"];
+    result = "too_large";
   }
 
   await sheets.spreadsheets.values.append({
     spreadsheetId: SPREADSHEET_ID,
-    range: `${SNAPSHOT_SHEET_NAME}!A:E`,
+    range: `${SNAPSHOT_SHEET_NAME}!A:Z`,
     valueInputOption: "RAW",
-    requestBody: { values: [[proposalId, proposalVersion, new Date().toISOString(), reason, data]] },
+    requestBody: { values: [[proposalId, proposalVersion, new Date().toISOString(), reason, ...parts]] },
   });
+  return result;
+}
+
+/** The exact canonical JSON stored for a version, or null if absent (or stored as too large). */
+export async function getProposalSnapshot(
+  proposalId: string,
+  proposalVersion: string
+): Promise<string | null> {
+  const sheets = getGoogleSheetsClient();
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${SNAPSHOT_SHEET_NAME}!A2:Z`,
+  });
+  const row = (response.data.values || []).find(
+    (r) => r[0]?.trim() === proposalId && r[1]?.trim() === proposalVersion
+  );
+  if (!row) return null;
+  const data = row.slice(4).join("");
+  return data === "[too large]" ? null : data;
 }
 
 // Project tracker — stored in "ProjectTracker" tab

@@ -78,11 +78,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Responses are always made against one specific version of the terms.
-    // If the proposal was edited after this page loaded, the client hasn't
-    // seen what they'd be responding to — make them reload first.
+    // The page must say which version it rendered: if that differs from the
+    // current one (edited while the page was open), or is missing (a page
+    // loaded before versioning shipped), the client hasn't verifiably seen the
+    // terms they'd be responding to — make them reload first.
     const canonical = canonicalProposalJson(proposal);
     const currentVersion = proposalVersion(proposal);
-    if (renderedVersion && renderedVersion !== currentVersion) {
+    if (typeof renderedVersion !== "string" || renderedVersion !== currentVersion) {
       return NextResponse.json(
         {
           success: false,
@@ -121,12 +123,14 @@ export async function POST(request: NextRequest) {
     // version hash on the acceptance row still identifies the terms.
     let snapshotFailed = false;
     try {
-      await saveProposalSnapshot(
+      const result = await saveProposalSnapshot(
         proposalId,
         currentVersion,
         status === "accepted" ? "accepted" : "changes_requested",
         canonical
       );
+      // Terms too large even when split across cells: only the hash is kept.
+      snapshotFailed = result === "too_large";
     } catch (error) {
       snapshotFailed = true;
       console.error(`Proposal snapshot failed for ${proposalId}@${currentVersion}:`, error);
