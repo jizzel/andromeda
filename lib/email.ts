@@ -6,6 +6,7 @@ import {
   ProposalResponseNoticeEmail,
   type ProposalResponseKind,
 } from "@/emails/ProposalResponseNotice";
+import { AdminSignInCodeEmail, AdminSignInNoticeEmail } from "@/emails/AdminSignIn";
 import { profile } from "@/constants/profile";
 
 interface SendMilestoneEmailArgs {
@@ -197,4 +198,34 @@ export async function sendProposalResponseNotice(args: SendProposalResponseNotic
   if (result.error) {
     throw new Error(`Resend send failed: ${result.error.message}`);
   }
+}
+
+// Admin sign-in emails always go to the profile address — never a request-supplied one.
+
+export async function sendAdminSignInCode(args: { code: string; expiresInMinutes: number; ip: string }): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.NOTIFICATION_FROM_EMAIL;
+  if (!apiKey || !from) throw new Error("Missing RESEND_API_KEY or NOTIFICATION_FROM_EMAIL env vars");
+
+  const result = await new Resend(apiKey).emails.send({
+    from,
+    to: profile.email,
+    subject: `Admin sign-in code: ${args.code}`,
+    react: AdminSignInCodeEmail({ recipientName: profile.firstName, ...args }),
+  });
+  if (result.error) throw new Error(`Resend send failed: ${result.error.message}`);
+}
+
+export async function sendAdminSignInNotice(args: { signedInAt: string; ip: string; userAgent: string }): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.NOTIFICATION_FROM_EMAIL;
+  if (!apiKey || !from) throw new Error("Missing RESEND_API_KEY or NOTIFICATION_FROM_EMAIL env vars");
+
+  const result = await new Resend(apiKey).emails.send({
+    from,
+    to: profile.email,
+    subject: "New admin sign-in",
+    react: AdminSignInNoticeEmail({ recipientName: profile.firstName, ...args }),
+  });
+  if (result.error) throw new Error(`Resend send failed: ${result.error.message}`);
 }

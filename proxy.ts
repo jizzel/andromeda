@@ -1,6 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ADMIN_SESSION_COOKIE, isValidSessionToken } from "@/lib/admin-session";
+
+// Everything under /admin and /api/admin needs a session, except signing in.
+const ADMIN_PUBLIC_PATHS = ["/admin/login", "/api/admin/login/request", "/api/admin/login/verify"];
+
+function adminGuard(request: NextRequest): NextResponse | null {
+  const { pathname } = request.nextUrl;
+  const isAdminPage = pathname === "/admin" || pathname.startsWith("/admin/");
+  const isAdminApi = pathname.startsWith("/api/admin/");
+  if ((!isAdminPage && !isAdminApi) || ADMIN_PUBLIC_PATHS.includes(pathname)) return null;
+  if (isValidSessionToken(request.cookies.get(ADMIN_SESSION_COOKIE)?.value)) return null;
+
+  if (isAdminApi) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  return NextResponse.redirect(new URL("/admin/login", request.url));
+}
 
 export function proxy(request: NextRequest) {
+  const denied = adminGuard(request);
+  if (denied) return denied;
+
   const nonceBytes = crypto.getRandomValues(new Uint8Array(16));
   const nonce = Buffer.from(nonceBytes).toString("base64");
 

@@ -1,5 +1,7 @@
 import { createHash } from "crypto";
 import puppeteer, { type Browser } from "puppeteer-core";
+import { NextResponse } from "next/server";
+import type { ProposalAcceptance, ProposalData } from "@/types/proposal";
 import { signPrintToken } from "@/lib/pdf-token";
 
 /**
@@ -158,4 +160,35 @@ export function proposalPdfFilename(clientName: string, title: string): string {
       .slice(0, 60);
   const base = [slug(clientName), slug(title)].filter(Boolean).join("-");
   return base ? `${base}-proposal.pdf` : "proposal.pdf";
+}
+
+/**
+ * Shared by the client export (`/api/proposal/pdf`, after an access-code check)
+ * and the admin export (`/api/admin/proposals/[id]/pdf`, after a session check):
+ * serve the proposal PDF from cache or render it against `origin`.
+ */
+export async function proposalPdfResponse(args: {
+  origin: string;
+  proposalId: string;
+  proposal: ProposalData;
+  expiryDate?: string;
+  acceptance: ProposalAcceptance | null;
+}): Promise<NextResponse> {
+  const { origin, proposalId, proposal, expiryDate, acceptance } = args;
+  const key = pdfCacheKey({ proposalId, data: proposal, expiryDate, acceptance });
+  try {
+    const pdf = await getOrRenderPdf(key, () => renderProposalPdf(origin, proposalId));
+    return new NextResponse(new Uint8Array(pdf), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="${proposalPdfFilename(proposal.client.name, proposal.title)}"`,
+        "Content-Length": String(pdf.length),
+        "Cache-Control": "private, no-store",
+      },
+    });
+  } catch (error) {
+    console.error("Proposal PDF generation failed:", error);
+    return NextResponse.json({ success: false, error: "PDF generation failed" }, { status: 500 });
+  }
 }
