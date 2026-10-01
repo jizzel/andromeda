@@ -412,14 +412,14 @@ export async function setAssetItemChecked(
 
 // Proposal acceptance — read/write "ProposalAcceptance" tab
 
-// ProposalAcceptance sheet columns: A:proposalId | B:status | C:counterNote | D:acceptedAt | E:packageId | F:paymentPlanId
+// ProposalAcceptance sheet columns: A:proposalId | B:status | C:counterNote | D:acceptedAt | E:packageId | F:paymentPlanId | G:proposalVersion
 
 export async function getProposalAcceptance(proposalId: string): Promise<ProposalAcceptance | null> {
   try {
     const sheets = getGoogleSheetsClient();
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${ACCEPTANCE_SHEET_NAME}!A2:F`,
+      range: `${ACCEPTANCE_SHEET_NAME}!A2:G`,
     });
     const rows = response.data.values || [];
     const row = rows.find((r) => r[0]?.trim() === proposalId);
@@ -430,6 +430,7 @@ export async function getProposalAcceptance(proposalId: string): Promise<Proposa
       acceptedAt: row[3]?.trim() || "",
       packageId: row[4]?.trim() || undefined,
       paymentPlanId: row[5]?.trim() || undefined,
+      proposalVersion: row[6]?.trim() || undefined,
     };
   } catch (error) {
     console.error("Failed to fetch proposal acceptance:", error);
@@ -452,6 +453,7 @@ export async function setProposalAcceptance(
     acceptedAt,
     acceptance.packageId ?? "",
     acceptance.paymentPlanId ?? "",
+    acceptance.proposalVersion ?? "",
   ];
 
   // Check if a row already exists for this proposal
@@ -465,7 +467,7 @@ export async function setProposalAcceptance(
   if (rowIndex === -1) {
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${ACCEPTANCE_SHEET_NAME}!A:F`,
+      range: `${ACCEPTANCE_SHEET_NAME}!A:G`,
       valueInputOption: "RAW",
       requestBody: { values: [row] },
     });
@@ -473,7 +475,7 @@ export async function setProposalAcceptance(
     const sheetRow = rowIndex + 2;
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${ACCEPTANCE_SHEET_NAME}!A${sheetRow}:F${sheetRow}`,
+      range: `${ACCEPTANCE_SHEET_NAME}!A${sheetRow}:G${sheetRow}`,
       valueInputOption: "RAW",
       requestBody: { values: [row] },
     });
@@ -484,6 +486,78 @@ export async function getAcceptanceSheetId(
   sheets: ReturnType<typeof getGoogleSheetsClient>
 ): Promise<number | null> {
   return getSheetId(sheets, ACCEPTANCE_SHEET_NAME, acceptanceSheetIdCache);
+}
+
+// Proposal snapshots — "ProposalSnapshots" tab, append-only.
+// Columns: A:proposalId | B:proposalVersion | C:capturedAt | D:reason | E…Z:data
+// One row per (proposalId, proposalVersion): the exact terms a response was made against.
+// `data` is the canonical JSON split into consecutive cells (E, F, G, …) because
+// Sheets rejects any single cell over 50,000 characters; concatenate E onward to
+// read it back (`getProposalSnapshot`).
+const SNAPSHOT_SHEET_NAME = "ProposalSnapshots";
+const SNAPSHOT_CHUNK_CHARS = 49_000; // headroom under the 50k cell limit
+const SNAPSHOT_MAX_CHUNKS = 22; // columns E–Z ≈ 1.07M characters
+
+export type SnapshotReason = "accepted" | "changes_requested";
+/** `too_large`: terms exceed E–Z even when split; only the row (with hash) was written. */
+export type SnapshotResult = "stored" | "duplicate" | "too_large";
+
+function chunk(text: string, size: number): string[] {
+  const parts: string[] = [];
+  for (let i = 0; i < text.length; i += size) parts.push(text.slice(i, i + size));
+  return parts.length ? parts : [""];
+}
+
+/** Records the terms for a version once; repeat calls for the same version are no-ops. */
+export async function saveProposalSnapshot(
+  proposalId: string,
+  proposalVersion: string,
+  reason: SnapshotReason,
+  canonicalJson: string
+): Promise<SnapshotResult> {
+  const sheets = getGoogleSheetsClient();
+  const existing = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${SNAPSHOT_SHEET_NAME}!A2:B`,
+  });
+  const rows = existing.data.values || [];
+  if (rows.some((r) => r[0]?.trim() === proposalId && r[1]?.trim() === proposalVersion)) return "duplicate";
+
+  let parts = chunk(canonicalJson, SNAPSHOT_CHUNK_CHARS);
+  let result: SnapshotResult = "stored";
+  if (parts.length > SNAPSHOT_MAX_CHUNKS) {
+    console.error(
+      `Proposal snapshot for ${proposalId}@${proposalVersion} is ${canonicalJson.length} chars — beyond ${SNAPSHOT_MAX_CHUNKS} cells; storing hash only`
+    );
+    parts = ["[too large]"];
+    result = "too_large";
+  }
+
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${SNAPSHOT_SHEET_NAME}!A:Z`,
+    valueInputOption: "RAW",
+    requestBody: { values: [[proposalId, proposalVersion, new Date().toISOString(), reason, ...parts]] },
+  });
+  return result;
+}
+
+/** The exact canonical JSON stored for a version, or null if absent (or stored as too large). */
+export async function getProposalSnapshot(
+  proposalId: string,
+  proposalVersion: string
+): Promise<string | null> {
+  const sheets = getGoogleSheetsClient();
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${SNAPSHOT_SHEET_NAME}!A2:Z`,
+  });
+  const row = (response.data.values || []).find(
+    (r) => r[0]?.trim() === proposalId && r[1]?.trim() === proposalVersion
+  );
+  if (!row) return null;
+  const data = row.slice(4).join("");
+  return data === "[too large]" ? null : data;
 }
 
 // Project tracker — stored in "ProjectTracker" tab

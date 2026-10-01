@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyEngagementAccess } from "@/lib/google-sheets";
 import type { VerifyAccessResponse } from "@/types/proposal";
+import { proposalVersion } from "@/lib/proposal-version";
 
 export async function POST(request: NextRequest): Promise<NextResponse<VerifyAccessResponse>> {
   try {
@@ -36,6 +37,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<VerifyAcc
       success: true,
       proposal: result.proposal,
       expiryDate: result.expiryDate,
+      proposalVersion: result.proposal ? proposalVersion(result.proposal) : undefined,
     });
   } catch (error) {
     console.error("Error in proposal verify API:", error);

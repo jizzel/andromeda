@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getProposalById, getProposalAcceptance } from "@/lib/google-sheets";
 import { verifyPrintToken } from "@/lib/pdf-token";
+import { proposalVersion } from "@/lib/proposal-version";
 import { ProposalPrintView } from "@/components/proposals/ProposalPrintView";
 
 /**
@@ -50,6 +51,7 @@ export default async function ProposalPrintPage({ params, searchParams }: PrintP
       proposal={record.data}
       expiryDate={record.expiryDate}
       acceptance={acceptance}
+      proposalVersion={proposalVersion(record.data)}
     />
   );
 }

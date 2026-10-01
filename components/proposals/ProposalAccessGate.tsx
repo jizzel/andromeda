@@ -50,7 +50,13 @@ const LABEL_COPY: Record<ProposalAccessGateLabel, AccessGateCopy> = {
 
 interface ProposalAccessGateProps {
   proposalId: string;
-  onAccessGranted: (proposalData: unknown, expiryDate?: string, accessCode?: string) => void;
+  /** `response` is the full verify payload, for callers that need extra fields (e.g. `proposalVersion`). */
+  onAccessGranted: (
+    proposalData: unknown,
+    expiryDate?: string,
+    accessCode?: string,
+    response?: Record<string, unknown>
+  ) => void;
   label?: ProposalAccessGateLabel;
   /** Defaults to the proposal verify route. Used by the creative brief gate to point at `/api/brief/verify`. */
   verifyUrl?: string;
@@ -89,7 +95,7 @@ export function ProposalAccessGate({
       const data = await response.json();
 
       if (data.success && data[responseDataKey]) {
-        onAccessGranted(data[responseDataKey], data.expiryDate, accessCode.trim());
+        onAccessGranted(data[responseDataKey], data.expiryDate, accessCode.trim(), data);
       } else {
         setError(data.error || "Invalid access code");
       }

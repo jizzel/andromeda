@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useProposalDocument } from "./ProposalDocumentContext";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -11,12 +11,14 @@ import {
   Clock,
   Package,
   CreditCard,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollReveal } from "@/components/animations/ScrollReveal";
 import { formatDate } from "@/lib/dates";
 import type { ProposalAcceptance as AcceptanceData, ProposalPackage, ProposalPaymentPlan } from "@/types/proposal";
 import { useAnalytics } from "@/lib/hooks/useAnalytics";
+import { shortVersion } from "@/lib/proposal-version-label";
 
 interface ProposalAcceptanceProps {
   proposalId: string;
@@ -30,6 +32,7 @@ interface ProposalAcceptanceProps {
   selectedPlanId: string | null;
 }
 
+// "counter" is the stored status for a change request (shown as "Request changes").
 type ResponseMode = "accepted" | "counter" | null;
 
 export function ProposalAcceptance({
@@ -49,17 +52,73 @@ export function ProposalAcceptance({
   const [confirmed, setConfirmed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [stale, setStale] = useState(false);
+  const [reloading, setReloading] = useState(false);
+  // Client chose to update their change request or accept the current version.
+  const [reopened, setReopened] = useState(false);
 
-  const { trackProposalResponseSubmitted } = useAnalytics();
-  const { printMode, onAcceptanceRecorded } = useProposalDocument();
-  const locked = !!acceptance;
+  const {
+    trackProposalResponseSubmitted,
+    trackProposalRevisionViewed,
+    trackProposalStaleVersion,
+    trackProposalResponseReopened,
+  } = useAnalytics();
+  const { printMode, onAcceptanceRecorded, proposalVersion, reloadProposal } = useProposalDocument();
   const hasPackages = !!(packages && packages.length > 0);
   const hasPlans = !!(paymentPlans && paymentPlans.length > 0);
+  // Only options present in the current version count — an id kept from an
+  // earlier change request may have been removed by a revision.
+  const currentPackage = packages?.find((p) => p.id === selectedPackageId);
+  const currentPlan = paymentPlans?.find((p) => p.id === selectedPlanId);
+  const selectionComplete = (!hasPackages || !!currentPackage) && (!hasPlans || !!currentPlan);
+
+  // Response state. Acceptance is final. A change request stays open until the
+  // proposal is revised: a different current version means Joseph has published
+  // changes, so the form reopens for the client to accept (or ask again).
+  // Rows recorded before versioning have no version and count as "not yet revised".
+  const isAccepted = acceptance?.status === "accepted";
+  const isChangeRequest = acceptance?.status === "counter";
+  const revisedSinceRequest =
+    isChangeRequest &&
+    !!acceptance?.proposalVersion &&
+    !!proposalVersion &&
+    acceptance.proposalVersion !== proposalVersion;
+  const showConfirmation = isAccepted || (isChangeRequest && !revisedSinceRequest && !reopened);
+  const versionLabel = proposalVersion ? shortVersion(proposalVersion) : "unversioned";
+
+  useEffect(() => {
+    if (revisedSinceRequest && !printMode) {
+      trackProposalRevisionViewed({ proposal_id: proposalId, proposal_version: versionLabel });
+    }
+    // Once per mount/version — the tracker function identity isn't stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [revisedSinceRequest, proposalId, versionLabel, printMode]);
+
+  const reopenForm = () => {
+    setCounterNote(acceptance?.counterNote ?? "");
+    setResponseMode(null);
+    setConfirmed(false);
+    setError(null);
+    setReopened(true);
+    trackProposalResponseReopened({ proposal_id: proposalId, proposal_version: versionLabel });
+  };
+
+  const handleReload = async () => {
+    if (!reloadProposal) return window.location.reload();
+    setReloading(true);
+    try {
+      // Remounts this component with the latest version.
+      await reloadProposal();
+    } catch {
+      setReloading(false);
+      setError("Couldn't load the latest version. Please refresh the page.");
+    }
+  };
 
   const handleSubmit = async () => {
     if (!responseMode || !confirmed) return;
     if (responseMode === "counter" && !counterNote.trim()) return;
-    if (responseMode === "accepted" && ((hasPackages && !selectedPackageId) || (hasPlans && !selectedPlanId))) return;
+    if (responseMode === "accepted" && !selectionComplete) return;
 
     setSubmitting(true);
     setError(null);
@@ -73,25 +132,32 @@ export function ProposalAcceptance({
           accessCode,
           status: responseMode,
           counterNote: responseMode === "counter" ? counterNote.trim() : undefined,
-          packageId: selectedPackageId ?? undefined,
-          paymentPlanId: selectedPlanId ?? undefined,
+          packageId: currentPackage?.id,
+          paymentPlanId: currentPlan?.id,
+          proposalVersion,
         }),
       });
       const data = await res.json();
-      if (data.success) {
+      if (data.code === "stale_version") {
+        trackProposalStaleVersion({ proposal_id: proposalId, proposal_version: versionLabel });
+        setStale(true);
+        setError(data.error || "This proposal was updated — please review the latest version.");
+      } else if (data.success) {
         trackProposalResponseSubmitted({
           proposal_id: proposalId,
           status: responseMode,
-          package_id: selectedPackageId ?? undefined,
-          payment_plan_id: selectedPlanId ?? undefined,
+          package_id: currentPackage?.id,
+          payment_plan_id: currentPlan?.id,
         });
         const recorded: AcceptanceData = {
           status: responseMode,
           counterNote: responseMode === "counter" ? counterNote.trim() : undefined,
-          packageId: selectedPackageId ?? undefined,
-          paymentPlanId: selectedPlanId ?? undefined,
+          packageId: currentPackage?.id,
+          paymentPlanId: currentPlan?.id,
           acceptedAt: new Date().toISOString(),
+          proposalVersion: data.proposalVersion ?? proposalVersion,
         };
+        setReopened(false);
         setAcceptance(recorded);
         onAcceptanceRecorded?.(recorded);
       } else {
@@ -104,8 +170,10 @@ export function ProposalAcceptance({
     }
   };
 
-  const selectedPackage = packages?.find((p) => p.id === (acceptance?.packageId ?? selectedPackageId));
-  const selectedPlan = paymentPlans?.find((p) => p.id === (acceptance?.paymentPlanId ?? selectedPlanId));
+  // Confirmation shows what was recorded; the open form shows the live
+  // selection — they differ when a client reopens the form and picks again.
+  const recordedPackage = packages?.find((p) => p.id === acceptance?.packageId);
+  const recordedPlan = paymentPlans?.find((p) => p.id === acceptance?.paymentPlanId);
 
   // Already submitted — show confirmation state
   // The printed/PDF document is the offer itself; the response form and
@@ -113,7 +181,8 @@ export function ProposalAcceptance({
   // cards and the accepted date in the CTA block.
   if (printMode) return null;
 
-  if (acceptance) {
+  // Confirmation also stands in for the form once the offer window has closed.
+  if (acceptance && (showConfirmation || isExpired)) {
     return (
       <section className="w-full py-16 px-6">
         <div className="max-w-2xl mx-auto">
@@ -141,22 +210,22 @@ export function ProposalAcceptance({
                   </p>
 
                   {/* Selections summary */}
-                  {(selectedPackage || selectedPlan) && (
+                  {(recordedPackage || recordedPlan) && (
                     <div className="space-y-2 mb-6 p-4 rounded-lg bg-white/5 light:bg-black/5">
-                      {selectedPackage && (
+                      {recordedPackage && (
                         <div className="flex items-center gap-2 text-sm">
                           <Package className="w-4 h-4 text-[var(--andromeda-accent-beige)] shrink-0" />
                           <span className="text-[var(--andromeda-text-secondary)]">Package:</span>
-                          <span className="font-medium text-[var(--andromeda-text-primary)]">{selectedPackage.name}</span>
-                          <span className="text-[var(--andromeda-text-secondary)] ml-auto">{selectedPackage.totalPrice}</span>
+                          <span className="font-medium text-[var(--andromeda-text-primary)]">{recordedPackage.name}</span>
+                          <span className="text-[var(--andromeda-text-secondary)] ml-auto">{recordedPackage.totalPrice}</span>
                         </div>
                       )}
-                      {selectedPlan && (
+                      {recordedPlan && (
                         <div className="flex items-center gap-2 text-sm">
                           <CreditCard className="w-4 h-4 text-[var(--andromeda-accent-beige)] shrink-0" />
                           <span className="text-[var(--andromeda-text-secondary)]">Payment:</span>
-                          <span className="font-medium text-[var(--andromeda-text-primary)]">{selectedPlan.name}</span>
-                          <span className="text-[var(--andromeda-text-secondary)] ml-auto">{selectedPlan.totalInvestment}</span>
+                          <span className="font-medium text-[var(--andromeda-text-primary)]">{recordedPlan.name}</span>
+                          <span className="text-[var(--andromeda-text-secondary)] ml-auto">{recordedPlan.totalInvestment}</span>
                         </div>
                       )}
                     </div>
@@ -166,6 +235,7 @@ export function ProposalAcceptance({
                     <p className="text-xs text-[var(--andromeda-text-secondary)]/50 flex items-center justify-center gap-1.5">
                       <Clock className="w-3 h-3" />
                       Submitted {formatDate(acceptance.acceptedAt)}
+                      {acceptance.proposalVersion && <> · Version {shortVersion(acceptance.proposalVersion)}</>}
                     </p>
                   )}
                 </motion.div>
@@ -183,28 +253,28 @@ export function ProposalAcceptance({
                     </div>
                   </div>
                   <h3 className="text-xl font-bold text-[var(--andromeda-text-primary)] mb-2 text-center">
-                    Changes Noted
+                    Changes Requested
                   </h3>
                   <p className="text-[var(--andromeda-text-secondary)] mb-6 text-center">
-                    Thank you, {clientName}. Your proposed changes have been received. We&apos;ll
-                    review and get back to you shortly.
+                    Thank you, {clientName}. We&apos;ll send you a revised proposal to review and
+                    accept.
                   </p>
 
                   {/* Selections summary */}
-                  {(selectedPackage || selectedPlan) && (
+                  {(recordedPackage || recordedPlan) && (
                     <div className="space-y-2 mb-6 p-4 rounded-lg bg-white/5 light:bg-black/5">
-                      {selectedPackage && (
+                      {recordedPackage && (
                         <div className="flex items-center gap-2 text-sm">
                           <Package className="w-4 h-4 text-amber-400 shrink-0" />
                           <span className="text-[var(--andromeda-text-secondary)]">Package preference:</span>
-                          <span className="font-medium text-[var(--andromeda-text-primary)]">{selectedPackage.name}</span>
+                          <span className="font-medium text-[var(--andromeda-text-primary)]">{recordedPackage.name}</span>
                         </div>
                       )}
-                      {selectedPlan && (
+                      {recordedPlan && (
                         <div className="flex items-center gap-2 text-sm">
                           <CreditCard className="w-4 h-4 text-amber-400 shrink-0" />
                           <span className="text-[var(--andromeda-text-secondary)]">Payment preference:</span>
-                          <span className="font-medium text-[var(--andromeda-text-primary)]">{selectedPlan.name}</span>
+                          <span className="font-medium text-[var(--andromeda-text-primary)]">{recordedPlan.name}</span>
                         </div>
                       )}
                     </div>
@@ -220,6 +290,17 @@ export function ProposalAcceptance({
                       <Clock className="w-3 h-3" />
                       Submitted {formatDate(acceptance.acceptedAt)}
                     </p>
+                  )}
+                  {!isExpired && (
+                    <div className="flex justify-center mt-5">
+                      <button
+                        type="button"
+                        onClick={reopenForm}
+                        className="text-sm text-[var(--andromeda-accent-beige)] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--andromeda-accent-beige)]/50 rounded"
+                      >
+                        Update your request or accept as presented
+                      </button>
+                    </div>
                   )}
                 </motion.div>
               )}
@@ -246,12 +327,31 @@ export function ProposalAcceptance({
           <p className="text-[var(--andromeda-text-secondary)] mb-8">
             Let us know how you&apos;d like to move forward with this proposal.
           </p>
+          {revisedSinceRequest && acceptance && (
+            <div className="flex items-start gap-3 p-4 mb-8 rounded-lg bg-[var(--andromeda-accent-beige)]/10 border border-[var(--andromeda-accent-beige)]/30">
+              <RefreshCw className="w-4 h-4 mt-0.5 shrink-0 text-[var(--andromeda-accent-beige)]" />
+              <p className="text-sm text-[var(--andromeda-text-primary)]">
+                This proposal has been revised since your change request
+                {acceptance.acceptedAt ? ` on ${formatDate(acceptance.acceptedAt)}` : ""}. Please review
+                the updated terms above, then accept or request further changes.
+              </p>
+            </div>
+          )}
+          {reopened && !revisedSinceRequest && (
+            <button
+              type="button"
+              onClick={() => setReopened(false)}
+              className="text-sm text-[var(--andromeda-text-secondary)] hover:text-[var(--andromeda-accent-beige)] mb-6"
+            >
+              ← Keep my current change request
+            </button>
+          )}
         </ScrollReveal>
 
         <ScrollReveal delay={0.1}>
           {/* Selection summary strip — shows chosen package/plan */}
           <AnimatePresence>
-            {(selectedPackageId || selectedPlanId) && (
+            {(currentPackage || currentPlan) && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
@@ -260,21 +360,21 @@ export function ProposalAcceptance({
                 className="overflow-hidden mb-6"
               >
                 <div className="flex flex-wrap gap-2 p-4 rounded-lg bg-[var(--andromeda-accent-beige)]/5 border border-[var(--andromeda-accent-beige)]/20">
-                  {selectedPackage && (
+                  {currentPackage && (
                     <div className="flex items-center gap-1.5 text-sm">
                       <Package className="w-3.5 h-3.5 text-[var(--andromeda-accent-beige)]" />
                       <span className="text-[var(--andromeda-text-secondary)]">Package:</span>
-                      <span className="font-medium text-[var(--andromeda-text-primary)]">{selectedPackage.name}</span>
+                      <span className="font-medium text-[var(--andromeda-text-primary)]">{currentPackage.name}</span>
                     </div>
                   )}
-                  {selectedPackage && selectedPlan && (
+                  {currentPackage && currentPlan && (
                     <span className="text-[var(--andromeda-text-secondary)]/30">·</span>
                   )}
-                  {selectedPlan && (
+                  {currentPlan && (
                     <div className="flex items-center gap-1.5 text-sm">
                       <CreditCard className="w-3.5 h-3.5 text-[var(--andromeda-accent-beige)]" />
                       <span className="text-[var(--andromeda-text-secondary)]">Payment:</span>
-                      <span className="font-medium text-[var(--andromeda-text-primary)]">{selectedPlan.name}</span>
+                      <span className="font-medium text-[var(--andromeda-text-primary)]">{currentPlan.name}</span>
                     </div>
                   )}
                 </div>
@@ -283,11 +383,11 @@ export function ProposalAcceptance({
           </AnimatePresence>
 
           {/* Nudge to select if not yet chosen */}
-          {(hasPackages || hasPlans) && (!selectedPackageId || !selectedPlanId) && (
+          {!selectionComplete && (
             <p className="text-xs text-[var(--andromeda-text-secondary)]/60 mb-6">
-              {!selectedPackageId && hasPackages && !selectedPlanId && hasPlans
+              {!currentPackage && hasPackages && !currentPlan && hasPlans
                 ? "Select a package and payment plan above before submitting."
-                : !selectedPackageId && hasPackages
+                : !currentPackage && hasPackages
                   ? "Select a package above before submitting."
                   : "Select a payment plan above before submitting."}
             </p>
@@ -362,17 +462,17 @@ export function ProposalAcceptance({
                 </div>
                 <div>
                   <p className="font-semibold text-[var(--andromeda-text-primary)] text-sm">
-                    Accept with changes
+                    Request changes
                   </p>
                   <p className="text-xs text-[var(--andromeda-text-secondary)] mt-1">
-                    I&apos;d like to discuss adjustments before proceeding
+                    Ask for adjustments — you&apos;ll receive a revised proposal to accept
                   </p>
                 </div>
               </div>
             </motion.button>
           </div>
 
-          {/* Counter-note textarea */}
+          {/* Change-request textarea */}
           <AnimatePresence>
             {responseMode === "counter" && (
               <motion.div
@@ -386,7 +486,7 @@ export function ProposalAcceptance({
                   htmlFor="counterNote"
                   className="block text-sm font-medium text-[var(--andromeda-text-secondary)] mb-2"
                 >
-                  Describe the changes you&apos;d like to discuss
+                  What would you like changed?
                 </label>
                 <textarea
                   id="counterNote"
@@ -459,7 +559,18 @@ export function ProposalAcceptance({
                 className="flex items-center gap-2 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm mb-4"
               >
                 <AlertCircle className="w-4 h-4 shrink-0" />
-                {error}
+                <span className="flex-1">{error}</span>
+                {stale && (
+                  <button
+                    type="button"
+                    onClick={handleReload}
+                    disabled={reloading}
+                    className="flex items-center gap-1.5 font-semibold text-[var(--andromeda-accent-beige)] hover:underline disabled:opacity-50 shrink-0"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${reloading ? "animate-spin" : ""}`} />
+                    {reloading ? "Loading…" : "Reload proposal"}
+                  </button>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -479,8 +590,9 @@ export function ProposalAcceptance({
                     !confirmed ||
                     submitting ||
                     (responseMode === "counter" && !counterNote.trim()) ||
-                    (responseMode === "accepted" && ((hasPackages && !selectedPackageId) || (hasPlans && !selectedPlanId))) ||
-                    locked
+                    (responseMode === "accepted" && !selectionComplete) ||
+                    isAccepted ||
+                    stale
                   }
                   className="bg-[var(--andromeda-accent-beige)] text-[var(--andromeda-primary)] hover:bg-[var(--andromeda-accent-beige)]/90 px-8 py-5 text-base font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
                 >
@@ -496,7 +608,7 @@ export function ProposalAcceptance({
                   ) : (
                     <span className="flex items-center gap-2">
                       <Send className="w-4 h-4" />
-                      Submit Response
+                      {responseMode === "counter" ? "Request Changes" : "Accept Proposal"}
                     </span>
                   )}
                 </Button>
