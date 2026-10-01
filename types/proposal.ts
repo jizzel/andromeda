@@ -167,11 +167,17 @@ export interface AssetRequest {
 export type AcceptanceStatus = "pending" | "accepted" | "counter";
 
 export interface ProposalAcceptance {
+  /** `counter` = the client requested changes (shown as "Request changes"). */
   status: AcceptanceStatus;
   counterNote?: string;
   packageId?: string;
   paymentPlanId?: string;
   acceptedAt: string;
+  /**
+   * Version (lib/proposal-version.ts) of the terms this response was made
+   * against. Blank on rows recorded before versioning.
+   */
+  proposalVersion?: string;
 }
 
 export interface ProposalAccess {
@@ -239,7 +245,6 @@ export interface ProposalData {
   issuedAt: string;
   totalDuration?: string;
   heroImage: string;
-  pdfUrl: string;
   contactEmail: string;
   overview: ProposalOverview;
   goals: ProposalGoal[];
@@ -434,4 +439,6 @@ export interface VerifyAccessResponse {
   error?: string;
   proposal?: ProposalDataUnion;
   expiryDate?: string;
+  /** Current version of the proposal terms; sent back on submit to detect stale pages. */
+  proposalVersion?: string;
 }

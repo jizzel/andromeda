@@ -82,10 +82,16 @@ interface ProposalTrackerOpenedEvent {
   proposal_id: string;
 }
 
+interface ProposalVersionEvent {
+  proposal_id: string;
+  /** Short form of the proposal version involved. */
+  proposal_version: string;
+}
+
 interface ProposalPdfDownloadedEvent {
   proposal_id: string;
-  /** generated = server PDF, print = browser print dialog, static = hand-maintained pdfUrl */
-  method: "generated" | "print" | "static";
+  /** generated = server PDF, print = browser print dialog */
+  method: "generated" | "print";
 }
 
 interface ProposalTrackerPhaseViewedEvent {
@@ -141,6 +147,12 @@ export const useAnalytics = () => {
   const trackProposalUploadFolderOpened = (data: ProposalUploadFolderOpenedEvent) => emit("proposal_upload_folder_opened", data);
   const trackProposalTrackerOpened = (data: ProposalTrackerOpenedEvent) => emit("proposal_tracker_opened", data);
   const trackProposalPdfDownloaded = (data: ProposalPdfDownloadedEvent) => emit("proposal_pdf_downloaded", data);
+  /** Revised-since-your-change-request banner shown (a revision reached the client). */
+  const trackProposalRevisionViewed = (data: ProposalVersionEvent) => emit("proposal_revision_viewed", data);
+  /** A response was refused because the proposal changed while the page was open. */
+  const trackProposalStaleVersion = (data: ProposalVersionEvent) => emit("proposal_stale_version", data);
+  /** Client reopened the form to update a change request or accept as presented. */
+  const trackProposalResponseReopened = (data: ProposalVersionEvent) => emit("proposal_response_reopened", data);
   const trackProposalTrackerPhaseViewed = (data: ProposalTrackerPhaseViewedEvent) => emit("proposal_tracker_phase_viewed", data);
   const trackBriefAccessed = (data: BriefAccessedEvent) => emit("brief_accessed", data);
 
@@ -163,6 +175,9 @@ export const useAnalytics = () => {
     trackProposalUploadFolderOpened,
     trackProposalTrackerOpened,
     trackProposalPdfDownloaded,
+    trackProposalRevisionViewed,
+    trackProposalStaleVersion,
+    trackProposalResponseReopened,
     trackProposalTrackerPhaseViewed,
     trackBriefAccessed,
   };

@@ -10,13 +10,13 @@ import { openCalendlyPopup } from "@/lib/calendly";
 import { useAnalytics } from "@/lib/hooks/useAnalytics";
 import Link from "next/link";
 import { useProposalDocument } from "./ProposalDocumentContext";
+import { shortVersion } from "@/lib/proposal-version-label";
 
 interface ProposalCTAProps {
   expiryDate?: string;
   clientName: string;
   contactEmail?: string;
   contactPhone?: string;
-  pdfUrl?: string;
   proposalId?: string;
   assetsReady?: boolean;
   trackerReady?: boolean;
@@ -26,20 +26,22 @@ export function ProposalCTA({
   expiryDate,
   contactEmail = "joseph@attakorah.com",
   contactPhone,
-  pdfUrl,
   proposalId,
   assetsReady,
   trackerReady,
 }: ProposalCTAProps) {
   const { trackProposalAssetsOpened, trackProposalTrackerOpened, trackProposalPdfDownloaded } = useAnalytics();
-  const { printMode, accessCode, recordedAcceptance, requestPrint } = useProposalDocument();
+  const { printMode, accessCode, recordedAcceptance, requestPrint, proposalVersion } = useProposalDocument();
   const [pdfState, setPdfState] = useState<"idle" | "loading" | "error">("idle");
   const formattedExpiry = expiryDate ? formatDate(expiryDate) : null;
   const acceptedAt =
     recordedAcceptance?.status === "accepted" && recordedAcceptance.acceptedAt
       ? formatDate(recordedAcceptance.acceptedAt)
       : null;
-  const canGeneratePdf = !pdfUrl && !!proposalId && !!accessCode;
+  // The printed terms are the current version; flag it if acceptance was against another.
+  const acceptedVersion = recordedAcceptance?.status === "accepted" ? recordedAcceptance.proposalVersion : undefined;
+  const acceptedDifferentVersion = !!acceptedVersion && !!proposalVersion && acceptedVersion !== proposalVersion;
+  const canGeneratePdf = !!proposalId && !!accessCode;
 
   const downloadPdf = async () => {
     if (!proposalId || !accessCode || pdfState === "loading") return;
@@ -99,6 +101,14 @@ export function ProposalCTA({
             Questions or next steps: {contactEmail}
             {contactPhone ? ` · ${contactPhone}` : ""}
           </p>
+          {proposalVersion && (
+            <p className="text-xs text-[var(--andromeda-text-secondary)] mt-3">
+              Proposal version {shortVersion(proposalVersion)}
+              {acceptedDifferentVersion && acceptedVersion
+                ? ` · accepted version was ${shortVersion(acceptedVersion)}`
+                : ""}
+            </p>
+          )}
         </div>
       </section>
     );
@@ -152,28 +162,6 @@ export function ProposalCTA({
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </motion.div>
-
-            {pdfUrl && (
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Button
-                  asChild
-                  size="lg"
-                  variant="outline"
-                  className="border-[var(--andromeda-accent-beige)]/50 text-[var(--andromeda-text-primary)] hover:bg-[var(--andromeda-accent-beige)]/10 px-8 py-6 text-base"
-                >
-                  <a
-                    href={pdfUrl}
-                    download
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => proposalId && trackProposalPdfDownloaded({ proposal_id: proposalId, method: "static" })}
-                  >
-                    <FileDown className="w-5 h-5 mr-2" />
-                    Download Proposal
-                  </a>
-                </Button>
-              </motion.div>
-            )}
 
             {assetsReady && proposalId && (
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>

@@ -36,14 +36,20 @@ export function ProposalContentSocial({
 }: ProposalContentSocialProps) {
   const { trackProposalPackageSelected } = useAnalytics();
 
-  const [selectedPackageId, setSelectedPackageId] = useState<string | null>(
-    initialAcceptance?.packageId ?? null
-  );
+  // Start from the recorded selection only if that option still exists — a
+  // revision after a change request may have removed or replaced it. The
+  // shell remounts per version, so this re-runs after every revision.
+  const [selectedPackageId, setSelectedPackageId] = useState<string | null>(() => {
+    const id = initialAcceptance?.packageId;
+    return id && proposal.packages?.some((p) => p.id === id) ? id : null;
+  });
 
-  // Lock selection once a response is on record — including one submitted
-  // this session, which `initialAcceptance` (mount-time only) doesn't reflect.
+  // Lock selection once the proposal is accepted — including in this session,
+  // which `initialAcceptance` (mount-time only) doesn't reflect. While changes
+  // are requested the cards stay selectable, so a revision can be accepted
+  // with a new choice.
   const { recordedAcceptance } = useProposalDocument();
-  const locked = !!(recordedAcceptance ?? initialAcceptance);
+  const locked = (recordedAcceptance ?? initialAcceptance)?.status === "accepted";
 
   const handlePackageSelect = useCallback(
     (id: string) => {
@@ -107,7 +113,6 @@ export function ProposalContentSocial({
         expiryDate={expiryDate}
         clientName={proposal.client.name}
         contactEmail={proposal.contactEmail}
-        pdfUrl={proposal.pdfUrl}
         proposalId={proposalId}
         assetsReady={proposal.assetsReady}
         trackerReady={proposal.trackerReady}

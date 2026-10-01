@@ -24,6 +24,7 @@ export function ProposalPageWrapper({ proposalId }: ProposalPageWrapperProps) {
   const [recordedAcceptance, setRecordedAcceptance] = useState<ProposalAcceptance | null>(null);
   const [acceptanceLoaded, setAcceptanceLoaded] = useState(false);
   const [printMode, setPrintMode] = useState(false);
+  const [proposalVersion, setProposalVersion] = useState<string | undefined>(undefined);
 
   // Print mode while the browser print dialog is open — whether opened from
   // the "Print / Save as PDF" button or Ctrl/Cmd+P. flushSync makes React
@@ -63,12 +64,36 @@ export function ProposalPageWrapper({ proposalId }: ProposalPageWrapperProps) {
     load();
   }, [proposal, accessCode, proposalId]);
 
-  const handleAccessGranted = (proposalData: unknown, expiry?: string, code?: string) => {
+  const handleAccessGranted = (
+    proposalData: unknown,
+    expiry?: string,
+    code?: string,
+    response?: Record<string, unknown>
+  ) => {
     setProposal(proposalData as ProposalDataUnion);
     setExpiryDate(expiry);
     setAccessCode(code ?? "");
+    setProposalVersion(typeof response?.proposalVersion === "string" ? response.proposalVersion : undefined);
     trackProposalAccessed({ proposal_id: proposalId });
   };
+
+  // Re-fetch the latest version in place (after a "proposal was updated"
+  // response) without asking the client for the access code again. The
+  // acceptance effect above re-runs because `proposal` changes, and the shell
+  // remounts (keyed on version) so its selection state starts fresh.
+  const reloadProposal = useCallback(async () => {
+    const res = await fetch("/api/proposal/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ proposalId, accessCode }),
+    });
+    const data = await res.json();
+    if (!data.success || !data.proposal) throw new Error(data.error || "Unable to reload proposal");
+    setAcceptanceLoaded(false);
+    setProposal(data.proposal as ProposalDataUnion);
+    setExpiryDate(data.expiryDate);
+    setProposalVersion(data.proposalVersion);
+  }, [proposalId, accessCode]);
 
   if (!proposal) {
     return (
@@ -99,12 +124,15 @@ export function ProposalPageWrapper({ proposalId }: ProposalPageWrapperProps) {
         printMode,
         proposalId,
         accessCode,
+        proposalVersion,
         recordedAcceptance,
         requestPrint,
+        reloadProposal,
         onAcceptanceRecorded: setRecordedAcceptance,
       }}
     >
       <ProposalShell
+        key={proposalVersion ?? "unversioned"}
         proposal={proposal}
         expiryDate={expiryDate}
         proposalId={proposalId}

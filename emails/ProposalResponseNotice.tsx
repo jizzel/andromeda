@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { shortVersion } from "@/lib/proposal-version-label";
 import {
   Body,
   Container,
@@ -12,6 +13,7 @@ import {
   Text,
 } from "@react-email/components";
 
+/** `counter` / `counter-updated` = the client requested changes (stored status `counter`). */
 export type ProposalResponseKind = "accepted" | "counter" | "counter-updated";
 
 interface ProposalResponseNoticeEmailProps {
@@ -24,12 +26,16 @@ interface ProposalResponseNoticeEmailProps {
   counterNote?: string;
   submittedAt: string;
   proposalUrl: string;
+  /** Version of the terms the response was made against. */
+  proposalVersion?: string;
+  /** True when the terms snapshot couldn't be stored — only the hash was recorded. */
+  snapshotFailed?: boolean;
 }
 
 const EYEBROW: Record<ProposalResponseKind, string> = {
   accepted: "Proposal accepted",
-  counter: "Counter-proposal",
-  "counter-updated": "Counter-proposal updated",
+  counter: "Changes requested",
+  "counter-updated": "Change request updated",
 };
 
 export function ProposalResponseNoticeEmail({
@@ -42,12 +48,14 @@ export function ProposalResponseNoticeEmail({
   counterNote,
   submittedAt,
   proposalUrl,
+  proposalVersion,
+  snapshotFailed,
 }: ProposalResponseNoticeEmailProps) {
   const firstName = recipientName.trim().split(" ")[0] || recipientName;
   const preview =
     kind === "accepted"
       ? `${clientName} accepted ${projectTitle}.`
-      : `${clientName} sent a counter-proposal on ${projectTitle}.`;
+      : `${clientName} requested changes to ${projectTitle}.`;
 
   return (
     <Html>
@@ -67,11 +75,12 @@ export function ProposalResponseNoticeEmail({
               </>
             ) : kind === "counter" ? (
               <>
-                <strong>{clientName}</strong> has responded with requested changes.
+                <strong>{clientName}</strong> has requested changes. Revise the proposal on the
+                sheet — they&apos;ll then be able to review and accept the new version.
               </>
             ) : (
               <>
-                <strong>{clientName}</strong> has updated their requested changes.
+                <strong>{clientName}</strong> has updated their change request.
               </>
             )}
           </Text>
@@ -98,6 +107,15 @@ export function ProposalResponseNoticeEmail({
 
           <Hr style={divider} />
           <Text style={metaText}>Submitted at: {submittedAt}</Text>
+          {proposalVersion && (
+            <Text style={metaText}>Proposal version: {shortVersion(proposalVersion)}</Text>
+          )}
+          {snapshotFailed && (
+            <Text style={warningText}>
+              The copy of these terms couldn&apos;t be saved to ProposalSnapshots (check the tab
+              exists). The version hash above was still recorded.
+            </Text>
+          )}
         </Container>
       </Body>
     </Html>
@@ -203,6 +221,13 @@ const cta: CSSProperties = {
 const divider: CSSProperties = {
   borderColor: "#2a2825",
   margin: "32px 0 16px 0",
+};
+
+const warningText: CSSProperties = {
+  color: "#e0a050",
+  fontSize: "12px",
+  lineHeight: "18px",
+  margin: "12px 0 0 0",
 };
 
 const metaText: CSSProperties = {

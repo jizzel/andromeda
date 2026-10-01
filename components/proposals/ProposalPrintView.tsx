@@ -9,6 +9,7 @@ interface ProposalPrintViewProps {
   proposal: ProposalDataUnion;
   expiryDate: string;
   acceptance: ProposalAcceptance | null;
+  proposalVersion: string;
 }
 
 /**
@@ -16,11 +17,11 @@ interface ProposalPrintViewProps {
  * print mode. Rendered by the token-gated `/proposal/[id]/print` route that
  * the headless browser in `lib/pdf.ts` loads.
  */
-export function ProposalPrintView({ proposalId, proposal, expiryDate, acceptance }: ProposalPrintViewProps) {
+export function ProposalPrintView({ proposalId, proposal, expiryDate, acceptance, proposalVersion }: ProposalPrintViewProps) {
   const isExpired = new Date() > new Date(expiryDate);
 
   return (
-    <ProposalDocumentProvider value={{ printMode: true, proposalId, recordedAcceptance: acceptance }}>
+    <ProposalDocumentProvider value={{ printMode: true, proposalId, proposalVersion, recordedAcceptance: acceptance }}>
       {/* `pdf-document` scopes print CSS that compensates for the export's page scale. */}
       <div className="pdf-document">
         <ProposalShell

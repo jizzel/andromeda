@@ -17,10 +17,14 @@ interface ProposalDocumentValue {
   printMode: boolean;
   proposalId?: string;
   accessCode?: string;
+  /** Version of the terms currently displayed (lib/proposal-version.ts). */
+  proposalVersion?: string;
   /** The acceptance recorded on the sheet — never the viewer's unsaved selection. */
   recordedAcceptance?: ProposalAcceptance | null;
   /** Opens the browser print dialog in print mode. Absent on the PDF route. */
   requestPrint?: () => void;
+  /** Re-fetches the latest proposal version in place (live page only). */
+  reloadProposal?: () => Promise<void>;
   /** Called after a response is saved, so the document reflects it without a reload. */
   onAcceptanceRecorded?: (acceptance: ProposalAcceptance) => void;
 }

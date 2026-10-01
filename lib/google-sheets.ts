@@ -412,14 +412,14 @@ export async function setAssetItemChecked(
 
 // Proposal acceptance — read/write "ProposalAcceptance" tab
 
-// ProposalAcceptance sheet columns: A:proposalId | B:status | C:counterNote | D:acceptedAt | E:packageId | F:paymentPlanId
+// ProposalAcceptance sheet columns: A:proposalId | B:status | C:counterNote | D:acceptedAt | E:packageId | F:paymentPlanId | G:proposalVersion
 
 export async function getProposalAcceptance(proposalId: string): Promise<ProposalAcceptance | null> {
   try {
     const sheets = getGoogleSheetsClient();
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${ACCEPTANCE_SHEET_NAME}!A2:F`,
+      range: `${ACCEPTANCE_SHEET_NAME}!A2:G`,
     });
     const rows = response.data.values || [];
     const row = rows.find((r) => r[0]?.trim() === proposalId);
@@ -430,6 +430,7 @@ export async function getProposalAcceptance(proposalId: string): Promise<Proposa
       acceptedAt: row[3]?.trim() || "",
       packageId: row[4]?.trim() || undefined,
       paymentPlanId: row[5]?.trim() || undefined,
+      proposalVersion: row[6]?.trim() || undefined,
     };
   } catch (error) {
     console.error("Failed to fetch proposal acceptance:", error);
@@ -452,6 +453,7 @@ export async function setProposalAcceptance(
     acceptedAt,
     acceptance.packageId ?? "",
     acceptance.paymentPlanId ?? "",
+    acceptance.proposalVersion ?? "",
   ];
 
   // Check if a row already exists for this proposal
@@ -465,7 +467,7 @@ export async function setProposalAcceptance(
   if (rowIndex === -1) {
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${ACCEPTANCE_SHEET_NAME}!A:F`,
+      range: `${ACCEPTANCE_SHEET_NAME}!A:G`,
       valueInputOption: "RAW",
       requestBody: { values: [row] },
     });
@@ -473,7 +475,7 @@ export async function setProposalAcceptance(
     const sheetRow = rowIndex + 2;
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${ACCEPTANCE_SHEET_NAME}!A${sheetRow}:F${sheetRow}`,
+      range: `${ACCEPTANCE_SHEET_NAME}!A${sheetRow}:G${sheetRow}`,
       valueInputOption: "RAW",
       requestBody: { values: [row] },
     });
@@ -484,6 +486,46 @@ export async function getAcceptanceSheetId(
   sheets: ReturnType<typeof getGoogleSheetsClient>
 ): Promise<number | null> {
   return getSheetId(sheets, ACCEPTANCE_SHEET_NAME, acceptanceSheetIdCache);
+}
+
+// Proposal snapshots — "ProposalSnapshots" tab, append-only.
+// Columns: A:proposalId | B:proposalVersion | C:capturedAt | D:reason | E:data (canonical JSON)
+// One row per (proposalId, proposalVersion): the exact terms a response was made against.
+const SNAPSHOT_SHEET_NAME = "ProposalSnapshots";
+// Sheets rejects cells over 50,000 characters; keep headroom.
+const SNAPSHOT_MAX_CHARS = 49_000;
+
+export type SnapshotReason = "accepted" | "changes_requested";
+
+/** Records the terms for a version once; repeat calls for the same version are no-ops. */
+export async function saveProposalSnapshot(
+  proposalId: string,
+  proposalVersion: string,
+  reason: SnapshotReason,
+  canonicalJson: string
+): Promise<void> {
+  const sheets = getGoogleSheetsClient();
+  const existing = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${SNAPSHOT_SHEET_NAME}!A2:B`,
+  });
+  const rows = existing.data.values || [];
+  if (rows.some((r) => r[0]?.trim() === proposalId && r[1]?.trim() === proposalVersion)) return;
+
+  let data = canonicalJson;
+  if (data.length > SNAPSHOT_MAX_CHARS) {
+    console.error(
+      `Proposal snapshot for ${proposalId}@${proposalVersion} is ${data.length} chars — over the Sheets cell limit; storing hash only`
+    );
+    data = "[too large]";
+  }
+
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${SNAPSHOT_SHEET_NAME}!A:E`,
+    valueInputOption: "RAW",
+    requestBody: { values: [[proposalId, proposalVersion, new Date().toISOString(), reason, data]] },
+  });
 }
 
 // Project tracker — stored in "ProjectTracker" tab

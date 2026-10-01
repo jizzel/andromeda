@@ -92,7 +92,6 @@ export function ProposalContentChurch({ proposal, expiryDate, proposalId, access
         expiryDate={expiryDate}
         clientName={proposal.client.name}
         contactEmail={proposal.contactEmail}
-        pdfUrl={proposal.pdfUrl}
         proposalId={proposalId}
         assetsReady={proposal.assetsReady}
         trackerReady={proposal.trackerReady}

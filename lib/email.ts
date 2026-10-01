@@ -158,6 +158,8 @@ interface SendProposalResponseNoticeArgs {
   paymentPlanName?: string;
   counterNote?: string;
   submittedAt: string;
+  proposalVersion?: string;
+  snapshotFailed?: boolean;
 }
 
 export async function sendProposalResponseNotice(args: SendProposalResponseNoticeArgs): Promise<void> {
@@ -171,7 +173,7 @@ export async function sendProposalResponseNotice(args: SendProposalResponseNotic
 
   const resend = new Resend(apiKey);
   const proposalUrl = `${siteUrl.replace(/\/$/, "")}/proposal/${args.proposalId}`;
-  const tag = args.kind === "accepted" ? "[Accepted]" : "[Counter]";
+  const tag = args.kind === "accepted" ? "[Accepted]" : "[Changes requested]";
 
   const result = await resend.emails.send({
     from,
@@ -187,6 +189,8 @@ export async function sendProposalResponseNotice(args: SendProposalResponseNotic
       counterNote: args.counterNote,
       submittedAt: args.submittedAt,
       proposalUrl,
+      proposalVersion: args.proposalVersion,
+      snapshotFailed: args.snapshotFailed,
     }),
   });
 
