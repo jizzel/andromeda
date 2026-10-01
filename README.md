@@ -71,7 +71,10 @@ proxy.ts                        # CSP + security headers (replaces middleware.ts
 - **Projects** — Expandable inline cards with status badges, plus full case study pages.
 - **Perspectives** — MDX + Google Sheets hybrid blog at `/perspective`.
 - **Proposals** — Access-code protected client proposals with overview, packages, payment plans, and timeline.
-- **Proposal acceptance** — Clients accept as-presented or with counter-terms; recorded in the `ProposalAcceptance` sheet tab.
+- **Proposal acceptance** — Clients accept as presented or request changes; recorded in the `ProposalAcceptance` sheet tab. A change request leads to a revised proposal the client then accepts.
+- **Proposal versions** — Every response is pinned to a SHA-256 of the proposal terms, with the exact terms kept in `ProposalSnapshots`. A page left open across an edit can't submit stale terms.
+- **PDF export** — "Download PDF" renders the live proposal components with headless Chromium (`@sparticuz/chromium` on Vercel); "Print / Save as PDF" is the browser fallback.
+- **Admin dashboard** — `/admin`, signed in with a one-time code emailed to the site owner. Read-only overview of every proposal's lifecycle state, response, version drift, asset and tracker progress.
 - **Asset checklist** — Post-acceptance content gathering at `/proposal/[id]/assets`, with required / recommended / optional priorities and live progress sync.
 - **Project tracker** — Live status timeline at `/proposal/[id]/tracker` with phases, milestones, dates, and notes. Composable templates with per-proposal additions.
 - **Client milestone approvals** — Clients can self-approve specific milestones (e.g. "Final approval") from the tracker; sends Joseph an email confirmation.
@@ -111,7 +114,30 @@ RESEND_API_KEY=
 NOTIFICATION_FROM_EMAIL=             # e.g. notifications@attakorah.com (verified in Resend)
 TRACKER_WEBHOOK_SECRET=              # Shared secret with the Apps Script onEdit trigger
 CRON_SECRET=                         # Bearer secret for the Friday weekly-update Vercel Cron
+
+# Proposal PDF export.
+PDF_RENDER_SECRET=                   # HMAC key for short-lived print-route tokens
+CHROME_EXECUTABLE_PATH=              # Local dev only: path to an installed Chrome
+
+# Admin dashboard (/admin).
+ADMIN_SESSION_SECRET=                # HMAC key for admin session + sign-in-code cookies; rotate to sign out everyone
 ```
+
+### Spreadsheet tabs
+
+All tabs live in the `GOOGLE_PROPOSALS_SHEET_ID` spreadsheet; the service account needs edit access. Row 1 holds the headers.
+
+| Tab | Headers | Created |
+|---|---|---|
+| `Proposals` | `id \| accessCode \| expiryDate \| isActive \| data` | manually |
+| `BlogPosts` | see `lib/google-sheets.ts` (`BLOG_COLUMNS`) | manually |
+| `ProposalAcceptance` | `proposalId \| status \| counterNote \| acceptedAt \| packageId \| paymentPlanId \| proposalVersion` | manually |
+| `ProposalAssets` | `proposalId \| itemId \| checked \| checkedAt` | manually |
+| `ProjectTracker` | `proposalId \| phaseId \| milestoneId \| status \| startedAt \| completedAt \| note \| updatedAt \| notifiedAt` | manually |
+| `WeeklyUpdatesSent` / `WeeklyNotes` | `proposalId \| weekEndingDate \| sentAt` / `… \| note` | manually |
+| `CreativeBrief` | `id \| accessCode \| expiryDate \| isActive \| data` | manually |
+| `ProposalSnapshots` | `proposalId \| proposalVersion \| capturedAt \| reason \| data` (data continues across columns F–Z for large proposals) | automatically on first use |
+| `AdminSignIns` | `nonce \| at \| event \| ip \| userAgent` (append-only sign-in log) | automatically on first use |
 
 The profile vars are validated at module load (`constants/profile.ts`) — the build fails loudly rather than rendering with blanks. Without the Sheets/email vars, proposal verification and sheet-based posts silently return empty; the site still boots.
 
@@ -133,4 +159,4 @@ npm run start
 
 ## Further documentation
 
-`CLAUDE.md` carries the detailed architecture notes — content system internals, tracker data model, Apps Script wiring, gate component variants, and conventions. Start there when extending any of the proposal-side features.
+`CLAUDE.md` (kept locally, not in the repo) carries the detailed architecture notes — content system internals, tracker data model, Apps Script wiring, gate component variants, and conventions. Start there when extending any of the proposal-side features.

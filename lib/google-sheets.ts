@@ -531,6 +531,38 @@ export async function getAcceptanceSheetId(
   return getSheetId(sheets, ACCEPTANCE_SHEET_NAME, acceptanceSheetIdCache);
 }
 
+// Tabs the app writes to but that older spreadsheets won't have yet are created
+// on first use (with their header row) instead of failing with an invalid-range
+// error. Cached per instance once confirmed. Creation races between instances
+// are tolerated: "already exists" means another instance won.
+const ensuredTabs = new Set<string>();
+
+async function ensureTab(
+  sheets: ReturnType<typeof getGoogleSheetsClient>,
+  title: string,
+  headers: string[]
+): Promise<void> {
+  if (ensuredTabs.has(title)) return;
+  const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID, fields: "sheets.properties.title" });
+  if (!meta.data.sheets?.some((s) => s.properties?.title === title)) {
+    try {
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId: SPREADSHEET_ID,
+        requestBody: { requests: [{ addSheet: { properties: { title } } }] },
+      });
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${title}!A1`,
+        valueInputOption: "RAW",
+        requestBody: { values: [headers] },
+      });
+    } catch (error) {
+      if (!String((error as Error)?.message ?? error).includes("already exists")) throw error;
+    }
+  }
+  ensuredTabs.add(title);
+}
+
 // Proposal snapshots — "ProposalSnapshots" tab, append-only.
 // Columns: A:proposalId | B:proposalVersion | C:capturedAt | D:reason | E…Z:data
 // One row per (proposalId, proposalVersion): the exact terms a response was made against.
@@ -538,6 +570,7 @@ export async function getAcceptanceSheetId(
 // Sheets rejects any single cell over 50,000 characters; concatenate E onward to
 // read it back (`getProposalSnapshot`).
 const SNAPSHOT_SHEET_NAME = "ProposalSnapshots";
+const SNAPSHOT_HEADERS = ["proposalId", "proposalVersion", "capturedAt", "reason", "data"];
 const SNAPSHOT_CHUNK_CHARS = 49_000; // headroom under the 50k cell limit
 const SNAPSHOT_MAX_CHUNKS = 22; // columns E–Z ≈ 1.07M characters
 
@@ -559,6 +592,7 @@ export async function saveProposalSnapshot(
   canonicalJson: string
 ): Promise<SnapshotResult> {
   const sheets = getGoogleSheetsClient();
+  await ensureTab(sheets, SNAPSHOT_SHEET_NAME, SNAPSHOT_HEADERS);
   const existing = await sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
     range: `${SNAPSHOT_SHEET_NAME}!A2:B`,
@@ -947,9 +981,11 @@ export async function getAllWeeklyUpdatesSent(): Promise<Set<string>> {
 // matching code wins only if no earlier attempt already matched. Doubles as an
 // audit log of admin sign-ins.
 const ADMIN_SIGNIN_SHEET_NAME = "AdminSignIns";
+const ADMIN_SIGNIN_HEADERS = ["nonce", "at", "event", "ip", "userAgent"];
 
 export async function recordAdminSignInChallenge(nonce: string, ip: string, userAgent: string): Promise<void> {
   const sheets = getGoogleSheetsClient();
+  await ensureTab(sheets, ADMIN_SIGNIN_SHEET_NAME, ADMIN_SIGNIN_HEADERS);
   await sheets.spreadsheets.values.append({
     spreadsheetId: SPREADSHEET_ID,
     range: `${ADMIN_SIGNIN_SHEET_NAME}!A:E`,
@@ -983,6 +1019,7 @@ export async function registerAdminSignInAttempt(
   userAgent: string
 ): Promise<AdminSignInAttempt> {
   const sheets = getGoogleSheetsClient();
+  await ensureTab(sheets, ADMIN_SIGNIN_SHEET_NAME, ADMIN_SIGNIN_HEADERS);
   const appended = await sheets.spreadsheets.values.append({
     spreadsheetId: SPREADSHEET_ID,
     range: `${ADMIN_SIGNIN_SHEET_NAME}!A:E`,
