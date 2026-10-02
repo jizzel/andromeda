@@ -263,6 +263,8 @@ export function withProposalLock<T>(proposalId: string, fn: (lock: SheetLock) =>
  * the guard's checks and the write. (Hand edits on the sheet can't take the
  * lock; they're caught by the hash check.)
  */
+const proposalsSheetIdCache = { value: null as number | null };
+
 export async function updateProposalRow<R = never>(
   proposalId: string,
   expectedRowHash: string,
@@ -282,11 +284,17 @@ async function writeProposalRowIfUnchanged<R>(
   input: ProposalRowInput,
   guard?: (current: ProposalRowForEdit) => Promise<R | null>
 ): Promise<Exclude<ProposalRowUpdate<R>, { status: "busy" }>> {
-  const rows = await readRawProposalRows();
-  const index = rows.findIndex((r) => r[COLUMNS.ID]?.trim() === proposalId);
-  if (index === -1) return { status: "not_found" };
-  const record = rawRowToRecord(rows[index]);
-  const rowHash = hashRawRow(rows[index]);
+  // Read and written through the row's anchor, not its row number, so rows
+  // inserted, deleted or sorted on the sheet meanwhile can't redirect the
+  // write onto another proposal. (A hand edit to this same row between the
+  // check and the write is still possible — Sheets has no compare-and-swap.)
+  const sheets = getGoogleSheetsClient();
+  const sheetId = await getSheetId(sheets, SHEET_NAME, proposalsSheetIdCache);
+  if (sheetId === null) return { status: "not_found" };
+  const row = await readRowByAnchor(sheets, SHEET_NAME, sheetId, proposalId, lock);
+  if (!row) return { status: "not_found" };
+  const record = rawRowToRecord(row);
+  const rowHash = hashRawRow(row);
   // Stale editor first: no point running checks for a save that would be refused.
   if (rowHash !== expectedRowHash) return { status: "conflict", current: record ? { record, rowHash } : null };
   if (!record) return { status: "not_found" };
@@ -296,18 +304,8 @@ async function writeProposalRowIfUnchanged<R>(
   }
 
   const cells = [proposalId, input.accessCode, input.expiryDate, input.isActive ? "TRUE" : "FALSE", input.dataJson];
-  const sheetRow = index + 2;
-  const sheets = getGoogleSheetsClient();
-  lock.assertHeld();
-  await sheets.spreadsheets.values.update(
-    {
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A${sheetRow}:E${sheetRow}`,
-      valueInputOption: "RAW",
-      requestBody: { values: [cells] },
-    },
-    lock.requestOptions
-  );
+  // Nothing updated: the row was deleted since the check.
+  if (!(await writeRowByAnchor(sheets, sheetId, proposalId, cells, lock))) return { status: "not_found" };
   return { status: "saved", rowHash: hashRawRow(cells) };
 }
 
@@ -328,18 +326,13 @@ async function appendProposalRowIfAbsent(
   const rows = await readRawProposalRows();
   if (rows.some((r) => r[COLUMNS.ID]?.trim() === proposalId)) return { status: "exists" };
   const sheets = getGoogleSheetsClient();
-  lock.assertHeld();
-  await sheets.spreadsheets.values.append(
-    {
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A:E`,
-      valueInputOption: "RAW",
-      insertDataOption: "INSERT_ROWS",
-      requestBody: {
-        values: [[proposalId, input.accessCode, input.expiryDate, input.isActive ? "TRUE" : "FALSE", input.dataJson]],
-      },
-    },
-    lock.requestOptions
+  const sheetId = await getSheetId(sheets, SHEET_NAME, proposalsSheetIdCache);
+  await appendAnchoredRow(
+    sheets,
+    SHEET_NAME,
+    sheetId,
+    [proposalId, input.accessCode, input.expiryDate, input.isActive ? "TRUE" : "FALSE", input.dataJson],
+    lock
   );
   return { status: "created" };
 }
@@ -671,37 +664,14 @@ export async function setProposalAcceptance(
     acceptance.proposalVersion ?? "",
   ];
 
-  // Check if a row already exists for this proposal
-  const response = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${ACCEPTANCE_SHEET_NAME}!A2:A`,
-  });
-  const rows = response.data.values || [];
-  const rowIndex = rows.findIndex((r) => r[0]?.trim() === proposalId);
-
-  lock?.assertHeld();
-  if (rowIndex === -1) {
-    await sheets.spreadsheets.values.append(
-      {
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${ACCEPTANCE_SHEET_NAME}!A:G`,
-        valueInputOption: "RAW",
-        requestBody: { values: [row] },
-      },
-      lock?.requestOptions
-    );
-  } else {
-    const sheetRow = rowIndex + 2;
-    await sheets.spreadsheets.values.update(
-      {
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${ACCEPTANCE_SHEET_NAME}!A${sheetRow}:G${sheetRow}`,
-        valueInputOption: "RAW",
-        requestBody: { values: [row] },
-      },
-      lock?.requestOptions
-    );
+  // Through the row's anchor (see "Row anchors"), so a row inserted or
+  // deleted by hand meanwhile can't redirect the write onto another proposal.
+  const sheetId = await getSheetId(sheets, ACCEPTANCE_SHEET_NAME, acceptanceSheetIdCache);
+  if (sheetId !== null && (await readRowByAnchor(sheets, ACCEPTANCE_SHEET_NAME, sheetId, proposalId, lock))) {
+    if (await writeRowByAnchor(sheets, sheetId, proposalId, row, lock)) return;
+    // The row was deleted since the read: fall through and add it again.
   }
+  await appendAnchoredRow(sheets, ACCEPTANCE_SHEET_NAME, sheetId, row, lock);
 }
 
 export async function getAcceptanceSheetId(
@@ -860,6 +830,160 @@ async function tryWithSheetLock<T>(
     await appendLockEvent(key, token, "release").catch((error) =>
       console.error(`Failed to release sheet lock ${key} (expires with its lease):`, error)
     );
+  }
+}
+
+// Row anchors — stable row identity for rows the app rewrites in place.
+//
+// A row number read from the sheet is only a guess at write time: a row
+// inserted, deleted or sorted by hand in between shifts it, and a write by
+// number then lands on a different record. Instead each such row carries
+// developer metadata (key `andromeda:rowKey`, value = the row's id in column A,
+// invisible in the UI) attached to the row itself, which Sheets moves with the
+// row through inserts, deletes and sorts, and removes when the row is deleted.
+// Reads and writes go through that anchor (`…ByDataFilter`), so they reach the
+// record wherever it is now; a write to a deleted row updates nothing. Anchors
+// are created lazily (first write of an existing row) and on append, always
+// under the record's lock. Every anchored read re-checks column A, and a stale
+// anchor (e.g. a cut-and-paste across rows) is rebuilt.
+const ROW_ANCHOR_KEY = "andromeda:rowKey";
+type SheetsClient = ReturnType<typeof getGoogleSheetsClient>;
+
+function rowAnchorFilter(sheetId: number, rowKey: string) {
+  return {
+    developerMetadataLookup: {
+      metadataKey: ROW_ANCHOR_KEY,
+      metadataValue: rowKey,
+      locationType: "ROW",
+      metadataLocation: { sheetId },
+    },
+  };
+}
+
+type AnchoredRead = { status: "ok"; cells: string[] } | { status: "missing" } | { status: "stale" };
+
+async function readAnchoredRow(sheets: SheetsClient, sheetId: number, rowKey: string): Promise<AnchoredRead> {
+  const response = await sheets.spreadsheets.values.batchGetByDataFilter({
+    spreadsheetId: SPREADSHEET_ID,
+    requestBody: { dataFilters: [rowAnchorFilter(sheetId, rowKey)] },
+  });
+  const ranges = response.data.valueRanges || [];
+  if (ranges.length === 0) return { status: "missing" };
+  // More than one anchor, or one that no longer sits on its id: rebuild.
+  const cells = (ranges[0].valueRange?.values?.[0] || []) as string[];
+  if (ranges.length > 1 || cells[0]?.trim() !== rowKey) return { status: "stale" };
+  return { status: "ok", cells };
+}
+
+async function anchorRow(
+  sheets: SheetsClient,
+  sheetId: number,
+  rowKey: string,
+  rowIndex: number,
+  options?: { timeout: number }
+): Promise<void> {
+  await sheets.spreadsheets.batchUpdate(
+    {
+      spreadsheetId: SPREADSHEET_ID,
+      requestBody: {
+        requests: [
+          {
+            createDeveloperMetadata: {
+              developerMetadata: {
+                metadataKey: ROW_ANCHOR_KEY,
+                metadataValue: rowKey,
+                visibility: "DOCUMENT",
+                location: { dimensionRange: { sheetId, dimension: "ROWS", startIndex: rowIndex, endIndex: rowIndex + 1 } },
+              },
+            },
+          },
+        ],
+      },
+    },
+    options
+  );
+}
+
+async function dropRowAnchors(sheets: SheetsClient, sheetId: number, rowKey: string): Promise<void> {
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId: SPREADSHEET_ID,
+    requestBody: { requests: [{ deleteDeveloperMetadata: { dataFilter: rowAnchorFilter(sheetId, rowKey) } }] },
+  });
+}
+
+/**
+ * The current cells of the row whose column A is `rowKey`, read through its
+ * anchor (created if missing, rebuilt if stale), or null if no row has that
+ * id. Call under the record's lock: anchors are created here.
+ */
+async function readRowByAnchor(
+  sheets: SheetsClient,
+  tabName: string,
+  sheetId: number,
+  rowKey: string,
+  lock?: SheetLock
+): Promise<string[] | null> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const read = await readAnchoredRow(sheets, sheetId, rowKey);
+    if (read.status === "ok") return read.cells;
+    if (read.status === "stale") await dropRowAnchors(sheets, sheetId, rowKey);
+    const ids = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${tabName}!A:A` });
+    const rowIndex = (ids.data.values || []).findIndex((r, i) => i > 0 && r[0]?.trim() === rowKey);
+    if (rowIndex === -1) return null;
+    lock?.assertHeld();
+    await anchorRow(sheets, sheetId, rowKey, rowIndex, lock?.requestOptions);
+    // Loop: read back through the new anchor, which also confirms it.
+  }
+  throw new Error(`Couldn't anchor ${tabName} row ${rowKey}`);
+}
+
+/** Writes `cells` from column A of the anchored row. False if the row no longer exists. */
+async function writeRowByAnchor(
+  sheets: SheetsClient,
+  sheetId: number,
+  rowKey: string,
+  cells: string[],
+  lock?: SheetLock
+): Promise<boolean> {
+  lock?.assertHeld();
+  const response = await sheets.spreadsheets.values.batchUpdateByDataFilter(
+    {
+      spreadsheetId: SPREADSHEET_ID,
+      requestBody: {
+        valueInputOption: "RAW",
+        data: [{ dataFilter: rowAnchorFilter(sheetId, rowKey), majorDimension: "ROWS", values: [cells] }],
+      },
+    },
+    lock?.requestOptions
+  );
+  return (response.data.totalUpdatedCells ?? 0) > 0;
+}
+
+/** Appends a row and anchors it. The anchor is best-effort: it's created lazily on the next write otherwise. */
+async function appendAnchoredRow(
+  sheets: SheetsClient,
+  tabName: string,
+  sheetId: number | null,
+  cells: string[],
+  lock?: SheetLock
+): Promise<void> {
+  lock?.assertHeld();
+  const response = await sheets.spreadsheets.values.append(
+    {
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${tabName}!A:${String.fromCharCode(64 + cells.length)}`,
+      valueInputOption: "RAW",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: { values: [cells] },
+    },
+    lock?.requestOptions
+  );
+  const row = Number(response.data.updates?.updatedRange?.match(/![A-Z]+(\d+)/)?.[1]);
+  if (sheetId === null || !row) return;
+  try {
+    await anchorRow(sheets, sheetId, cells[0], row - 1, lock?.requestOptions);
+  } catch (error) {
+    console.error(`Couldn't anchor new ${tabName} row ${cells[0]} (will retry on next write):`, error);
   }
 }
 
