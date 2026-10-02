@@ -15,6 +15,7 @@ import {
   Loader2,
   Monitor,
   RefreshCw,
+  FileSignature,
   Save,
   Send,
   Smartphone,
@@ -144,7 +145,9 @@ const termsText = (data: object) => pretty(JSON.parse(canonicalProposalJson(data
 
 export function ProposalEditor({ proposalId, initial, acceptance, changeRequestSnapshot, publishedRevision, clientLink }: ProposalEditorProps) {
   const router = useRouter();
-  const [leaveOpen, setLeaveOpen] = useState(false);
+  // Where a guarded link was going when the "unsaved changes" dialog opened (null = closed).
+  const [leaveTo, setLeaveTo] = useState<string | null>(null);
+  const leaveOpen = leaveTo !== null;
   const [text, setText] = useState(() => pretty(initial.data));
   const [settings, setSettings] = useState<Settings>({
     accessCode: initial.accessCode,
@@ -382,7 +385,7 @@ export function ProposalEditor({ proposalId, initial, acceptance, changeRequestS
     // Plain clicks only; let modified clicks (new tab/window) through.
     if (!dirty || event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
     event.preventDefault();
-    setLeaveOpen(true);
+    setLeaveTo(event.currentTarget.getAttribute("href") ?? "/admin");
   };
 
   const save = useCallback(
@@ -552,6 +555,17 @@ export function ProposalEditor({ proposalId, initial, acceptance, changeRequestS
         <div className="hidden sm:block shrink-0">
           <SaveStatus state={saveState} dirty={dirty} />
         </div>
+        {isAccepted && (
+          <Link
+            href={`/admin/proposals/${encodeURIComponent(proposalId)}/agreement`}
+            onClick={confirmLeave}
+            aria-label="Agreement"
+            className="shrink-0 inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm font-semibold border border-[var(--andromeda-accent-beige)]/50 text-[var(--andromeda-accent-beige)] hover:bg-[var(--andromeda-accent-beige)]/10"
+          >
+            <FileSignature className="w-4 h-4" />
+            <span className="hidden sm:inline">Agreement</span>
+          </Link>
+        )}
         <button
           type="button"
           onClick={() => {
@@ -583,19 +597,19 @@ export function ProposalEditor({ proposalId, initial, acceptance, changeRequestS
 
       <AdminDialog
         open={leaveOpen}
-        onClose={() => setLeaveOpen(false)}
+        onClose={() => setLeaveTo(null)}
         title="Leave with unsaved changes?"
         description="Your draft is kept for this browser tab — come back to this proposal to restore it, or save first."
         actions={
           <>
-            <button type="button" onClick={() => setLeaveOpen(false)} className={dialogButton.secondary}>
+            <button type="button" onClick={() => setLeaveTo(null)} className={dialogButton.secondary}>
               Keep editing
             </button>
             <button
               type="button"
               onClick={() => {
-                setLeaveOpen(false);
-                router.push("/admin");
+                setLeaveTo(null);
+                router.push(leaveTo ?? "/admin");
               }}
               className={dialogButton.danger}
             >
@@ -606,7 +620,7 @@ export function ProposalEditor({ proposalId, initial, acceptance, changeRequestS
               disabled={blocked}
               title={blocked ? "Fix the errors before saving" : undefined}
               onClick={async () => {
-                setLeaveOpen(false);
+                setLeaveTo(null);
                 await save();
               }}
               className={dialogButton.primary}

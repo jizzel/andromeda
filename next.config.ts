@@ -10,6 +10,9 @@ const nextConfig: NextConfig = {
   // read as a character class.
   outputFileTracingIncludes: {
     '/api/**/pdf': ['./node_modules/@sparticuz/chromium/bin/**'],
+    // Agreement terms are read from the repo at request time (lib/agreement-templates.ts).
+    '/api/admin/proposals/**': ['./content/agreements/**'],
+    '/admin/proposals/**': ['./content/agreements/**'],
   },
   async redirects() {
     return [
