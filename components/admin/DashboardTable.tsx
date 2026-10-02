@@ -389,5 +389,6 @@ function revisionStatus(request: NonNullable<DashboardRow["changeRequest"]>): st
   const when = formatDate(publication.at);
   if (publication.email === "sent") return `Revision published ${when} and emailed${publication.emailTo ? ` to ${publication.emailTo}` : ""} — waiting for the client.`;
   if (publication.email === "failed") return `Revision published ${when}, but the email failed — resend it from the editor.`;
+  if (publication.email === "pending") return `Revision published ${when} — the client email is in progress.`;
   return `Revision published ${when} (client not emailed) — waiting for the client.`;
 }

@@ -1072,7 +1072,11 @@ async function readEngagementEvents(): Promise<EventRow[]> {
 
 const text = (value: unknown) => (typeof value === "string" ? value : undefined);
 
-/** Folds a proposal's events (in sheet order) into its published revisions, keyed by version. */
+/**
+ * Folds a proposal's events (in sheet order) into its published revisions,
+ * keyed by version. Email rows: `sending` reserves an attempt (see the publish
+ * route), `sent` is final, `failed` counts a recorded failure.
+ */
 function foldRevisions(rows: EventRow[]): Map<string, PublishedRevision> {
   const byVersion = new Map<string, PublishedRevision>();
   for (const row of rows) {
@@ -1086,15 +1090,24 @@ function foldRevisions(rows: EventRow[]): Map<string, PublishedRevision> {
         note: text(row.detail.note) ?? "",
         expiryDate: text(row.detail.expiryDate),
         extendedFrom: text(row.detail.extendedFrom),
-        email: { status: notify ? "pending" : "skipped", to: text(row.detail.emailTo) },
+        // A publish with notify on is itself the first attempt's reservation.
+        email: notify
+          ? { status: "pending", to: text(row.detail.emailTo), reservedAt: row.at, failures: 0 }
+          : { status: "skipped", failures: 0 },
       });
     } else if (row.event === "revision_email") {
       const revision = byVersion.get(row.proposalVersion);
-      if (!revision) continue;
-      const status = row.detail.status === "sent" ? "sent" : "failed";
-      // A success is final; a later failure (e.g. a retry) doesn't undo it.
-      if (revision.email.status === "sent") continue;
-      revision.email = { status, to: text(row.detail.to) ?? revision.email.to, at: row.at, error: text(row.detail.error) };
+      // A success is final: a later failure or reservation doesn't undo it.
+      if (!revision || revision.email.status === "sent") continue;
+      const to = text(row.detail.to) ?? revision.email.to;
+      const failures = revision.email.failures ?? 0;
+      if (row.detail.status === "sending") {
+        revision.email = { status: "pending", to, reservedAt: row.at, failures };
+      } else if (row.detail.status === "sent") {
+        revision.email = { status: "sent", to, at: row.at, failures };
+      } else {
+        revision.email = { status: "failed", to, at: row.at, error: text(row.detail.error), failures: failures + 1 };
+      }
     }
   }
   return byVersion;

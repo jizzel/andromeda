@@ -685,6 +685,7 @@ export function ProposalEditor({ proposalId, initial, acceptance, changeRequestS
                 : `Published ${new Date(publishNotice.revision.publishedAt).toLocaleTimeString()}`}
               {publishNotice.revision.email.status === "sent" && ` · emailed ${publishNotice.revision.email.to}`}
               {publishNotice.revision.email.status === "skipped" && " · client not emailed"}
+              {publishNotice.revision.email.status === "pending" && " · an email for this revision is already being sent — check back in a minute"}
               {publishNotice.revision.email.status === "failed" && ` · the email failed: ${publishNotice.revision.email.error ?? "unknown error"}`}
               {publishNotice.noteDropped && " · these terms were published earlier, so your new note wasn't sent"}
               {publishNotice.revision.email.status === "failed" && (

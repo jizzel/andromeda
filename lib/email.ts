@@ -231,6 +231,18 @@ export async function sendAdminSignInNotice(args: { signedInAt: string; ip: stri
   if (result.error) throw new Error(`Resend send failed: ${result.error.message}`);
 }
 
+/**
+ * Resend refused the send because an earlier request with the same
+ * idempotency key was already accepted (or is in flight): the email went out
+ * (or is going out) once already — don't count it as a failure to retry.
+ */
+export class DuplicateEmailError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "DuplicateEmailError";
+  }
+}
+
 interface SendProposalRevisedArgs {
   /** The proposal's `client.email` — always from the saved data, never from a request. */
   to: string;
@@ -239,6 +251,8 @@ interface SendProposalRevisedArgs {
   projectTitle: string;
   note?: string;
   expiryDate: string;
+  /** Stable per send attempt; Resend drops a repeat of a key it has already accepted (24 h). */
+  idempotencyKey: string;
 }
 
 /** Tells the client a revised proposal is ready (Phase C "Publish revision"). */
@@ -260,22 +274,29 @@ export async function sendProposalRevised(args: SendProposalRevisedArgs): Promis
     timeZone: "UTC",
   });
 
-  const result = await resend.emails.send({
-    from,
-    to: args.to,
-    replyTo: profile.email,
-    subject: `${args.projectTitle} — revised proposal ready`,
-    react: ProposalRevisedEmail({
-      clientName: args.clientName,
-      projectTitle: args.projectTitle,
-      note: args.note,
-      validUntil,
-      proposalUrl,
-      senderName: profile.name,
-    }),
-  });
+  const result = await resend.emails.send(
+    {
+      from,
+      to: args.to,
+      replyTo: profile.email,
+      subject: `${args.projectTitle} — revised proposal ready`,
+      react: ProposalRevisedEmail({
+        clientName: args.clientName,
+        projectTitle: args.projectTitle,
+        note: args.note,
+        validUntil,
+        proposalUrl,
+        senderName: profile.name,
+      }),
+    },
+    { idempotencyKey: args.idempotencyKey }
+  );
 
   if (result.error) {
+    // Same key as an accepted (or in-flight) request: that one is the email.
+    if (result.error.name === "invalid_idempotent_request" || result.error.name === "concurrent_idempotent_requests") {
+      throw new DuplicateEmailError(`Resend already has this email from an earlier attempt (${result.error.message})`);
+    }
     throw new Error(`Resend send failed: ${result.error.message}`);
   }
 }

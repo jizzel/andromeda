@@ -462,5 +462,14 @@ export interface PublishedRevision {
   note: string;
   expiryDate?: string;
   extendedFrom?: string;
-  email: { status: RevisionEmailStatus; to?: string; at?: string; error?: string };
+  email: {
+    status: RevisionEmailStatus;
+    to?: string;
+    at?: string;
+    error?: string;
+    /** While `pending`: when the current send attempt was reserved (a stale reservation can be retried). */
+    reservedAt?: string;
+    /** Recorded failed attempts; part of the provider idempotency key, so only a recorded failure gets a fresh key. */
+    failures?: number;
+  };
 }
