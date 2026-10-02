@@ -8,6 +8,10 @@ import {
 import { proposalVersion } from "@/lib/proposal-version";
 import { resolveTrackerPhases } from "@/constants/tracker-templates";
 import type { ProposalAcceptance, TrackerMilestoneState } from "@/types/proposal";
+import { UNAVAILABLE, type ChangeRequest, type DashboardRow, type LifecycleState, type Source } from "./admin-dashboard-types";
+
+export { UNAVAILABLE };
+export type { ChangeRequest, DashboardRow, LifecycleState };
 
 /**
  * Admin dashboard model: one row per proposal with its lifecycle state,
@@ -19,45 +23,6 @@ import type { ProposalAcceptance, TrackerMilestoneState } from "@/types/proposal
  * assets/tracker tabs into 0% progress. Each source that fails is passed as
  * `UNAVAILABLE` and the affected fields render as unavailable.
  */
-
-export const UNAVAILABLE = "unavailable" as const;
-type Source<T> = T | typeof UNAVAILABLE;
-
-export type LifecycleState =
-  | "draft" // isActive = false
-  | "sent" // live offer, no response yet
-  | "expiring" // live offer, ≤ 3 days left
-  | "expired" // offer window closed without acceptance
-  | "changes_requested" // client asked for changes; awaiting Joseph's revision
-  | "revised" // Joseph revised after a change request; awaiting the client
-  | "accepted"
-  | "unknown"; // responses couldn't be read, so the state can't be trusted
-
-export interface ProgressCount {
-  done: number;
-  total: number;
-}
-
-export interface DashboardRow {
-  id: string;
-  clientName: string;
-  title: string;
-  type: string;
-  accessCode: string;
-  state: LifecycleState;
-  expiryDate: string;
-  /** Days until expiry (negative once past); null for an unparseable date. */
-  daysLeft: number | null;
-  response: { status: ProposalAcceptance["status"]; at: string } | null | typeof UNAVAILABLE;
-  /** Accepted against a version that no longer matches the current terms. */
-  termsChangedSinceAcceptance: boolean;
-  /** Required asset items checked; null when the proposal has no asset request. */
-  assets: (ProgressCount & { unlocked: boolean }) | null | typeof UNAVAILABLE;
-  /** Tracker milestones done; null when no tracker is configured. */
-  tracker: (ProgressCount & { unlocked: boolean }) | null | typeof UNAVAILABLE;
-  /** ISO timestamp used for ordering (latest response, tracker update, or issue date). */
-  lastActivity: string;
-}
 
 const EXPIRING_DAYS = 3;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -127,6 +92,21 @@ export function deriveRow(
   ].filter((t): t is string => !!t && !isNaN(new Date(t).getTime()));
   const lastActivity = activity.sort().at(-1) ?? "";
 
+  let changeRequest: ChangeRequest | null = null;
+  if (acceptance?.status === "counter") {
+    // Church proposals have neither; the default/social layouts may have both.
+    const named = (list: unknown, id?: string) =>
+      id && Array.isArray(list) ? (list as { id: string; name: string }[]).find((o) => o.id === id)?.name ?? id : undefined;
+    changeRequest = {
+      note: acceptance.counterNote ?? "",
+      at: acceptance.acceptedAt,
+      packageName: named((data as { packages?: unknown }).packages, acceptance.packageId),
+      planName: named((data as { paymentPlans?: unknown }).paymentPlans, acceptance.paymentPlanId),
+      version: acceptance.proposalVersion,
+      revised: state === "revised",
+    };
+  }
+
   return {
     id: record.id,
     clientName: data.client?.name ?? record.id,
@@ -142,6 +122,7 @@ export function deriveRow(
     assets,
     tracker,
     lastActivity,
+    changeRequest,
   };
 }
 

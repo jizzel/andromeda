@@ -32,7 +32,8 @@ export function proxy(request: NextRequest) {
     `img-src 'self' data: blob: https://attakorah.com https://images.unsplash.com https://res.cloudinary.com https://lh3.googleusercontent.com https://*.calendly.com https://vercel.live https://vercel.com`,
     `font-src 'self' data: https://vercel.live https://assets.vercel.com`,
     `connect-src 'self' https://calendly.com https://*.calendly.com https://va.vercel-scripts.com https://vercel.live wss://ws-us3.pusher.com`,
-    `frame-src https://calendly.com https://vercel.live`,
+    // 'self' for the admin editor's same-origin live-preview iframe.
+    `frame-src 'self' https://calendly.com https://vercel.live`,
     `frame-ancestors 'self'`,
     `base-uri 'self'`,
     `form-action 'self'`,
