@@ -92,7 +92,11 @@ export async function AgreementDocument({ record, template, proposal, acceptance
           <dt>Version reference</dt>
           <dd className="font-mono text-[var(--andromeda-text-primary)]">{shortVersion(record.proposalVersion)}</dd>
           <dt>Accepted on</dt>
-          <dd className="text-[var(--andromeda-text-primary)]">{formatDateTime(acceptance.acceptedAt)}</dd>
+          <dd className="text-[var(--andromeda-text-primary)]">
+            {/* The pinned date (signed); older records fall back to the live acceptance, flagged. */}
+            {formatDateTime(record.acceptedAt ?? acceptance.acceptedAt)}
+            {!record.acceptedAt && <span className="ml-2 text-xs text-amber-500">(not pinned — re-save to pin)</span>}
+          </dd>
           {pkg && (
             <>
               <dt>Package</dt>

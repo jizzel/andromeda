@@ -59,6 +59,12 @@ export interface AgreementRecord {
   /** Which of the version's packages / payment plans the client chose (Schedule 2). */
   selection: AgreementSelection;
   /**
+   * When the client accepted, pinned from the acceptance at prepare time
+   * (shown in Schedule 2, part of the hash). Absent on records prepared
+   * before it was pinned: those must be re-saved before signing.
+   */
+  acceptedAt?: string;
+  /**
    * The client's name from the accepted snapshot, pinned when prepared (part
    * of the hash). Empty on records prepared before it was stored — signing
    * those falls back to reading the snapshot.

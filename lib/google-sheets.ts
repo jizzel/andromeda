@@ -1178,11 +1178,13 @@ export async function getAllRevisionsByProposal(): Promise<Map<string, Map<strin
 //          G:provider (JSON) | H:specialTerms (JSON) | I:offerValidUntil | J:agreementHash | K:providerSignature (JSON) | L:updatedAt
 //          M:selection (JSON — the client's chosen package / payment plan, pinned from the acceptance)
 //          N:clientName (pinned from the accepted snapshot; empty on records prepared before it was stored)
+//          O:acceptedAt (when the client accepted, pinned from the acceptance; empty on older records)
 // Current state only; every change is also an EngagementEvents row (the evidence trail).
 const AGREEMENTS_SHEET_NAME = "Agreements";
 const AGREEMENTS_HEADERS = [
   "proposalId", "status", "templateId", "templateVersion", "templateHash", "proposalVersion",
-  "provider", "specialTerms", "offerValidUntil", "agreementHash", "providerSignature", "updatedAt", "selection", "clientName",
+  "provider", "specialTerms", "offerValidUntil", "agreementHash", "providerSignature", "updatedAt", "selection",
+  "clientName", "acceptedAt",
 ];
 const agreementsSheetIdCache = { value: null as number | null };
 
@@ -1205,6 +1207,7 @@ function rowToAgreement(r: string[]): AgreementRecord | null {
       providerSignature: r[10] ? JSON.parse(r[10]) : null,
       updatedAt: r[11]?.trim() ?? "",
       selection: r[12] ? JSON.parse(r[12]) : {},
+      acceptedAt: r[14]?.trim() || undefined,
       // Verbatim, not trimmed: the name is part of the agreement hash, and
       // Sheets stores RAW strings exactly (incl. surrounding whitespace).
       clientName: r[13] ?? "",
@@ -1218,14 +1221,15 @@ function agreementToRow(a: AgreementRecord): string[] {
   return [
     a.proposalId, a.status, a.templateId, String(a.templateVersion), a.templateHash, a.proposalVersion,
     JSON.stringify(a.provider), JSON.stringify(a.specialTerms), a.offerValidUntil, a.agreementHash,
-    a.providerSignature ? JSON.stringify(a.providerSignature) : "", a.updatedAt, JSON.stringify(a.selection ?? {}), a.clientName ?? "",
+    a.providerSignature ? JSON.stringify(a.providerSignature) : "", a.updatedAt, JSON.stringify(a.selection ?? {}),
+    a.clientName ?? "", a.acceptedAt ?? "",
   ];
 }
 
 async function readAgreementRows(): Promise<string[][]> {
   const sheets = getGoogleSheetsClient();
   await ensureTab(sheets, AGREEMENTS_SHEET_NAME, AGREEMENTS_HEADERS);
-  const response = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${AGREEMENTS_SHEET_NAME}!A2:N` });
+  const response = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${AGREEMENTS_SHEET_NAME}!A2:O` });
   return (response.data.values || []) as string[][];
 }
 
@@ -1357,26 +1361,30 @@ export async function getProposalSnapshot(
 
 // Agreement snapshots — "AgreementSnapshots" tab, append-only.
 // Columns: A:proposalId | B:agreementHash | C:capturedAt | D:reason | E…Z:data (chunked like ProposalSnapshots)
-// One row per signed agreement hash: the full signed record plus the terms text,
-// written *before* the signed record so a signature can never outlive its evidence.
+// One row per signing occurrence — keyed by agreement hash *and* the signature's
+// signedAt (column C), since the same content can be signed again after a void.
+// The full signed record plus the terms text, written *before* the signed
+// record so a signature can never outlive its evidence.
 const AGREEMENT_SNAPSHOT_SHEET_NAME = "AgreementSnapshots";
 const AGREEMENT_SNAPSHOT_HEADERS = ["proposalId", "agreementHash", "capturedAt", "reason", "data"];
 
 /**
- * Stores a signed agreement once per hash ("duplicate" if already stored).
+ * Stores one signing occurrence ("duplicate" only if this exact signature —
+ * same hash and signedAt — is already stored, e.g. a retried write).
  * Throws instead of degrading: signing must fail rather than proceed without evidence.
  */
 export async function saveAgreementSnapshot(
   proposalId: string,
   agreementHash: string,
+  signedAt: string,
   reason: "provider_signed",
   json: string,
   lock: SheetLock
 ): Promise<"stored" | "duplicate"> {
   const sheets = getGoogleSheetsClient();
   await ensureTab(sheets, AGREEMENT_SNAPSHOT_SHEET_NAME, AGREEMENT_SNAPSHOT_HEADERS);
-  const existing = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${AGREEMENT_SNAPSHOT_SHEET_NAME}!A2:B` });
-  if ((existing.data.values || []).some((r) => r[0]?.trim() === proposalId && r[1]?.trim() === agreementHash)) return "duplicate";
+  const existing = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${AGREEMENT_SNAPSHOT_SHEET_NAME}!A2:C` });
+  if ((existing.data.values || []).some((r) => r[0]?.trim() === proposalId && r[1]?.trim() === agreementHash && r[2]?.trim() === signedAt)) return "duplicate";
   const parts = chunk(json, SNAPSHOT_CHUNK_CHARS);
   if (parts.length > SNAPSHOT_MAX_CHUNKS) throw new Error(`Agreement snapshot for ${proposalId} is ${json.length} chars — too large to store`);
   lock.assertHeld();
@@ -1386,19 +1394,26 @@ export async function saveAgreementSnapshot(
       range: `${AGREEMENT_SNAPSHOT_SHEET_NAME}!A:Z`,
       valueInputOption: "RAW",
       insertDataOption: "INSERT_ROWS",
-      requestBody: { values: [[proposalId, agreementHash, new Date().toISOString(), reason, ...parts]] },
+      requestBody: { values: [[proposalId, agreementHash, signedAt, reason, ...parts]] },
     },
     lock.requestOptions
   );
   return "stored";
 }
 
-/** The stored snapshot JSON for a signed agreement hash, or null. Throws if the tab can't be read. */
-export async function readAgreementSnapshot(proposalId: string, agreementHash: string): Promise<string | null> {
+/**
+ * A stored signing occurrence's JSON, or null: the exact signature when
+ * `signedAt` is given, else the latest signing of that hash. Throws if the tab
+ * can't be read.
+ */
+export async function readAgreementSnapshot(proposalId: string, agreementHash: string, signedAt?: string): Promise<string | null> {
   const sheets = getGoogleSheetsClient();
   await ensureTab(sheets, AGREEMENT_SNAPSHOT_SHEET_NAME, AGREEMENT_SNAPSHOT_HEADERS);
   const response = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${AGREEMENT_SNAPSHOT_SHEET_NAME}!A2:Z` });
-  const row = (response.data.values || []).find((r) => r[0]?.trim() === proposalId && r[1]?.trim() === agreementHash);
+  const rows = (response.data.values || []).filter(
+    (r) => r[0]?.trim() === proposalId && r[1]?.trim() === agreementHash && (!signedAt || r[2]?.trim() === signedAt)
+  );
+  const row = rows.at(-1);
   return row ? row.slice(4).join("") : null;
 }
 
