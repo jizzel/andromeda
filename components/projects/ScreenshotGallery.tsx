@@ -163,7 +163,7 @@ export function ScreenshotGallery({ screenshots, projectSlug }: ScreenshotGaller
                 width={1920}
                 height={1080}
                 className="max-w-full max-h-full object-contain rounded-lg"
-                priority
+                loading="eager"
               />
 
               {/* Caption */}

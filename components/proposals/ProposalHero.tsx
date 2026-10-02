@@ -32,7 +32,8 @@ export function ProposalHero({ title, subtitle, clientName, backgroundImage, iss
           fill
           sizes="100vw"
           className="object-cover"
-          priority
+          loading="eager"
+          fetchPriority="high"
         />
         {/* Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-[var(--andromeda-primary)]" />

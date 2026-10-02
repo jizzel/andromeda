@@ -1,7 +1,6 @@
 import { ImageResponse } from "next/og";
 import { profile } from "@/constants/profile";
 
-export const runtime = "edge";
 export const alt = `${profile.name} - ${profile.title}`;
 export const size = {
   width: 1200,

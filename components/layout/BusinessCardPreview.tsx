@@ -39,7 +39,7 @@ export function BusinessCardPreview({ isVisible }: BusinessCardPreviewProps) {
                   width={80}
                   height={80}
                   className="object-cover"
-                  priority
+                  loading="eager"
                   placeholder="blur"
                   blurDataURL={blurPlaceholders.profile}
                   sizes={getImageSizes("profile")}
