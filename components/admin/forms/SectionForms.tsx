@@ -3,7 +3,7 @@
 import { Component, useMemo, useState, type ReactNode } from "react";
 import { XCircle } from "lucide-react";
 import type { ProposalAcceptance } from "@/types/proposal";
-import { formSectionProblem, layoutOf, type FormSection, type FormSectionProblem, type ProposalIssue } from "@/lib/proposal-schema";
+import { LAYOUT_SECTIONS, formSectionProblem, layoutOf, type FormSection, type FormSectionProblem, type ProposalIssue } from "@/lib/proposal-schema";
 import { AdminDialog, dialogButton } from "../AdminDialog";
 import { IssueIndex } from "./fields";
 import { PackagesForm } from "./PackagesForm";
@@ -11,12 +11,6 @@ import { PaymentPlansForm } from "./PaymentPlansForm";
 import { TimelineForm } from "./TimelineForm";
 import type { DeleteRequest, Mutate } from "./shared";
 
-/** Which form sections each layout has (the rest is edited as JSON). */
-const SECTIONS = {
-  default: { packages: true, paymentPlans: true, timeline: true },
-  social: { packages: true, paymentPlans: false, timeline: true },
-  church: { packages: false, paymentPlans: false, timeline: true },
-} as const;
 
 interface SectionFormsProps {
   data: Record<string, unknown>;
@@ -37,7 +31,8 @@ const SECTION_TITLES: Record<FormSection, string> = { packages: "Packages", paym
 export function SectionForms({ data, errors, acceptance, onChange, onShowInJson }: SectionFormsProps) {
   const issues = useMemo(() => new IssueIndex(errors), [errors]);
   const [pendingDelete, setPendingDelete] = useState<DeleteRequest | null>(null);
-  const sections = SECTIONS[layoutOf(data)];
+  // Which form sections the layout has (the rest is edited as JSON).
+  const sections = LAYOUT_SECTIONS[layoutOf(data)];
   const props = { data, issues, onChange, acceptance, requestDelete: setPendingDelete };
   // A section whose values have the wrong types (valid JSON, wrong shape) is
   // shown as a notice instead of a form: the form would crash on it, and

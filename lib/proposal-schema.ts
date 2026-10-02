@@ -341,6 +341,18 @@ export function formSectionProblem(data: Record<string, unknown>, section: FormS
   return { path: formatPath([section, ...issue.path]), message: issue.message };
 }
 
+/**
+ * Which of the commonly revised list sections each layout renders. Drives
+ * both the admin forms and the duplicate-id check: a section the layout
+ * doesn't render is only an unknown key (a warning), so it must never block
+ * saving.
+ */
+export const LAYOUT_SECTIONS: Record<ProposalLayout, Record<FormSection, boolean>> = {
+  default: { packages: true, paymentPlans: true, timeline: true },
+  social: { packages: true, paymentPlans: false, timeline: true },
+  church: { packages: false, paymentPlans: false, timeline: true },
+};
+
 export function schemaFor(data: unknown) {
   return { default: defaultProposalSchema, church: churchProposalSchema, social: socialProposalSchema }[layoutOf(data)];
 }
@@ -352,7 +364,9 @@ export function schemaFor(data: unknown) {
  */
 function duplicateIdErrors(data: Record<string, unknown>): ProposalIssue[] {
   const errors: ProposalIssue[] = [];
+  const sections = LAYOUT_SECTIONS[layoutOf(data)];
   for (const [key, label] of [["packages", "Package"], ["paymentPlans", "Payment plan"]] as const) {
+    if (!sections[key]) continue; // ignored by this layout: an unknown-key warning, not an error
     const list = data[key];
     if (!Array.isArray(list)) continue;
     const seen = new Set<string>();
