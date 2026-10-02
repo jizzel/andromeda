@@ -58,6 +58,12 @@ export interface AgreementRecord {
   proposalVersion: string;
   /** Which of the version's packages / payment plans the client chose (Schedule 2). */
   selection: AgreementSelection;
+  /**
+   * The client's name from the accepted snapshot, pinned when prepared (part
+   * of the hash). Empty on records prepared before it was stored — signing
+   * those falls back to reading the snapshot.
+   */
+  clientName: string;
   provider: ProviderIdentity;
   specialTerms: SpecialTerm[];
   /** YYYY-MM-DD: how long the provider-signed offer stays open for the client. */

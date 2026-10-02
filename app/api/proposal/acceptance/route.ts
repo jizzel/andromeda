@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { withRouteTelemetry } from "@/lib/sheets-telemetry";
 import {
   verifyProposalAccess,
   verifyEngagementAccess,
@@ -37,7 +38,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ success: true, acceptance });
 }
 
-export async function POST(request: NextRequest) {
+async function handlePOST(request: NextRequest) {
   try {
     const body = await request.json();
     const { proposalId, accessCode, status, counterNote, packageId, paymentPlanId, proposalVersion: renderedVersion } = body;
@@ -243,3 +244,5 @@ async function recordResponse(lock: SheetLock, input: ResponseInput): Promise<Re
     recorded: { proposal, existing, currentVersion, trimmedNote, trimmedPackageId, trimmedPlanId, snapshotFailed },
   };
 }
+
+export const POST = withRouteTelemetry<{ params: Promise<object> }, Response>("client response", (request) => handlePOST(request as NextRequest));

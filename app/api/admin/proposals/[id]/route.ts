@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { withRouteTelemetry } from "@/lib/sheets-telemetry";
 import { isAdminRequest, isSameOrigin } from "@/lib/admin-auth";
 import {
   getProposalAcceptance,
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest, { params }: Params) {
   return json({ success: true, ...editable(row), acceptance: await getProposalAcceptance(id) });
 }
 
-export async function PUT(request: NextRequest, { params }: Params) {
+async function handlePUT(request: NextRequest, { params }: Params) {
   if (!isAdminRequest(request)) return json({ success: false, error: "Unauthorized" }, 401);
   if (!isSameOrigin(request)) return json({ success: false, error: "Forbidden" }, 403);
   const { id } = await params;
@@ -77,3 +78,5 @@ async function acceptedTermsGuard(
   const acceptedVersion = acceptance.proposalVersion ?? proposalVersion(current.record.data);
   return nextVersion === acceptedVersion ? null : "confirm_accepted_edit";
 }
+
+export const PUT = withRouteTelemetry<Params, Response>("proposal save", (request, ctx) => handlePUT(request as NextRequest, ctx));

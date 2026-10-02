@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "crypto";
 import { google } from "googleapis";
+import { instrumentSheets, noteLockHeld, onSheetsRetryAttempt } from "@/lib/sheets-telemetry";
 import { unstable_cache } from "next/cache";
 import type {
   ProposalData,
@@ -39,18 +40,41 @@ interface SheetBlogPost {
 }
 
 // Initialize Google Sheets API client
+/**
+ * One Sheets client (and auth object) per server instance, created on first
+ * use. Reusing it keeps the auth library's cached access token across calls
+ * instead of setting up a new client and token for every helper — Google's
+ * recommended practice for client libraries. Wrapped by `instrumentSheets` so
+ * slow calls and retries are logged (`lib/sheets-telemetry.ts`).
+ */
+let sheetsClient: ReturnType<typeof google.sheets> | null = null;
+
+/**
+ * How the app's Sheets client is built (instrumented, retry hook attached).
+ * `overrides` exist for tests that point it at a local stub server; the app
+ * always uses the defaults.
+ */
+export function createSheetsClient(overrides: { rootUrl?: string; auth?: string } = {}) {
+  const auth =
+    overrides.auth ??
+    new google.auth.GoogleAuth({
+      credentials: {
+        client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+        private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+      },
+      scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+    });
+  // Retries stay on (googleapis' defaults: GET/PUT…, 429 and 5xx, 3 attempts with
+  // backoff); the hook only makes them visible. Per-call options — e.g. the
+  // write timeout under a sheet lock — still merge on top of these.
+  return instrumentSheets(
+    google.sheets({ version: "v4", auth, ...(overrides.rootUrl && { rootUrl: overrides.rootUrl }), retryConfig: { onRetryAttempt: onSheetsRetryAttempt } })
+  );
+}
+
 function getGoogleSheetsClient() {
-  const credentials = {
-    client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-    private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-  };
-
-  const auth = new google.auth.GoogleAuth({
-    credentials,
-    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-  });
-
-  return google.sheets({ version: "v4", auth });
+  sheetsClient ??= createSheetsClient();
+  return sheetsClient;
 }
 
 const SPREADSHEET_ID = process.env.GOOGLE_PROPOSALS_SHEET_ID;
@@ -837,12 +861,15 @@ async function tryWithSheetLock<T>(
       },
       requestOptions: { timeout: LOCK_WRITE_TIMEOUT_MS },
     };
+    const heldFrom = Date.now();
     try {
       return { status: "ok", value: await fn(lock) };
     } catch (error) {
       if (!(error instanceof SheetLockExpiredError)) throw error;
       console.warn(error.message);
       return { status: "busy" };
+    } finally {
+      noteLockHeld(Date.now() - heldFrom);
     }
   } finally {
     // Release whether we held it or not — a losing acquire must not block others.
@@ -1150,15 +1177,19 @@ export async function getAllRevisionsByProposal(): Promise<Map<string, Map<strin
 // Columns: A:proposalId | B:status | C:templateId | D:templateVersion | E:templateHash | F:proposalVersion |
 //          G:provider (JSON) | H:specialTerms (JSON) | I:offerValidUntil | J:agreementHash | K:providerSignature (JSON) | L:updatedAt
 //          M:selection (JSON — the client's chosen package / payment plan, pinned from the acceptance)
+//          N:clientName (pinned from the accepted snapshot; empty on records prepared before it was stored)
 // Current state only; every change is also an EngagementEvents row (the evidence trail).
 const AGREEMENTS_SHEET_NAME = "Agreements";
 const AGREEMENTS_HEADERS = [
   "proposalId", "status", "templateId", "templateVersion", "templateHash", "proposalVersion",
-  "provider", "specialTerms", "offerValidUntil", "agreementHash", "providerSignature", "updatedAt", "selection",
+  "provider", "specialTerms", "offerValidUntil", "agreementHash", "providerSignature", "updatedAt", "selection", "clientName",
 ];
 const agreementsSheetIdCache = { value: null as number | null };
 
 function rowToAgreement(r: string[]): AgreementRecord | null {
+  // Ids, hashes and dates below are app-generated (never whitespace), so trimming
+  // them only guards against hand edits; free text that feeds the agreement
+  // hash (client name; JSON columns) is read exactly as stored.
   try {
     return {
       proposalId: r[0].trim(),
@@ -1174,6 +1205,9 @@ function rowToAgreement(r: string[]): AgreementRecord | null {
       providerSignature: r[10] ? JSON.parse(r[10]) : null,
       updatedAt: r[11]?.trim() ?? "",
       selection: r[12] ? JSON.parse(r[12]) : {},
+      // Verbatim, not trimmed: the name is part of the agreement hash, and
+      // Sheets stores RAW strings exactly (incl. surrounding whitespace).
+      clientName: r[13] ?? "",
     };
   } catch {
     return null; // a hand-edited, unreadable row
@@ -1184,14 +1218,14 @@ function agreementToRow(a: AgreementRecord): string[] {
   return [
     a.proposalId, a.status, a.templateId, String(a.templateVersion), a.templateHash, a.proposalVersion,
     JSON.stringify(a.provider), JSON.stringify(a.specialTerms), a.offerValidUntil, a.agreementHash,
-    a.providerSignature ? JSON.stringify(a.providerSignature) : "", a.updatedAt, JSON.stringify(a.selection ?? {}),
+    a.providerSignature ? JSON.stringify(a.providerSignature) : "", a.updatedAt, JSON.stringify(a.selection ?? {}), a.clientName ?? "",
   ];
 }
 
 async function readAgreementRows(): Promise<string[][]> {
   const sheets = getGoogleSheetsClient();
   await ensureTab(sheets, AGREEMENTS_SHEET_NAME, AGREEMENTS_HEADERS);
-  const response = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${AGREEMENTS_SHEET_NAME}!A2:M` });
+  const response = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${AGREEMENTS_SHEET_NAME}!A2:N` });
   return (response.data.values || []) as string[][];
 }
 
@@ -1287,22 +1321,38 @@ export async function saveProposalSnapshot(
   return result;
 }
 
-/** The exact canonical JSON stored for a version, or null if absent (or stored as too large). */
+const isSnapshotRow = (r: string[] | undefined, proposalId: string, proposalVersion: string) =>
+  !!r && r[0]?.trim() === proposalId && r[1]?.trim() === proposalVersion;
+
+/**
+ * The exact canonical JSON stored for a version, or null if absent (or stored
+ * as too large). Reads the small id/version columns to find the row, then only
+ * that row — not every snapshot of every proposal. The fetched row's identity
+ * is re-checked: if a hand sort or insert moved rows between the two reads, it
+ * looks again once, then falls back to the full read rather than ever
+ * returning another proposal's terms.
+ */
 export async function getProposalSnapshot(
   proposalId: string,
   proposalVersion: string
 ): Promise<string | null> {
   const sheets = getGoogleSheetsClient();
-  const response = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${SNAPSHOT_SHEET_NAME}!A2:Z`,
-  });
-  const row = (response.data.values || []).find(
-    (r) => r[0]?.trim() === proposalId && r[1]?.trim() === proposalVersion
-  );
-  if (!row) return null;
-  const data = row.slice(4).join("");
-  return data === "[too large]" ? null : data;
+  const dataOf = (row: string[]) => {
+    const data = row.slice(4).join("");
+    return data === "[too large]" ? null : data;
+  };
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const index = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${SNAPSHOT_SHEET_NAME}!A2:B` });
+    const i = (index.data.values || []).findIndex((r) => isSnapshotRow(r, proposalId, proposalVersion));
+    if (i === -1) return null;
+    const sheetRow = i + 2;
+    const fetched = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${SNAPSHOT_SHEET_NAME}!A${sheetRow}:Z${sheetRow}` });
+    const row = fetched.data.values?.[0] as string[] | undefined;
+    if (isSnapshotRow(row, proposalId, proposalVersion)) return dataOf(row!);
+  }
+  const full = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${SNAPSHOT_SHEET_NAME}!A2:Z` });
+  const row = (full.data.values || []).find((r) => isSnapshotRow(r, proposalId, proposalVersion));
+  return row ? dataOf(row) : null;
 }
 
 // Agreement snapshots — "AgreementSnapshots" tab, append-only.

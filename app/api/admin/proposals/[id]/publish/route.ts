@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { withRouteTelemetry } from "@/lib/sheets-telemetry";
 import { isAdminRequest, isSameOrigin, requestMeta } from "@/lib/admin-auth";
 import {
   appendEngagementEvent,
@@ -43,7 +44,7 @@ const reservationActive = (revision: PublishedRevision, now = Date.now()) =>
  * client can't accept in between, and two clicks can't publish twice. The
  * email is sent after the lock is released; its outcome is a separate event.
  */
-export async function POST(request: NextRequest, { params }: Params) {
+async function handlePOST(request: NextRequest, { params }: Params) {
   if (!isAdminRequest(request)) return json({ success: false, error: "Unauthorized" }, 401);
   if (!isSameOrigin(request)) return json({ success: false, error: "Forbidden" }, 403);
   const { id } = await params;
@@ -226,3 +227,5 @@ async function emailClient(
   }
   return { ...revision, email: { status, to, at, error, failures: status === "failed" ? failures + 1 : failures } };
 }
+
+export const POST = withRouteTelemetry<Params, Response>("publish revision", (request, ctx) => handlePOST(request as NextRequest, ctx));
