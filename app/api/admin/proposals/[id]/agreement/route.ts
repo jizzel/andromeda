@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { withRouteTelemetry } from "@/lib/sheets-telemetry";
 import { isAdminRequest, isSameOrigin, requestMeta } from "@/lib/admin-auth";
 import { appendEngagementEvent, readAgreement, readAgreementSnapshot, saveAgreementSnapshot, withProposalLock, writeAgreement } from "@/lib/google-sheets";
 import { latestTemplate, listTemplates, loadTemplate } from "@/lib/agreement-templates";
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest, { params }: Params) {
  * `expectedUpdatedAt`, so two tabs can't overwrite each other. Changing a
  * provider-signed agreement voids the signature — only with `voidSignature`.
  */
-export async function PUT(request: NextRequest, { params }: Params) {
+async function handlePUT(request: NextRequest, { params }: Params) {
   if (!isAdminRequest(request)) return json({ success: false, error: "Unauthorized" }, 401);
   if (!isSameOrigin(request)) return json({ success: false, error: "Forbidden" }, 403);
   const { id } = await params;
@@ -76,12 +77,13 @@ export async function PUT(request: NextRequest, { params }: Params) {
       templateHash: template.hash,
       proposalVersion: basis.acceptance.proposalVersion,
       selection: selectionOf(basis.acceptance),
+      clientName: clientNameOf(basis.snapshot),
       acceptedAt: basis.acceptance.acceptedAt,
       provider: resolveProvider(contractAs),
       specialTerms,
       offerValidUntil,
     };
-    const hash = agreementHash({ ...fields, clientName: clientNameOf(basis.snapshot) });
+    const hash = agreementHash(fields);
     if (current && current.agreementHash === hash) return { kind: "unchanged", record: current } as const;
 
     if (current?.status === "provider_signed") {
@@ -94,7 +96,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
       if (!(await readAgreementSnapshot(id, current.agreementHash, signedAt))) {
         const pinned = loadTemplate(current.templateId, current.templateVersion);
         const text = pinned && pinned.hash === current.templateHash ? pinned.raw : "";
-        await saveAgreementSnapshot(id, current.agreementHash, signedAt, "provider_signed", agreementSnapshotJson(current, clientNameOf(basis.snapshot), text), lock);
+        await saveAgreementSnapshot(id, current.agreementHash, signedAt, "provider_signed", agreementSnapshotJson(current, current.clientName || clientNameOf(basis.snapshot), text, basis.snapshotJson), lock);
       }
       await appendEngagementEvent(
         {
@@ -136,3 +138,5 @@ export async function PUT(request: NextRequest, { params }: Params) {
       return json({ success: true, agreement: outcome.record, unchanged: outcome.kind === "unchanged" });
   }
 }
+
+export const PUT = withRouteTelemetry<Params, Response>("agreement save", (request, ctx) => handlePUT(request as NextRequest, ctx));

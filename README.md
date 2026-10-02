@@ -122,6 +122,7 @@ CHROME_EXECUTABLE_PATH=              # Local dev only: path to an installed Chro
 # Admin dashboard (/admin).
 ADMIN_SESSION_SECRET=                # HMAC key for admin session + sign-in-code cookies; rotate to sign out everyone
 AGREEMENT_PROVIDER_TRADING_NAME=     # Optional: offer "trading as …" on agreements
+SHEETS_TIMING_LOG=                   # Optional: "1" logs every Sheets API call with its duration
 ```
 
 ### Spreadsheet tabs
@@ -140,7 +141,7 @@ All tabs live in the `GOOGLE_PROPOSALS_SHEET_ID` spreadsheet; the service accoun
 | `ProposalSnapshots` | `proposalId \| proposalVersion \| capturedAt \| reason \| data` (data continues across columns F–Z for large proposals) | automatically on first use |
 | `AdminSignIns` | `nonce \| at \| event \| ip \| userAgent` (append-only sign-in log) | automatically on first use |
 | `SheetLocks` | `key \| token \| at \| event` (append-only lock log for admin saves) | automatically on first use |
-| `Agreements` | `proposalId \| status \| templateId \| templateVersion \| templateHash \| proposalVersion \| provider \| specialTerms \| offerValidUntil \| agreementHash \| providerSignature \| updatedAt \| selection \| clientName (reserved) \| acceptedAt` (one row per proposal) | automatically on first use |
+| `Agreements` | `proposalId \| status \| templateId \| templateVersion \| templateHash \| proposalVersion \| provider \| specialTerms \| offerValidUntil \| agreementHash \| providerSignature \| updatedAt \| selection \| clientName \| acceptedAt` (one row per proposal) | automatically on first use |
 | `AgreementSnapshots` | `proposalId \| agreementHash \| capturedAt \| reason \| data` (append-only; one row per signing — hash + signedAt in C — with the full signed agreement + terms text, chunked across E–Z) | automatically on first use |
 | `EngagementEvents` | `proposalId \| at \| event \| proposalVersion \| detail \| ip \| userAgent` (append-only engagement log: published revisions and their client emails) | automatically on first use |
 

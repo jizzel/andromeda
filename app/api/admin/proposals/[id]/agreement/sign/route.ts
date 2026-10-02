@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { withRouteTelemetry } from "@/lib/sheets-telemetry";
 import { isAdminRequest, isSameOrigin, requestMeta } from "@/lib/admin-auth";
 import { appendEngagementEvent, readAgreement, saveAgreementSnapshot, SheetLockExpiredError, withProposalLock, writeAgreement } from "@/lib/google-sheets";
 import { loadTemplate } from "@/lib/agreement-templates";
@@ -6,7 +7,7 @@ import { agreementHash, namesMatch, sameSelection, selectionOf } from "@/lib/agr
 import { PROVIDER_SIGNING_DECLARATION } from "@/constants/agreement";
 import type { AgreementRecord } from "@/types/agreement";
 import { busy, json, readJsonBody } from "../../edit";
-import { agreementSnapshotJson, clientNameOf, loadAgreementBasis } from "../context";
+import { agreementSnapshotJson, clientNameOf, loadAcceptedAcceptance, loadVerifiedSnapshot } from "../context";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -17,7 +18,7 @@ type Params = { params: Promise<{ id: string }> };
  * signs only if that equals both the stored hash and the hash Joseph was
  * shown. Anything that moved in between is refused, never signed blind.
  */
-export async function POST(request: NextRequest, { params }: Params) {
+async function handlePOST(request: NextRequest, { params }: Params) {
   if (!isAdminRequest(request)) return json({ success: false, error: "Unauthorized" }, 401);
   if (!isSameOrigin(request)) return json({ success: false, error: "Forbidden" }, 403);
   const { id } = await params;
@@ -35,22 +36,33 @@ export async function POST(request: NextRequest, { params }: Params) {
     if (!namesMatch(typedName, record.provider.name)) return { kind: "name" } as const;
     if (new Date() > new Date(record.offerValidUntil)) return { kind: "offer_expired" } as const;
 
-    const basis = await loadAgreementBasis(id);
-    if (!basis.ok) return { kind: "basis", basis } as const;
-    if (basis.acceptance.proposalVersion !== record.proposalVersion) return { kind: "stale" } as const;
+    // Still accepted, at the same version, with the same selection and date —
+    // checked against the current acceptance on every sign.
+    const accepted = await loadAcceptedAcceptance(id);
+    if (!accepted.ok) return { kind: "basis", basis: accepted } as const;
+    if (accepted.acceptance.proposalVersion !== record.proposalVersion) return { kind: "stale" } as const;
     // The chosen package / plan are part of what's signed: a corrected acceptance must be reviewed first.
-    if (!sameSelection(record.selection ?? {}, selectionOf(basis.acceptance))) return { kind: "stale_selection" } as const;
+    if (!sameSelection(record.selection ?? {}, selectionOf(accepted.acceptance))) return { kind: "stale_selection" } as const;
     // The acceptance date is shown in Schedule 2 and signed: it must be pinned
     // (older drafts: re-save) and still match the acceptance.
-    if (!record.acceptedAt || record.acceptedAt !== basis.acceptance.acceptedAt) return { kind: "stale_acceptance" } as const;
+    if (!record.acceptedAt || record.acceptedAt !== accepted.acceptance.acceptedAt) return { kind: "stale_acceptance" } as const;
+    // The incorporated terms are re-read and verified on every sign: the
+    // stored snapshot must still exist and hash to the pinned version, so a
+    // deleted or hand-edited snapshot can never sit under a signature. (It's
+    // also what supplies the client name for records prepared before it was pinned.)
+    const verified = await loadVerifiedSnapshot(id, record.proposalVersion);
+    if (!verified.ok) return { kind: "basis", basis: verified } as const;
+    const clientName = record.clientName || clientNameOf(verified.snapshot);
+    if (clientName !== clientNameOf(verified.snapshot)) return { kind: "stale" } as const;
     const template = loadTemplate(record.templateId, record.templateVersion);
     if (!template || template.hash !== record.templateHash) return { kind: "template_changed" } as const;
-    const recomputed = agreementHash({ ...record, clientName: clientNameOf(basis.snapshot) });
+    const recomputed = agreementHash({ ...record, clientName });
     if (recomputed !== record.agreementHash || recomputed !== shownHash) return { kind: "stale" } as const;
 
     const signedAt = new Date().toISOString();
     const signed: AgreementRecord = {
       ...record,
+      clientName, // pins it on legacy records too
       status: "provider_signed",
       providerSignature: { typedName: typedName.trim(), declaration: PROVIDER_SIGNING_DECLARATION, signedAt, agreementHash: recomputed, ...meta },
       updatedAt: signedAt,
@@ -58,7 +70,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     // Evidence first: the immutable copy is stored before the signed record,
     // and if it can't be, nothing is signed.
     try {
-      await saveAgreementSnapshot(id, recomputed, signedAt, "provider_signed", agreementSnapshotJson(signed, clientNameOf(basis.snapshot), template.raw), lock);
+      await saveAgreementSnapshot(id, recomputed, signedAt, "provider_signed", agreementSnapshotJson(signed, clientName, template.raw, verified.snapshotJson), lock);
     } catch (error) {
       if (error instanceof SheetLockExpiredError) throw error;
       console.error(`Agreement snapshot for ${id}@${recomputed} failed:`, error);
@@ -105,3 +117,5 @@ export async function POST(request: NextRequest, { params }: Params) {
       return json({ success: true, agreement: outcome.record });
   }
 }
+
+export const POST = withRouteTelemetry<Params, Response>("agreement sign", (request, ctx) => handlePOST(request as NextRequest, ctx));

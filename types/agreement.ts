@@ -64,6 +64,12 @@ export interface AgreementRecord {
    * before it was pinned: those must be re-saved before signing.
    */
   acceptedAt?: string;
+  /**
+   * The client's name from the accepted snapshot, pinned when prepared (part
+   * of the hash). Empty on records prepared before it was stored — signing
+   * those falls back to reading the snapshot.
+   */
+  clientName: string;
   provider: ProviderIdentity;
   specialTerms: SpecialTerm[];
   /** YYYY-MM-DD: how long the provider-signed offer stays open for the client. */
@@ -84,5 +90,12 @@ export interface AgreementSnapshot {
   clientName: string;
   /** The terms file's exact text at signing (its sha256 is `record.templateHash`). */
   templateText: string;
+  /**
+   * The incorporated proposal (Schedule 2) exactly as stored for the accepted
+   * version — its sha256 is `record.proposalVersion` — so the signed document
+   * stays rebuildable even if `ProposalSnapshots` is later edited or lost.
+   * Absent on snapshots written before it was kept.
+   */
+  proposalJson?: string;
   capturedAt: string;
 }
