@@ -359,11 +359,7 @@ function ChangeRequestDetails({ proposalId, request }: { proposalId: string; req
         </p>
       )}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className={`text-sm ${request.revised ? "text-[var(--andromeda-highlight)]" : "text-amber-500"}`}>
-          {request.revised
-            ? "Revised since this request — waiting for the client to review and accept."
-            : "Not revised yet — saving content changes in the editor publishes the revision."}
-        </p>
+        <p className={`text-sm ${!request.revised ? "text-amber-500" : publicationTone(request.publication)}`}>{revisionStatus(request)}</p>
         <Link
           href={`/admin/proposals/${encodeURIComponent(proposalId)}`}
           className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold bg-[var(--andromeda-accent-beige)] text-[var(--andromeda-primary)] hover:bg-[var(--andromeda-accent-beige)]/90"
@@ -374,4 +370,24 @@ function ChangeRequestDetails({ proposalId, request }: { proposalId: string; req
       </div>
     </div>
   );
+}
+
+type Publication = NonNullable<DashboardRow["changeRequest"]>["publication"];
+
+function publicationTone(publication: Publication): string {
+  if (publication === UNAVAILABLE) return "text-[var(--andromeda-text-secondary)]";
+  if (!publication || publication.email === "failed") return "text-amber-500";
+  return "text-[var(--andromeda-highlight)]";
+}
+
+/** Where the revision stands: not yet revised → revised but unannounced → published (and emailed). */
+function revisionStatus(request: NonNullable<DashboardRow["changeRequest"]>): string {
+  if (!request.revised) return "Not revised yet — edit the proposal, then publish the revision.";
+  const publication = request.publication;
+  if (publication === UNAVAILABLE) return "Revised since this request — couldn't read whether it was published.";
+  if (!publication) return "Revised but not published — the client hasn't been told. Publish it from the editor.";
+  const when = formatDate(publication.at);
+  if (publication.email === "sent") return `Revision published ${when} and emailed${publication.emailTo ? ` to ${publication.emailTo}` : ""} — waiting for the client.`;
+  if (publication.email === "failed") return `Revision published ${when}, but the email failed — resend it from the editor.`;
+  return `Revision published ${when} (client not emailed) — waiting for the client.`;
 }

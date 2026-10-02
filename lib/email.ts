@@ -7,6 +7,7 @@ import {
   type ProposalResponseKind,
 } from "@/emails/ProposalResponseNotice";
 import { AdminSignInCodeEmail, AdminSignInNoticeEmail } from "@/emails/AdminSignIn";
+import { ProposalRevisedEmail } from "@/emails/ProposalRevised";
 import { profile } from "@/constants/profile";
 
 interface SendMilestoneEmailArgs {
@@ -228,4 +229,53 @@ export async function sendAdminSignInNotice(args: { signedInAt: string; ip: stri
     react: AdminSignInNoticeEmail({ recipientName: profile.firstName, ...args }),
   });
   if (result.error) throw new Error(`Resend send failed: ${result.error.message}`);
+}
+
+interface SendProposalRevisedArgs {
+  /** The proposal's `client.email` — always from the saved data, never from a request. */
+  to: string;
+  clientName: string;
+  proposalId: string;
+  projectTitle: string;
+  note?: string;
+  expiryDate: string;
+}
+
+/** Tells the client a revised proposal is ready (Phase C "Publish revision"). */
+export async function sendProposalRevised(args: SendProposalRevisedArgs): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.NOTIFICATION_FROM_EMAIL;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+
+  if (!apiKey || !from || !siteUrl) {
+    throw new Error("Missing RESEND_API_KEY, NOTIFICATION_FROM_EMAIL, or NEXT_PUBLIC_SITE_URL env vars");
+  }
+
+  const resend = new Resend(apiKey);
+  const proposalUrl = `${siteUrl.replace(/\/$/, "")}/proposal/${args.proposalId}`;
+  const validUntil = new Date(`${args.expiryDate}T00:00:00Z`).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+
+  const result = await resend.emails.send({
+    from,
+    to: args.to,
+    replyTo: profile.email,
+    subject: `${args.projectTitle} — revised proposal ready`,
+    react: ProposalRevisedEmail({
+      clientName: args.clientName,
+      projectTitle: args.projectTitle,
+      note: args.note,
+      validUntil,
+      proposalUrl,
+      senderName: profile.name,
+    }),
+  });
+
+  if (result.error) {
+    throw new Error(`Resend send failed: ${result.error.message}`);
+  }
 }

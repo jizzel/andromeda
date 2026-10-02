@@ -9,6 +9,9 @@ import type {
   TrackerStatus,
 } from "@/types/proposal";
 import type { CreativeBriefData } from "@/types/brief";
+import type { PublishedRevision } from "@/types/proposal";
+
+export type { PublishedRevision };
 
 // Re-declare types here to avoid circular dependency with lib/content
 type PostCategory = "System Design" | "Monitoring" | "Automation" | "Research";
@@ -275,6 +278,21 @@ export async function updateProposalRow<R = never>(
     writeProposalRowIfUnchanged(lock, proposalId, expectedRowHash, input, guard)
   );
   return locked.status === "busy" ? { status: "busy" } : locked.value;
+}
+
+/**
+ * The check-and-write of `updateProposalRow` for a caller that already holds
+ * the proposal lock (e.g. publishing a revision, which also records an event
+ * under the same lock). Taking the lock again would report `busy`.
+ */
+export function updateProposalRowLocked<R = never>(
+  lock: SheetLock,
+  proposalId: string,
+  expectedRowHash: string,
+  input: ProposalRowInput,
+  guard?: (current: ProposalRowForEdit) => Promise<R | null>
+): Promise<Exclude<ProposalRowUpdate<R>, { status: "busy" }>> {
+  return writeProposalRowIfUnchanged(lock, proposalId, expectedRowHash, input, guard);
 }
 
 async function writeProposalRowIfUnchanged<R>(
@@ -987,6 +1005,127 @@ async function appendAnchoredRow(
   }
 }
 
+// Engagement events — "EngagementEvents" tab, append-only.
+// Columns: A:proposalId | B:at | C:event | D:proposalVersion | E:detail (JSON) | F:ip | G:userAgent
+//
+// The engagement's audit trail, one row per thing that happened. Phase C
+// records revisions; the agreement flow (signing, execution) adds its own
+// event types to the same log. Nothing is ever updated in place: a later
+// event (e.g. the email outcome) is a new row, and readers fold rows together.
+const EVENTS_SHEET_NAME = "EngagementEvents";
+const EVENTS_HEADERS = ["proposalId", "at", "event", "proposalVersion", "detail", "ip", "userAgent"];
+
+export type EngagementEventType = "revision_published" | "revision_email";
+
+export interface EngagementEventInput {
+  proposalId: string;
+  event: EngagementEventType;
+  proposalVersion: string;
+  detail: Record<string, unknown>;
+  ip?: string;
+  userAgent?: string;
+}
+
+/** Appends one event; under a lock, pass it so the write is deadline-checked. */
+export async function appendEngagementEvent(input: EngagementEventInput, lock?: SheetLock): Promise<string> {
+  const sheets = getGoogleSheetsClient();
+  await ensureTab(sheets, EVENTS_SHEET_NAME, EVENTS_HEADERS);
+  const at = new Date().toISOString();
+  lock?.assertHeld();
+  await sheets.spreadsheets.values.append(
+    {
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${EVENTS_SHEET_NAME}!A:G`,
+      valueInputOption: "RAW",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: {
+        values: [[input.proposalId, at, input.event, input.proposalVersion, JSON.stringify(input.detail), input.ip ?? "", input.userAgent ?? ""]],
+      },
+    },
+    lock?.requestOptions
+  );
+  return at;
+}
+
+interface EventRow {
+  proposalId: string;
+  at: string;
+  event: string;
+  proposalVersion: string;
+  detail: Record<string, unknown>;
+}
+
+async function readEngagementEvents(): Promise<EventRow[]> {
+  const sheets = getGoogleSheetsClient();
+  await ensureTab(sheets, EVENTS_SHEET_NAME, EVENTS_HEADERS);
+  const response = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${EVENTS_SHEET_NAME}!A2:E` });
+  return (response.data.values || []).map((r) => {
+    let detail: Record<string, unknown> = {};
+    try {
+      detail = r[4] ? (JSON.parse(r[4]) as Record<string, unknown>) : {};
+    } catch {
+      // A hand-edited, unreadable detail cell: keep the row, drop the detail.
+    }
+    return { proposalId: r[0]?.trim() ?? "", at: r[1]?.trim() ?? "", event: r[2]?.trim() ?? "", proposalVersion: r[3]?.trim() ?? "", detail };
+  });
+}
+
+const text = (value: unknown) => (typeof value === "string" ? value : undefined);
+
+/** Folds a proposal's events (in sheet order) into its published revisions, keyed by version. */
+function foldRevisions(rows: EventRow[]): Map<string, PublishedRevision> {
+  const byVersion = new Map<string, PublishedRevision>();
+  for (const row of rows) {
+    if (row.event === "revision_published") {
+      // The first publish of a version is the revision; later ones are no-ops (the API refuses them).
+      if (byVersion.has(row.proposalVersion)) continue;
+      const notify = row.detail.notify === true;
+      byVersion.set(row.proposalVersion, {
+        proposalVersion: row.proposalVersion,
+        publishedAt: row.at,
+        note: text(row.detail.note) ?? "",
+        expiryDate: text(row.detail.expiryDate),
+        extendedFrom: text(row.detail.extendedFrom),
+        email: { status: notify ? "pending" : "skipped", to: text(row.detail.emailTo) },
+      });
+    } else if (row.event === "revision_email") {
+      const revision = byVersion.get(row.proposalVersion);
+      if (!revision) continue;
+      const status = row.detail.status === "sent" ? "sent" : "failed";
+      // A success is final; a later failure (e.g. a retry) doesn't undo it.
+      if (revision.email.status === "sent") continue;
+      revision.email = { status, to: text(row.detail.to) ?? revision.email.to, at: row.at, error: text(row.detail.error) };
+    }
+  }
+  return byVersion;
+}
+
+/** The revision published for exactly this version, or null. Throws if the log can't be read. */
+export async function readPublishedRevision(proposalId: string, version: string): Promise<PublishedRevision | null> {
+  const rows = (await readEngagementEvents()).filter((r) => r.proposalId === proposalId);
+  return foldRevisions(rows).get(version) ?? null;
+}
+
+/** Lenient variant for the client page: no notice beats a failed page. */
+export async function getPublishedRevision(proposalId: string, version: string): Promise<PublishedRevision | null> {
+  try {
+    return await readPublishedRevision(proposalId, version);
+  } catch (error) {
+    console.error(`Revision lookup failed for ${proposalId}@${version}:`, error);
+    return null;
+  }
+}
+
+/** Every proposal's published revisions (all versions), for the dashboard. Throws on failure. */
+export async function getAllRevisionsByProposal(): Promise<Map<string, Map<string, PublishedRevision>>> {
+  const grouped = new Map<string, EventRow[]>();
+  for (const row of await readEngagementEvents()) {
+    if (!row.proposalId) continue;
+    grouped.set(row.proposalId, [...(grouped.get(row.proposalId) ?? []), row]);
+  }
+  return new Map([...grouped].map(([id, rows]) => [id, foldRevisions(rows)]));
+}
+
 // Proposal snapshots — "ProposalSnapshots" tab, append-only.
 // Columns: A:proposalId | B:proposalVersion | C:capturedAt | D:reason | E…Z:data
 // One row per (proposalId, proposalVersion): the exact terms a response was made against.
@@ -998,7 +1137,7 @@ const SNAPSHOT_HEADERS = ["proposalId", "proposalVersion", "capturedAt", "reason
 const SNAPSHOT_CHUNK_CHARS = 49_000; // headroom under the 50k cell limit
 const SNAPSHOT_MAX_CHUNKS = 22; // columns E–Z ≈ 1.07M characters
 
-export type SnapshotReason = "accepted" | "changes_requested";
+export type SnapshotReason = "accepted" | "changes_requested" | "revision_published";
 /** `too_large`: terms exceed E–Z even when split; only the row (with hash) was written. */
 export type SnapshotResult = "stored" | "duplicate" | "too_large";
 

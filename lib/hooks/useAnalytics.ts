@@ -88,6 +88,10 @@ interface ProposalVersionEvent {
   proposal_version: string;
 }
 
+interface ProposalRevisionNoticeViewedEvent extends ProposalVersionEvent {
+  has_note: boolean;
+}
+
 interface ProposalPdfDownloadedEvent {
   proposal_id: string;
   /** generated = server PDF, print = browser print dialog */
@@ -149,6 +153,8 @@ export const useAnalytics = () => {
   const trackProposalPdfDownloaded = (data: ProposalPdfDownloadedEvent) => emit("proposal_pdf_downloaded", data);
   /** Revised-since-your-change-request banner shown (a revision reached the client). */
   const trackProposalRevisionViewed = (data: ProposalVersionEvent) => emit("proposal_revision_viewed", data);
+  /** "Revised on …" notice shown: Joseph published this version as a revision (with or without a note). */
+  const trackProposalRevisionNoticeViewed = (data: ProposalRevisionNoticeViewedEvent) => emit("proposal_revision_notice_viewed", data);
   /** A response was refused because the proposal changed while the page was open. */
   const trackProposalStaleVersion = (data: ProposalVersionEvent) => emit("proposal_stale_version", data);
   /** Client reopened the form to update a change request or accept as presented. */
@@ -176,6 +182,7 @@ export const useAnalytics = () => {
     trackProposalTrackerOpened,
     trackProposalPdfDownloaded,
     trackProposalRevisionViewed,
+    trackProposalRevisionNoticeViewed,
     trackProposalStaleVersion,
     trackProposalResponseReopened,
     trackProposalTrackerPhaseViewed,

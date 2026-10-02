@@ -443,4 +443,24 @@ export interface VerifyAccessResponse {
   expiryDate?: string;
   /** Current version of the proposal terms; sent back on submit to detect stale pages. */
   proposalVersion?: string;
+  /** Set when Joseph published the current version as a revision (admin "Publish revision"). */
+  revision?: ProposalRevisionNotice;
+}
+
+export interface ProposalRevisionNotice {
+  publishedAt: string;
+  /** What changed, in Joseph's words; may be empty. */
+  note: string;
+}
+
+export type RevisionEmailStatus = "sent" | "failed" | "pending" | "skipped";
+
+/** A published revision (admin "Publish revision"), with the outcome of its client email folded in. */
+export interface PublishedRevision {
+  proposalVersion: string;
+  publishedAt: string;
+  note: string;
+  expiryDate?: string;
+  extendedFrom?: string;
+  email: { status: RevisionEmailStatus; to?: string; at?: string; error?: string };
 }

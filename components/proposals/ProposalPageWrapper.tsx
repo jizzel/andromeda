@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { flushSync } from "react-dom";
-import type { ProposalDataUnion, ProposalAcceptance } from "@/types/proposal";
+import type { ProposalDataUnion, ProposalAcceptance, ProposalRevisionNotice as Revision } from "@/types/proposal";
 import { ProposalAccessGate } from "./ProposalAccessGate";
 import { ProposalShell } from "./ProposalShell";
 import { ProposalDocumentProvider } from "./ProposalDocumentContext";
+import { ProposalRevisionNotice } from "./ProposalRevisionNotice";
 import { useAnalytics } from "@/lib/hooks/useAnalytics";
 
 interface ProposalPageWrapperProps {
@@ -25,6 +26,7 @@ export function ProposalPageWrapper({ proposalId }: ProposalPageWrapperProps) {
   const [acceptanceLoaded, setAcceptanceLoaded] = useState(false);
   const [printMode, setPrintMode] = useState(false);
   const [proposalVersion, setProposalVersion] = useState<string | undefined>(undefined);
+  const [revision, setRevision] = useState<Revision | null>(null);
 
   // Print mode while the browser print dialog is open — whether opened from
   // the "Print / Save as PDF" button or Ctrl/Cmd+P. flushSync makes React
@@ -74,6 +76,7 @@ export function ProposalPageWrapper({ proposalId }: ProposalPageWrapperProps) {
     setExpiryDate(expiry);
     setAccessCode(code ?? "");
     setProposalVersion(typeof response?.proposalVersion === "string" ? response.proposalVersion : undefined);
+    setRevision(revisionFrom(response?.revision));
     trackProposalAccessed({ proposal_id: proposalId });
   };
 
@@ -93,6 +96,7 @@ export function ProposalPageWrapper({ proposalId }: ProposalPageWrapperProps) {
     setProposal(data.proposal as ProposalDataUnion);
     setExpiryDate(data.expiryDate);
     setProposalVersion(data.proposalVersion);
+    setRevision(revisionFrom(data.revision));
   }, [proposalId, accessCode]);
 
   if (!proposal) {
@@ -131,6 +135,10 @@ export function ProposalPageWrapper({ proposalId }: ProposalPageWrapperProps) {
         onAcceptanceRecorded: setRecordedAcceptance,
       }}
     >
+      {/* Accepted proposals are settled; a revision notice would only confuse. */}
+      {revision && recordedAcceptance?.status !== "accepted" && (
+        <ProposalRevisionNotice proposalId={proposalId} proposalVersion={proposalVersion} revision={revision} />
+      )}
       <ProposalShell
         key={proposalVersion ?? "unversioned"}
         proposal={proposal}
@@ -142,4 +150,9 @@ export function ProposalPageWrapper({ proposalId }: ProposalPageWrapperProps) {
       />
     </ProposalDocumentProvider>
   );
+}
+
+function revisionFrom(value: unknown): Revision | null {
+  const r = value as Partial<Revision> | undefined;
+  return r && typeof r.publishedAt === "string" ? { publishedAt: r.publishedAt, note: typeof r.note === "string" ? r.note : "" } : null;
 }

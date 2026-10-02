@@ -16,20 +16,23 @@ import {
   Monitor,
   RefreshCw,
   Save,
+  Send,
   Smartphone,
   Wand2,
   XCircle,
 } from "lucide-react";
-import type { ProposalAcceptance, ProposalDataUnion } from "@/types/proposal";
+import type { ProposalAcceptance, ProposalDataUnion, PublishedRevision } from "@/types/proposal";
 import { validateProposal, type ProposalIssue } from "@/lib/proposal-schema";
 import { shortVersion } from "@/lib/proposal-version-label";
 import { isoDate } from "@/lib/dates";
 import { rangeForPath } from "./json-paths";
-import { diffLines } from "./line-diff";
+import { DiffView } from "./DiffView";
 import type { PreviewMessage } from "./ProposalPreview";
 import { AdminDialog, dialogButton } from "./AdminDialog";
 import { Field, REVEAL_CARD_EVENT, Toggle } from "./forms/fields";
 import { FormErrorBoundary, SectionForms } from "./forms/SectionForms";
+import { PublishRevisionDialog, type PublishOptions } from "./PublishRevisionDialog";
+import { canonicalProposalJson } from "@/lib/proposal-terms";
 
 interface EditableRow {
   accessCode: string;
@@ -44,6 +47,10 @@ interface ProposalEditorProps {
   proposalId: string;
   initial: EditableRow;
   acceptance: ProposalAcceptance | null;
+  /** Canonical JSON of the version the open change request was made against, if stored. */
+  changeRequestSnapshot: string | null;
+  /** The revision published for the loaded version, if any. */
+  publishedRevision: PublishedRevision | null;
   clientLink: string;
 }
 
@@ -132,7 +139,10 @@ function extendExpiry(current: string, days: number): string {
   return isoDate(new Date(base + days * 24 * 60 * 60 * 1000));
 }
 
-export function ProposalEditor({ proposalId, initial, acceptance, clientLink }: ProposalEditorProps) {
+/** Terms as the publish diff shows them: canonical (key-sorted, operational keys removed), pretty-printed. */
+const termsText = (data: object) => pretty(JSON.parse(canonicalProposalJson(data)));
+
+export function ProposalEditor({ proposalId, initial, acceptance, changeRequestSnapshot, publishedRevision, clientLink }: ProposalEditorProps) {
   const router = useRouter();
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [text, setText] = useState(() => pretty(initial.data));
@@ -149,6 +159,11 @@ export function ProposalEditor({ proposalId, initial, acceptance, clientLink }: 
   // Below `lg` the editor is one panel at a time; from `lg` up all panels show side by side.
   const [tab, setTab] = useState<EditorTab>("settings");
   const [contentView, setContentView] = useState<ContentView>("form");
+  const [published, setPublished] = useState<PublishedRevision | null>(publishedRevision);
+  const [publishOpen, setPublishOpen] = useState(0); // >0 = open; bumped to remount the dialog fresh
+  const [publishing, setPublishing] = useState(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
+  const [publishNotice, setPublishNotice] = useState<{ revision: PublishedRevision; alreadyPublished: boolean; noteDropped: boolean } | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [draftNotice, setDraftNotice] = useState<
     { kind: "restored"; savedAt: string } | { kind: "stale"; draft: StoredDraft } | null
@@ -406,6 +421,77 @@ export function ProposalEditor({ proposalId, initial, acceptance, clientLink }: 
     [blocked, proposalId, rowHash, settings, parsed, text, clearStoredDraft]
   );
 
+  // --- Publish revision: save + record + (optionally) email the client.
+  const isAccepted = acceptance?.status === "accepted";
+  const publishBlockedReason = isAccepted
+    ? "Accepted — changes now go through the agreement"
+    : blocked
+      ? "Fix the errors before publishing"
+      : !settings.isActive
+        ? "Make the proposal active to publish"
+        : null;
+  // Already published = the draft's *terms* are the saved version's and that
+  // version is published. Compared canonically (as the version hash is), so
+  // expiry, operational toggles and JSON formatting don't count as new terms.
+  const draftTerms = canEditData ? canonicalProposalJson(parsed.data as object) : null;
+  const savedTerms = useMemo(() => {
+    const result = parse(saved.text);
+    return result.error || !result.data || typeof result.data !== "object" ? null : canonicalProposalJson(result.data as object);
+  }, [saved.text]);
+  const publishedForDraft = published?.proposalVersion === version && draftTerms !== null && draftTerms === savedTerms ? published : null;
+  const diffBase = useMemo(() => {
+    if (changeRequestSnapshot) {
+      try {
+        return { label: "the version the client asked to change", text: pretty(JSON.parse(changeRequestSnapshot)) };
+      } catch {
+        // Unreadable snapshot: fall back to the saved row.
+      }
+    }
+    return { label: "the version saved on the sheet", text: termsText(initial.data) };
+    // The base is fixed for this editor session (the server snapshot it was opened with).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [changeRequestSnapshot]);
+
+  const publish = async (options: PublishOptions) => {
+    setPublishing(true);
+    setPublishError(null);
+    try {
+      const nextSettings = options.extendExpiryTo ? { ...settings, expiryDate: options.extendExpiryTo } : settings;
+      const res = await fetch(`/api/admin/proposals/${encodeURIComponent(proposalId)}/publish`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ expectedRowHash: rowHash, ...settings, data: parsed.data, ...options }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (body.success) {
+        setRowHash(body.rowHash);
+        setVersion(body.proposalVersion);
+        setSettings(nextSettings);
+        setSaved({ text, settings: { ...nextSettings } });
+        clearStoredDraft();
+        setPublished(body.revision);
+        setPublishNotice({
+          revision: body.revision,
+          alreadyPublished: body.alreadyPublished === true,
+          // Fallback only (the dialog shouldn't offer a new publish for published terms):
+          // a reused revision keeps its original note.
+          noteDropped: body.alreadyPublished === true && !options.resendEmail && options.note !== (body.revision.note ?? ""),
+        });
+        setSaveState({ kind: "saved", at: new Date() });
+        setPublishOpen(0);
+      } else if (body.code === "conflict") {
+        setPublishOpen(0);
+        setSaveState({ kind: "conflict", current: body.current ?? null });
+      } else {
+        setPublishError(body.error || "Couldn't publish.");
+      }
+    } catch {
+      setPublishError("Connection failed — nothing was published. Try again.");
+    } finally {
+      setPublishing(false);
+    }
+  };
+
   // Cmd/Ctrl+S saves.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -468,6 +554,20 @@ export function ProposalEditor({ proposalId, initial, acceptance, clientLink }: 
         </div>
         <button
           type="button"
+          onClick={() => {
+            setPublishError(null);
+            setPublishOpen((n) => n + 1);
+          }}
+          disabled={!!publishBlockedReason || publishing}
+          title={publishBlockedReason ?? "Publish this version as a revision and tell the client"}
+          aria-label="Publish revision"
+          className="shrink-0 inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm font-semibold border border-[var(--andromeda-accent-beige)]/50 text-[var(--andromeda-accent-beige)] hover:bg-[var(--andromeda-accent-beige)]/10 disabled:opacity-40"
+        >
+          {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+          <span className="hidden sm:inline">Publish</span>
+        </button>
+        <button
+          type="button"
           onClick={() => void save()}
           disabled={!dirty || blocked || saveState.kind === "saving"}
           title={blocked ? "Fix the errors before saving" : "Save (⌘S)"}
@@ -517,6 +617,23 @@ export function ProposalEditor({ proposalId, initial, acceptance, clientLink }: 
         }
       />
 
+      {publishOpen > 0 && (
+        <PublishRevisionDialog
+          key={publishOpen}
+          open
+          onClose={() => setPublishOpen(0)}
+          onPublish={(options) => void publish(options)}
+          submitting={publishing}
+          error={publishError}
+          baseLabel={diffBase.label}
+          baseText={diffBase.text}
+          draftText={canEditData ? termsText(parsed.data as object) : ""}
+          clientEmail={(client.email ?? "").trim() || undefined}
+          expiryDate={settings.expiryDate}
+          published={publishedForDraft}
+        />
+      )}
+
       {/* State banners */}
       <div className="px-6 pt-4 space-y-2">
         {draftNotice?.kind === "restored" && (
@@ -553,10 +670,39 @@ export function ProposalEditor({ proposalId, initial, acceptance, clientLink }: 
             changes what the client agreed to — saving such a change asks for confirmation.
           </Banner>
         )}
-        {acceptance?.status === "counter" && (
+        {acceptance?.status === "counter" && !publishNotice && (
           <Banner tone="info">
-            The client requested changes. Saving content changes publishes a revision — their page will show
-            &ldquo;revised since your change request&rdquo; and let them accept it.
+            The client requested changes. Save updates their page quietly; <strong>Publish</strong> also records the
+            revision, shows them a &ldquo;Revised&rdquo; note and emails them.
+            {published?.proposalVersion === version && ` This version was published on ${new Date(published.publishedAt).toLocaleDateString()}.`}
+          </Banner>
+        )}
+        {publishNotice && (
+          <Banner tone={publishNotice.revision.email.status === "failed" || publishNotice.noteDropped ? "warn" : "info"}>
+            <span className="flex flex-wrap items-center gap-3">
+              {publishNotice.alreadyPublished
+                ? `Already published on ${new Date(publishNotice.revision.publishedAt).toLocaleString()}`
+                : `Published ${new Date(publishNotice.revision.publishedAt).toLocaleTimeString()}`}
+              {publishNotice.revision.email.status === "sent" && ` · emailed ${publishNotice.revision.email.to}`}
+              {publishNotice.revision.email.status === "skipped" && " · client not emailed"}
+              {publishNotice.revision.email.status === "failed" && ` · the email failed: ${publishNotice.revision.email.error ?? "unknown error"}`}
+              {publishNotice.noteDropped && " · these terms were published earlier, so your new note wasn't sent"}
+              {publishNotice.revision.email.status === "failed" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPublishError(null);
+                    setPublishOpen((n) => n + 1);
+                  }}
+                  className="font-semibold underline"
+                >
+                  Try again
+                </button>
+              )}
+              <button type="button" onClick={() => setPublishNotice(null)} className="underline text-[var(--andromeda-text-secondary)]">
+                Dismiss
+              </button>
+            </span>
           </Banner>
         )}
         {saveState.kind === "confirm_accepted" && (
@@ -925,15 +1071,6 @@ function ConflictPanel({
   onOverwrite: (hash: string) => void;
   onCancel: () => void;
 }) {
-  const lines = useMemo(() => (current ? diffLines(pretty(current.data), mine) : []), [current, mine]);
-  // Changed lines plus two lines of context, like a unified diff; gaps become "⋯".
-  const visible = useMemo(() => {
-    const keep = new Set<number>();
-    lines.forEach((line, i) => {
-      if (line.type !== "same") for (let k = i - 2; k <= i + 2; k++) keep.add(k);
-    });
-    return lines.map((line, i) => ({ line, i, show: keep.has(i) }));
-  }, [lines]);
   const sheetSettings = current
     ? `Sheet settings now: code ${current.accessCode}, expires ${current.expiryDate}, ${current.isActive ? "active" : "draft"}.`
     : "";
@@ -945,24 +1082,9 @@ function ConflictPanel({
         the sheet, <span className="text-[var(--andromeda-success)]">+</span> is yours. {sheetSettings}
       </p>
       {current ? (
-        <pre className="max-h-72 overflow-auto text-xs font-mono p-3 rounded bg-black/30 mb-3">
-          {visible.map(({ line, i, show }) => {
-            if (!show) return visible[i - 1]?.show ? <div key={i} className="text-[var(--andromeda-text-secondary)]/50">⋯</div> : null;
-            const tone =
-              line.type === "add"
-                ? "text-[var(--andromeda-success)]"
-                : line.type === "del"
-                  ? "text-[var(--andromeda-error)]"
-                  : "text-[var(--andromeda-text-secondary)]/70";
-            return (
-              <div key={i} className={tone}>
-                {line.type === "add" ? "+ " : line.type === "del" ? "− " : "  "}
-                {line.text}
-              </div>
-            );
-          })}
-          {lines.every((l) => l.type === "same") && <span>Content is identical — only settings differ.</span>}
-        </pre>
+        <div className="mb-3">
+          <DiffView before={pretty(current.data)} after={mine} empty="Content is identical — only settings differ." />
+        </div>
       ) : (
         <p className="text-sm mb-3">The row could no longer be read.</p>
       )}
