@@ -96,7 +96,7 @@ async function handlePUT(request: NextRequest, { params }: Params) {
       if (!(await readAgreementSnapshot(id, current.agreementHash, signedAt))) {
         const pinned = loadTemplate(current.templateId, current.templateVersion);
         const text = pinned && pinned.hash === current.templateHash ? pinned.raw : "";
-        await saveAgreementSnapshot(id, current.agreementHash, signedAt, "provider_signed", agreementSnapshotJson(current, current.clientName || clientNameOf(basis.snapshot), text), lock);
+        await saveAgreementSnapshot(id, current.agreementHash, signedAt, "provider_signed", agreementSnapshotJson(current, current.clientName || clientNameOf(basis.snapshot), text, basis.snapshotJson), lock);
       }
       await appendEngagementEvent(
         {

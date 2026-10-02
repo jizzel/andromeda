@@ -90,5 +90,12 @@ export interface AgreementSnapshot {
   clientName: string;
   /** The terms file's exact text at signing (its sha256 is `record.templateHash`). */
   templateText: string;
+  /**
+   * The incorporated proposal (Schedule 2) exactly as stored for the accepted
+   * version — its sha256 is `record.proposalVersion` — so the signed document
+   * stays rebuildable even if `ProposalSnapshots` is later edited or lost.
+   * Absent on snapshots written before it was kept.
+   */
+  proposalJson?: string;
   capturedAt: string;
 }

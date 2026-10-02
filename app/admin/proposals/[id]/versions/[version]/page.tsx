@@ -22,7 +22,24 @@ export default async function AdminProposalVersionPage({ params }: { params: Pro
   if (!/^[0-9a-f]{64}$/.test(version)) notFound();
   const [json, row, acceptance] = await Promise.all([getProposalSnapshot(id, version), getProposalRowForEdit(id), getProposalAcceptance(id)]);
   if (!json || !row) notFound();
-  const proposal = JSON.parse(json) as ProposalDataUnion;
+  // Only render terms that still hash to their version: a hand-edited
+  // snapshot is reported, never shown as what the client accepted.
+  let proposal: ProposalDataUnion | null = null;
+  try {
+    proposal = JSON.parse(json) as ProposalDataUnion;
+  } catch {
+    proposal = null;
+  }
+  if (!proposal || proposalVersion(proposal) !== version) {
+    return (
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
+        <div role="alert" className="p-4 rounded-xl border border-[var(--andromeda-error)]/30 bg-[var(--andromeda-error)]/5 text-sm">
+          The stored terms for version <span className="font-mono">{shortVersion(version)}</span> no longer match that version — the snapshot was
+          altered or corrupted, so it isn&apos;t shown. Agreements can&apos;t be prepared or signed against it.
+        </div>
+      </main>
+    );
+  }
   const isAccepted = acceptance?.status === "accepted" && acceptance.proposalVersion === version;
   const isLive = proposalVersion(row.record.data) === version;
 

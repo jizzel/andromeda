@@ -7,7 +7,7 @@ import { agreementHash, namesMatch, sameSelection, selectionOf } from "@/lib/agr
 import { PROVIDER_SIGNING_DECLARATION } from "@/constants/agreement";
 import type { AgreementRecord } from "@/types/agreement";
 import { busy, json, readJsonBody } from "../../edit";
-import { agreementSnapshotJson, clientNameOf, loadAcceptedAcceptance, loadAgreementBasis } from "../context";
+import { agreementSnapshotJson, clientNameOf, loadAcceptedAcceptance, loadVerifiedSnapshot } from "../context";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -36,10 +36,8 @@ async function handlePOST(request: NextRequest, { params }: Params) {
     if (!namesMatch(typedName, record.provider.name)) return { kind: "name" } as const;
     if (new Date() > new Date(record.offerValidUntil)) return { kind: "offer_expired" } as const;
 
-    // Still accepted, at the same version, with the same selection — checked
-    // against the current acceptance on every sign. The accepted terms
-    // themselves were read (and their snapshot verified) when the agreement
-    // was prepared; snapshots are append-only, so they aren't re-read here.
+    // Still accepted, at the same version, with the same selection and date —
+    // checked against the current acceptance on every sign.
     const accepted = await loadAcceptedAcceptance(id);
     if (!accepted.ok) return { kind: "basis", basis: accepted } as const;
     if (accepted.acceptance.proposalVersion !== record.proposalVersion) return { kind: "stale" } as const;
@@ -48,13 +46,14 @@ async function handlePOST(request: NextRequest, { params }: Params) {
     // The acceptance date is shown in Schedule 2 and signed: it must be pinned
     // (older drafts: re-save) and still match the acceptance.
     if (!record.acceptedAt || record.acceptedAt !== accepted.acceptance.acceptedAt) return { kind: "stale_acceptance" } as const;
-    // Records prepared before the client name was pinned: verified fallback to the snapshot.
-    let clientName = record.clientName;
-    if (!clientName) {
-      const basis = await loadAgreementBasis(id);
-      if (!basis.ok) return { kind: "basis", basis } as const;
-      clientName = clientNameOf(basis.snapshot);
-    }
+    // The incorporated terms are re-read and verified on every sign: the
+    // stored snapshot must still exist and hash to the pinned version, so a
+    // deleted or hand-edited snapshot can never sit under a signature. (It's
+    // also what supplies the client name for records prepared before it was pinned.)
+    const verified = await loadVerifiedSnapshot(id, record.proposalVersion);
+    if (!verified.ok) return { kind: "basis", basis: verified } as const;
+    const clientName = record.clientName || clientNameOf(verified.snapshot);
+    if (clientName !== clientNameOf(verified.snapshot)) return { kind: "stale" } as const;
     const template = loadTemplate(record.templateId, record.templateVersion);
     if (!template || template.hash !== record.templateHash) return { kind: "template_changed" } as const;
     const recomputed = agreementHash({ ...record, clientName });
@@ -71,7 +70,7 @@ async function handlePOST(request: NextRequest, { params }: Params) {
     // Evidence first: the immutable copy is stored before the signed record,
     // and if it can't be, nothing is signed.
     try {
-      await saveAgreementSnapshot(id, recomputed, signedAt, "provider_signed", agreementSnapshotJson(signed, clientName, template.raw), lock);
+      await saveAgreementSnapshot(id, recomputed, signedAt, "provider_signed", agreementSnapshotJson(signed, clientName, template.raw, verified.snapshotJson), lock);
     } catch (error) {
       if (error instanceof SheetLockExpiredError) throw error;
       console.error(`Agreement snapshot for ${id}@${recomputed} failed:`, error);
