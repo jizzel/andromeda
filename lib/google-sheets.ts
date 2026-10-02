@@ -1369,6 +1369,23 @@ const AGREEMENT_SNAPSHOT_SHEET_NAME = "AgreementSnapshots";
 const AGREEMENT_SNAPSHOT_HEADERS = ["proposalId", "agreementHash", "capturedAt", "reason", "data"];
 
 /**
+ * Whether a snapshot row (same proposal and hash) is this exact signature.
+ * Rows carry the signature's signedAt in column C — except rows written before
+ * snapshots were keyed per signature, where C is the capture time (a few ms
+ * later). Those are matched by the signature recorded inside their JSON, so
+ * legacy evidence is found rather than treated as missing and rebuilt.
+ */
+function snapshotRowIsSignature(row: string[], signedAt: string): boolean {
+  if (row[2]?.trim() === signedAt) return true;
+  try {
+    const data = JSON.parse(row.slice(4).join("")) as { record?: { providerSignature?: { signedAt?: string } | null } };
+    return data.record?.providerSignature?.signedAt === signedAt;
+  } catch {
+    return false; // unreadable data never counts as a match
+  }
+}
+
+/**
  * Stores one signing occurrence ("duplicate" only if this exact signature —
  * same hash and signedAt — is already stored, e.g. a retried write).
  * Throws instead of degrading: signing must fail rather than proceed without evidence.
@@ -1384,7 +1401,15 @@ export async function saveAgreementSnapshot(
   const sheets = getGoogleSheetsClient();
   await ensureTab(sheets, AGREEMENT_SNAPSHOT_SHEET_NAME, AGREEMENT_SNAPSHOT_HEADERS);
   const existing = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${AGREEMENT_SNAPSHOT_SHEET_NAME}!A2:C` });
-  if ((existing.data.values || []).some((r) => r[0]?.trim() === proposalId && r[1]?.trim() === agreementHash && r[2]?.trim() === signedAt)) return "duplicate";
+  const sameHash = (existing.data.values || []).filter((r) => r[0]?.trim() === proposalId && r[1]?.trim() === agreementHash);
+  if (sameHash.some((r) => r[2]?.trim() === signedAt)) return "duplicate";
+  // Same content stored before under a different C: only then read the data
+  // cells, to recognise a legacy row for this very signature.
+  if (sameHash.length) {
+    const full = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${AGREEMENT_SNAPSHOT_SHEET_NAME}!A2:Z` });
+    const candidates = (full.data.values || []).filter((r) => r[0]?.trim() === proposalId && r[1]?.trim() === agreementHash);
+    if (candidates.some((r) => snapshotRowIsSignature(r, signedAt))) return "duplicate";
+  }
   const parts = chunk(json, SNAPSHOT_CHUNK_CHARS);
   if (parts.length > SNAPSHOT_MAX_CHUNKS) throw new Error(`Agreement snapshot for ${proposalId} is ${json.length} chars — too large to store`);
   lock.assertHeld();
@@ -1411,7 +1436,7 @@ export async function readAgreementSnapshot(proposalId: string, agreementHash: s
   await ensureTab(sheets, AGREEMENT_SNAPSHOT_SHEET_NAME, AGREEMENT_SNAPSHOT_HEADERS);
   const response = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${AGREEMENT_SNAPSHOT_SHEET_NAME}!A2:Z` });
   const rows = (response.data.values || []).filter(
-    (r) => r[0]?.trim() === proposalId && r[1]?.trim() === agreementHash && (!signedAt || r[2]?.trim() === signedAt)
+    (r) => r[0]?.trim() === proposalId && r[1]?.trim() === agreementHash && (!signedAt || snapshotRowIsSignature(r, signedAt))
   );
   const row = rows.at(-1);
   return row ? row.slice(4).join("") : null;
