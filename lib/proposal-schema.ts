@@ -302,12 +302,82 @@ function formatPath(path: PropertyKey[]): string {
   }, "");
 }
 
+export type ProposalLayout = "default" | "church" | "social";
+
 /** Which layout a proposal renders with — same rule as `ProposalShell`. */
-export function schemaFor(data: unknown) {
+export function layoutOf(data: unknown): ProposalLayout {
   const type = (data as { proposalType?: unknown } | null)?.proposalType;
-  if (type === "church-asset-management") return churchProposalSchema;
-  if (type === "social-media-engagement") return socialProposalSchema;
-  return defaultProposalSchema;
+  if (type === "church-asset-management") return "church";
+  if (type === "social-media-engagement") return "social";
+  return "default";
+}
+
+/**
+ * Whether the admin forms can render each section they edit. The forms
+ * tolerate *missing* fields (shown blank; validation still reports them as
+ * required) and unknown keys (kept, reported as warnings), but not wrong
+ * types — `packages: [null]`, a number where text belongs — which they'd
+ * dereference or call string methods on. Relaxed versions of the section
+ * schemas check exactly that. `null` means the section is editable;
+ * otherwise the first offending path and why, for a "fix it in JSON" notice.
+ */
+const formShapes = {
+  packages: z.array(z.looseObject(pkg.shape).partial()),
+  paymentPlans: z.array(
+    z.looseObject({ ...paymentPlan.shape, structure: z.array(z.looseObject(paymentMilestone.shape).partial()) }).partial()
+  ),
+  timeline: z.array(z.looseObject(timelineItem.shape).partial()),
+};
+
+export type FormSection = keyof typeof formShapes;
+export type FormSectionProblem = { path: string; message: string } | null;
+
+export function formSectionProblem(data: Record<string, unknown>, section: FormSection): FormSectionProblem {
+  const value = data[section];
+  if (value === undefined) return null; // absent: the form starts an empty list
+  const result = formShapes[section].safeParse(value);
+  if (result.success) return null;
+  const issue = result.error.issues[0];
+  return { path: formatPath([section, ...issue.path]), message: issue.message };
+}
+
+/**
+ * Which of the commonly revised list sections each layout renders. Drives
+ * both the admin forms and the duplicate-id check: a section the layout
+ * doesn't render is only an unknown key (a warning), so it must never block
+ * saving.
+ */
+export const LAYOUT_SECTIONS: Record<ProposalLayout, Record<FormSection, boolean>> = {
+  default: { packages: true, paymentPlans: true, timeline: true },
+  social: { packages: true, paymentPlans: false, timeline: true },
+  church: { packages: false, paymentPlans: false, timeline: true },
+};
+
+export function schemaFor(data: unknown) {
+  return { default: defaultProposalSchema, church: churchProposalSchema, social: socialProposalSchema }[layoutOf(data)];
+}
+
+/**
+ * Package and payment-plan ids must be unique: a client's response records
+ * the chosen ids, and the acceptance API resolves them against the proposal.
+ * Reported on each repeat, at its `id` path.
+ */
+function duplicateIdErrors(data: Record<string, unknown>): ProposalIssue[] {
+  const errors: ProposalIssue[] = [];
+  const sections = LAYOUT_SECTIONS[layoutOf(data)];
+  for (const [key, label] of [["packages", "Package"], ["paymentPlans", "Payment plan"]] as const) {
+    if (!sections[key]) continue; // ignored by this layout: an unknown-key warning, not an error
+    const list = data[key];
+    if (!Array.isArray(list)) continue;
+    const seen = new Set<string>();
+    list.forEach((item, index) => {
+      const id = (item as { id?: unknown } | null)?.id;
+      if (typeof id !== "string") return;
+      if (seen.has(id)) errors.push({ path: `${key}[${index}].id`, message: `${label} ids must be unique — "${id}" is already used` });
+      seen.add(id);
+    });
+  }
+  return errors;
 }
 
 export function validateProposal(data: unknown): ProposalValidation {
@@ -335,6 +405,8 @@ export function validateProposal(data: unknown): ProposalValidation {
       }
     }
   }
+
+  errors.push(...duplicateIdErrors(data as Record<string, unknown>));
 
   const size = JSON.stringify(data).length;
   if (size > MAX_PROPOSAL_JSON_CHARS) {

@@ -28,6 +28,8 @@ import { rangeForPath } from "./json-paths";
 import { diffLines } from "./line-diff";
 import type { PreviewMessage } from "./ProposalPreview";
 import { AdminDialog, dialogButton } from "./AdminDialog";
+import { Field, REVEAL_CARD_EVENT, Toggle } from "./forms/fields";
+import { FormErrorBoundary, SectionForms } from "./forms/SectionForms";
 
 interface EditableRow {
   accessCode: string;
@@ -62,6 +64,9 @@ type SaveState =
 const pretty = (data: unknown) => JSON.stringify(data, null, 2);
 
 type EditorTab = "settings" | "content" | "preview";
+/** How the Content panel edits the draft: structured forms for the common sections, or the full JSON. */
+type ContentView = "form" | "json";
+const CONTENT_VIEW_KEY = "andromeda:admin-content-view";
 const EDITOR_TABS: { id: EditorTab; label: string }[] = [
   { id: "settings", label: "Settings" },
   { id: "content", label: "Content" },
@@ -143,6 +148,7 @@ export function ProposalEditor({ proposalId, initial, acceptance, clientLink }: 
   const [previewWidth, setPreviewWidth] = useState<"desktop" | "mobile">("desktop");
   // Below `lg` the editor is one panel at a time; from `lg` up all panels show side by side.
   const [tab, setTab] = useState<EditorTab>("settings");
+  const [contentView, setContentView] = useState<ContentView>("form");
   const [copied, setCopied] = useState<string | null>(null);
   const [draftNotice, setDraftNotice] = useState<
     { kind: "restored"; savedAt: string } | { kind: "stale"; draft: StoredDraft } | null
@@ -155,7 +161,7 @@ export function ProposalEditor({ proposalId, initial, acceptance, clientLink }: 
     () => (parsed.error ? { errors: [], warnings: [] } : validateProposal(parsed.data)),
     [parsed]
   );
-  const canEditData = !parsed.error && !!parsed.data && typeof parsed.data === "object";
+  const canEditData = !parsed.error && !!parsed.data && typeof parsed.data === "object" && !Array.isArray(parsed.data);
   const dirty = text !== saved.text || JSON.stringify(settings) !== JSON.stringify(saved.settings);
   const blocked = !!parsed.error || validation.errors.length > 0;
 
@@ -191,6 +197,48 @@ export function ProposalEditor({ proposalId, initial, acceptance, clientLink }: 
     if (!range) return;
     view.dispatch({ selection: { anchor: range.from, head: range.to }, scrollIntoView: true });
     view.focus();
+  };
+
+  // Form vs JSON is a per-browser convenience; storage may be unavailable.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      try {
+        if (window.localStorage.getItem(CONTENT_VIEW_KEY) === "json") setContentView("json");
+      } catch {}
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
+  const switchContentView = (view: ContentView) => {
+    setContentView(view);
+    try {
+      window.localStorage.setItem(CONTENT_VIEW_KEY, view);
+    } catch {}
+  };
+
+  // An issue's path points at a form field when the form shows it; otherwise
+  // (or in JSON view) jump to it in the JSON.
+  const jumpToIssue = (path: string) => {
+    if (contentView === "form") {
+      const target = path ? document.querySelector<HTMLElement>(`#editor-panel-content [data-path="${CSS.escape(path)}"]`) : null;
+      if (target) {
+        // Expand the card(s) holding the field, then focus it once it's rendered
+        // visible (or the first input of a list).
+        for (let card = target.closest("[data-card]"); card; card = card.parentElement?.closest("[data-card]") ?? null) {
+          card.dispatchEvent(new Event(REVEAL_CARD_EVENT));
+        }
+        requestAnimationFrame(() => {
+          const field = target.matches("input, textarea, select") ? target : target.querySelector<HTMLElement>("input, textarea, select");
+          target.scrollIntoView({ block: "center", behavior: "smooth" });
+          (field ?? target).focus({ preventScroll: true });
+        });
+        return;
+      }
+      switchContentView("json");
+      // CodeMirror was hidden; let it lay out before selecting and scrolling.
+      requestAnimationFrame(() => requestAnimationFrame(() => jumpTo(path)));
+      return;
+    }
+    jumpTo(path);
   };
 
   // --- Settings that live inside `data` edit the JSON draft directly (one source of truth).
@@ -672,18 +720,63 @@ export function ProposalEditor({ proposalId, initial, acceptance, clientLink }: 
             aria-labelledby="editor-tab-content"
             className={`${tab === "content" ? "" : "max-lg:hidden"} flex flex-col gap-4 min-w-0`}
           >
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--andromeda-text-secondary)]">Content (JSON)</h2>
-            <button
-              type="button"
-              disabled={!!parsed.error}
-              onClick={() => setText(pretty(parsed.data))}
-              className="inline-flex items-center gap-1 text-xs text-[var(--andromeda-text-secondary)] hover:text-[var(--andromeda-accent-beige)] disabled:opacity-40"
-            >
-              <Wand2 className="w-3.5 h-3.5" /> Format
-            </button>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--andromeda-text-secondary)]">Content</h2>
+            <div className="flex items-center gap-3">
+              {contentView === "json" && (
+                <button
+                  type="button"
+                  disabled={!!parsed.error}
+                  onClick={() => setText(pretty(parsed.data))}
+                  className="inline-flex items-center gap-1 text-xs text-[var(--andromeda-text-secondary)] hover:text-[var(--andromeda-accent-beige)] disabled:opacity-40"
+                >
+                  <Wand2 className="w-3.5 h-3.5" /> Format
+                </button>
+              )}
+              <div role="radiogroup" aria-label="Content view" className="flex gap-1 p-0.5 rounded-lg bg-[var(--andromeda-secondary)] border border-white/10 light:border-black/10">
+                {(["form", "json"] as const).map((view) => (
+                  <button
+                    key={view}
+                    type="button"
+                    role="radio"
+                    aria-checked={contentView === view}
+                    onClick={() => switchContentView(view)}
+                    className={`px-2.5 py-1 rounded-md text-xs font-medium ${
+                      contentView === view
+                        ? "bg-[var(--andromeda-accent-beige)]/15 text-[var(--andromeda-accent-beige)]"
+                        : "text-[var(--andromeda-text-secondary)] hover:text-[var(--andromeda-text-primary)]"
+                    }`}
+                  >
+                    {view === "form" ? "Form" : "JSON"}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
-          <div className="rounded-xl overflow-hidden border border-white/10 light:border-black/10 text-[13px]">
+          {contentView === "form" &&
+            (canEditData ? (
+              <div className="p-4 rounded-xl border border-white/10 light:border-black/10 bg-[var(--andromeda-secondary)]">
+                <FormErrorBoundary resetKey={text} onShowJson={() => switchContentView("json")}>
+                  <SectionForms
+                    data={parsed.data as Record<string, unknown>}
+                    errors={validation.errors}
+                    acceptance={acceptance}
+                    onChange={updateData}
+                    onShowInJson={jumpToIssue}
+                  />
+                </FormErrorBoundary>
+              </div>
+            ) : (
+              <div role="alert" className="p-4 rounded-xl border border-[var(--andromeda-error)]/30 bg-[var(--andromeda-error)]/5 text-sm">
+                The JSON has a syntax error, so the form can&apos;t read it.{" "}
+                <button type="button" onClick={() => switchContentView("json")} className="underline hover:text-[var(--andromeda-accent-beige)]">
+                  Fix it in the JSON view
+                </button>
+                .
+              </div>
+            ))}
+          {/* Hidden, not unmounted, in Form view: keeps CodeMirror's undo history and cursor. */}
+          <div className={`${contentView === "json" ? "" : "hidden"} rounded-xl overflow-hidden border border-white/10 light:border-black/10 text-[13px]`}>
             <CodeMirror
               ref={editorRef}
               value={text}
@@ -695,7 +788,7 @@ export function ProposalEditor({ proposalId, initial, acceptance, clientLink }: 
             />
           </div>
 
-          <IssuesList parseError={parsed.error} errors={validation.errors} warnings={validation.warnings} onJump={jumpTo} />
+          <IssuesList parseError={parsed.error} errors={validation.errors} warnings={validation.warnings} onJump={jumpToIssue} />
           </div>
         </section>
 
@@ -762,45 +855,6 @@ function Banner({ tone, children }: { tone: "info" | "warn" | "error"; children:
       <AlertTriangle className={`w-4 h-4 mt-0.5 shrink-0 ${tone === "info" ? "text-[var(--andromeda-highlight)]" : tone === "warn" ? "text-amber-500" : "text-[var(--andromeda-error)]"}`} />
       <div>{children}</div>
     </div>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <p className="text-xs font-semibold uppercase tracking-wider text-[var(--andromeda-text-secondary)] mb-1.5">{label}</p>
-      {children}
-    </div>
-  );
-}
-
-function Toggle({
-  checked,
-  onChange,
-  on,
-  off,
-  disabled,
-}: {
-  checked: boolean;
-  onChange: (value: boolean) => void;
-  on: string;
-  off: string;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      disabled={disabled}
-      onClick={() => onChange(!checked)}
-      className="inline-flex items-center gap-2 text-sm disabled:opacity-50"
-    >
-      <span className={`relative w-9 h-5 rounded-full transition-colors ${checked ? "bg-[var(--andromeda-accent-beige)]" : "bg-white/15 light:bg-black/15"}`}>
-        <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-[var(--andromeda-primary)] transition-[left] ${checked ? "left-[18px]" : "left-0.5"}`} />
-      </span>
-      {checked ? on : off}
-    </button>
   );
 }
 
