@@ -1,5 +1,6 @@
 import {
   getAllAcceptances,
+  getAllAgreements,
   getAllCheckedAssetsByProposal,
   getAllProposals,
   getAllRevisionsByProposal,
@@ -9,6 +10,7 @@ import {
 import { proposalVersion } from "@/lib/proposal-version";
 import { resolveTrackerPhases } from "@/constants/tracker-templates";
 import type { ProposalAcceptance, PublishedRevision, TrackerMilestoneState } from "@/types/proposal";
+import type { AgreementRecord } from "@/types/agreement";
 import { UNAVAILABLE, type ChangeRequest, type DashboardRow, type LifecycleState, type Source } from "./admin-dashboard-types";
 
 export { UNAVAILABLE };
@@ -34,7 +36,8 @@ export function deriveRow(
   checkedAssetsSource: Source<Set<string> | undefined>,
   trackerSource: Source<TrackerMilestoneState[] | undefined>,
   now: Date,
-  revisionsSource: Source<Map<string, PublishedRevision> | undefined> = undefined
+  revisionsSource: Source<Map<string, PublishedRevision> | undefined> = undefined,
+  agreementSource: Source<AgreementRecord | undefined> = undefined
 ): DashboardRow {
   const responsesKnown = acceptanceSource !== UNAVAILABLE;
   const acceptance = responsesKnown ? acceptanceSource : undefined;
@@ -130,6 +133,12 @@ export function deriveRow(
     tracker,
     lastActivity,
     changeRequest,
+    agreement:
+      agreementSource === UNAVAILABLE
+        ? UNAVAILABLE
+        : agreementSource
+          ? { status: agreementSource.status, signedAt: agreementSource.providerSignature?.signedAt }
+          : null,
   };
 }
 
@@ -157,18 +166,19 @@ function pick<T>(source: Settled<Map<string, T>>, id: string): Source<T | undefi
 
 /** Throws if the Proposals tab itself can't be read — there's nothing to show without it. */
 export async function loadDashboard(now = new Date()): Promise<DashboardData> {
-  const [proposals, acceptances, assets, trackers, revisions] = await Promise.all([
+  const [proposals, acceptances, assets, trackers, revisions, agreements] = await Promise.all([
     getAllProposals(),
     settle("ProposalAcceptance", getAllAcceptances()),
     settle("ProposalAssets", getAllCheckedAssetsByProposal()),
     settle("ProjectTracker", readAllTrackerStatesByProposal()),
     settle("EngagementEvents", getAllRevisionsByProposal()),
+    settle("Agreements", getAllAgreements()),
   ]);
   const rows = proposals
     .map((record) =>
-      deriveRow(record, pick(acceptances, record.id), pick(assets, record.id), pick(trackers, record.id), now, pick(revisions, record.id))
+      deriveRow(record, pick(acceptances, record.id), pick(assets, record.id), pick(trackers, record.id), now, pick(revisions, record.id), pick(agreements, record.id))
     )
     .sort((a, b) => b.lastActivity.localeCompare(a.lastActivity));
-  const unavailable = [acceptances, assets, trackers, revisions].flatMap((source) => (source.ok ? [] : [source.tab]));
+  const unavailable = [acceptances, assets, trackers, revisions, agreements].flatMap((source) => (source.ok ? [] : [source.tab]));
   return { rows, unavailable };
 }

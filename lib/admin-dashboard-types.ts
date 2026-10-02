@@ -1,4 +1,5 @@
 import type { ProposalAcceptance, RevisionEmailStatus } from "@/types/proposal";
+import type { AgreementStatus } from "@/types/agreement";
 
 /**
  * Dashboard row types and the UNAVAILABLE marker, kept free of server imports
@@ -45,6 +46,8 @@ export interface DashboardRow {
   tracker: (ProgressCount & { unlocked: boolean }) | null | typeof UNAVAILABLE;
   /** ISO timestamp used for ordering (latest response, tracker update, or issue date). */
   lastActivity: string;
+  /** The agreement's state once accepted: null when none is prepared, `UNAVAILABLE` when unreadable. */
+  agreement: { status: AgreementStatus; signedAt?: string } | null | typeof UNAVAILABLE;
 }
 
 export interface ChangeRequest {

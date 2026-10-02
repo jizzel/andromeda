@@ -2,7 +2,7 @@
 
 import { Fragment, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, ChevronRight, ExternalLink, FileDown, MessageSquareDiff, PencilLine } from "lucide-react";
+import { AlertTriangle, ChevronRight, ExternalLink, FileDown, FileSignature, MessageSquareDiff, PencilLine } from "lucide-react";
 import { UNAVAILABLE, type DashboardRow, type LifecycleState } from "@/lib/admin-dashboard-types";
 import { formatDate } from "@/lib/dates";
 import { shortVersion } from "@/lib/proposal-version-label";
@@ -82,6 +82,7 @@ export function DashboardTable({ rows, siteUrl }: { rows: DashboardRow[]; siteUr
                   </span>
                 </div>
                 {row.termsChangedSinceAcceptance && <TermsChanged />}
+                {row.state === "accepted" && <AgreementBadge value={row.agreement} />}
                 {row.changeRequest && (
                   <RequestSnippet row={row} open={open} onToggle={() => toggle(row.id)} controlsId={`change-request-card-${row.id}`} className="mt-3 text-sm" />
                 )}
@@ -132,6 +133,7 @@ export function DashboardTable({ rows, siteUrl }: { rows: DashboardRow[]; siteUr
                       <td className="px-4 py-4">
                         <StatePill row={row} open={open} onToggle={() => toggle(row.id)} controlsId={`change-request-${row.id}`} />
                         {row.termsChangedSinceAcceptance && <TermsChanged />}
+                {row.state === "accepted" && <AgreementBadge value={row.agreement} />}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">
                         <OfferCell row={row} />
@@ -269,6 +271,12 @@ function RowActions({ row, siteUrl, ids }: { row: DashboardRow; siteUrl: string;
       <CopyButton value={`${siteUrl}/proposal/${row.id}`} label="Link" />
       <CopyButton value={row.accessCode} label="Code" />
       <DuplicateButton proposalId={row.id} existingIds={ids} />
+      {row.state === "accepted" && (
+        <Link href={`/admin/proposals/${encodeURIComponent(row.id)}/agreement`} className={actionClass}>
+          <FileSignature className="w-3.5 h-3.5" />
+          Agreement
+        </Link>
+      )}
       {row.state !== "draft" && (
         <a href={`/api/admin/proposals/${encodeURIComponent(row.id)}/pdf`} className={actionClass}>
           <FileDown className="w-3.5 h-3.5" />
@@ -391,4 +399,17 @@ function revisionStatus(request: NonNullable<DashboardRow["changeRequest"]>): st
   if (publication.email === "failed") return `Revision published ${when}, but the email failed — resend it from the editor.`;
   if (publication.email === "pending") return `Revision published ${when} — the client email is in progress.`;
   return `Revision published ${when} (client not emailed) — waiting for the client.`;
+}
+
+/** Where an accepted proposal's agreement stands. */
+function AgreementBadge({ value }: { value: DashboardRow["agreement"] }) {
+  const [label, tone] =
+    value === UNAVAILABLE
+      ? ["Agreement: unavailable", "text-[var(--andromeda-text-secondary)] bg-white/5"]
+      : !value
+        ? ["No agreement yet", "text-amber-500 bg-amber-500/10"]
+        : value.status === "provider_signed"
+          ? ["Agreement signed by you", "text-[var(--andromeda-success)] bg-[var(--andromeda-success)]/10"]
+          : ["Agreement draft", "text-[var(--andromeda-highlight)] bg-[var(--andromeda-highlight)]/10"];
+  return <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${tone}`}>{label}</span>;
 }
