@@ -2,12 +2,13 @@ import {
   getAllAcceptances,
   getAllCheckedAssetsByProposal,
   getAllProposals,
+  getAllRevisionsByProposal,
   readAllTrackerStatesByProposal,
   type ProposalRecord,
 } from "@/lib/google-sheets";
 import { proposalVersion } from "@/lib/proposal-version";
 import { resolveTrackerPhases } from "@/constants/tracker-templates";
-import type { ProposalAcceptance, TrackerMilestoneState } from "@/types/proposal";
+import type { ProposalAcceptance, PublishedRevision, TrackerMilestoneState } from "@/types/proposal";
 import { UNAVAILABLE, type ChangeRequest, type DashboardRow, type LifecycleState, type Source } from "./admin-dashboard-types";
 
 export { UNAVAILABLE };
@@ -32,7 +33,8 @@ export function deriveRow(
   acceptanceSource: Source<ProposalAcceptance | undefined>,
   checkedAssetsSource: Source<Set<string> | undefined>,
   trackerSource: Source<TrackerMilestoneState[] | undefined>,
-  now: Date
+  now: Date,
+  revisionsSource: Source<Map<string, PublishedRevision> | undefined> = undefined
 ): DashboardRow {
   const responsesKnown = acceptanceSource !== UNAVAILABLE;
   const acceptance = responsesKnown ? acceptanceSource : undefined;
@@ -104,6 +106,11 @@ export function deriveRow(
       planName: named((data as { paymentPlans?: unknown }).paymentPlans, acceptance.paymentPlanId),
       version: acceptance.proposalVersion,
       revised: state === "revised",
+      publication: (() => {
+        if (revisionsSource === UNAVAILABLE) return UNAVAILABLE;
+        const revision = revisionsSource?.get(currentVersion);
+        return revision ? { at: revision.publishedAt, email: revision.email.status, emailTo: revision.email.to } : null;
+      })(),
     };
   }
 
@@ -150,17 +157,18 @@ function pick<T>(source: Settled<Map<string, T>>, id: string): Source<T | undefi
 
 /** Throws if the Proposals tab itself can't be read — there's nothing to show without it. */
 export async function loadDashboard(now = new Date()): Promise<DashboardData> {
-  const [proposals, acceptances, assets, trackers] = await Promise.all([
+  const [proposals, acceptances, assets, trackers, revisions] = await Promise.all([
     getAllProposals(),
     settle("ProposalAcceptance", getAllAcceptances()),
     settle("ProposalAssets", getAllCheckedAssetsByProposal()),
     settle("ProjectTracker", readAllTrackerStatesByProposal()),
+    settle("EngagementEvents", getAllRevisionsByProposal()),
   ]);
   const rows = proposals
     .map((record) =>
-      deriveRow(record, pick(acceptances, record.id), pick(assets, record.id), pick(trackers, record.id), now)
+      deriveRow(record, pick(acceptances, record.id), pick(assets, record.id), pick(trackers, record.id), now, pick(revisions, record.id))
     )
     .sort((a, b) => b.lastActivity.localeCompare(a.lastActivity));
-  const unavailable = [acceptances, assets, trackers].flatMap((source) => (source.ok ? [] : [source.tab]));
+  const unavailable = [acceptances, assets, trackers, revisions].flatMap((source) => (source.ok ? [] : [source.tab]));
   return { rows, unavailable };
 }

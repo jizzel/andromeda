@@ -7,6 +7,7 @@ import {
   type ProposalResponseKind,
 } from "@/emails/ProposalResponseNotice";
 import { AdminSignInCodeEmail, AdminSignInNoticeEmail } from "@/emails/AdminSignIn";
+import { ProposalRevisedEmail } from "@/emails/ProposalRevised";
 import { profile } from "@/constants/profile";
 
 interface SendMilestoneEmailArgs {
@@ -228,4 +229,74 @@ export async function sendAdminSignInNotice(args: { signedInAt: string; ip: stri
     react: AdminSignInNoticeEmail({ recipientName: profile.firstName, ...args }),
   });
   if (result.error) throw new Error(`Resend send failed: ${result.error.message}`);
+}
+
+/**
+ * Resend refused the send because an earlier request with the same
+ * idempotency key was already accepted (or is in flight): the email went out
+ * (or is going out) once already — don't count it as a failure to retry.
+ */
+export class DuplicateEmailError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "DuplicateEmailError";
+  }
+}
+
+interface SendProposalRevisedArgs {
+  /** The proposal's `client.email` — always from the saved data, never from a request. */
+  to: string;
+  clientName: string;
+  proposalId: string;
+  projectTitle: string;
+  note?: string;
+  expiryDate: string;
+  /** Stable per send attempt; Resend drops a repeat of a key it has already accepted (24 h). */
+  idempotencyKey: string;
+}
+
+/** Tells the client a revised proposal is ready (Phase C "Publish revision"). */
+export async function sendProposalRevised(args: SendProposalRevisedArgs): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.NOTIFICATION_FROM_EMAIL;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+
+  if (!apiKey || !from || !siteUrl) {
+    throw new Error("Missing RESEND_API_KEY, NOTIFICATION_FROM_EMAIL, or NEXT_PUBLIC_SITE_URL env vars");
+  }
+
+  const resend = new Resend(apiKey);
+  const proposalUrl = `${siteUrl.replace(/\/$/, "")}/proposal/${args.proposalId}`;
+  const validUntil = new Date(`${args.expiryDate}T00:00:00Z`).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+
+  const result = await resend.emails.send(
+    {
+      from,
+      to: args.to,
+      replyTo: profile.email,
+      subject: `${args.projectTitle} — revised proposal ready`,
+      react: ProposalRevisedEmail({
+        clientName: args.clientName,
+        projectTitle: args.projectTitle,
+        note: args.note,
+        validUntil,
+        proposalUrl,
+        senderName: profile.name,
+      }),
+    },
+    { idempotencyKey: args.idempotencyKey }
+  );
+
+  if (result.error) {
+    // Same key as an accepted (or in-flight) request: that one is the email.
+    if (result.error.name === "invalid_idempotent_request" || result.error.name === "concurrent_idempotent_requests") {
+      throw new DuplicateEmailError(`Resend already has this email from an earlier attempt (${result.error.message})`);
+    }
+    throw new Error(`Resend send failed: ${result.error.message}`);
+  }
 }

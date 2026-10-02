@@ -281,6 +281,9 @@ export type _SocialMatchesType = Assert<Equals<z.infer<typeof socialProposalSche
 /** Sheets rejects cells over 50,000 characters; keep headroom for the `data` cell. */
 export const MAX_PROPOSAL_JSON_CHARS = 49_000;
 
+/** Limit on the "what changed" note sent with a published revision. */
+export const MAX_REVISION_NOTE_CHARS = 1000;
+
 /** Keys from older proposal formats that the pages no longer read. */
 const LEGACY_KEYS = new Set(["id", "pdfUrl", "validityDays", "nextSteps"]);
 

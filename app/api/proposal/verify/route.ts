@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyEngagementAccess } from "@/lib/google-sheets";
+import { getPublishedRevision, verifyEngagementAccess } from "@/lib/google-sheets";
 import type { VerifyAccessResponse } from "@/types/proposal";
 import { proposalVersion } from "@/lib/proposal-version";
 
@@ -33,11 +33,17 @@ export async function POST(request: NextRequest): Promise<NextResponse<VerifyAcc
       );
     }
 
+    const version = result.proposal ? proposalVersion(result.proposal) : undefined;
+    // Only a revision published for exactly these terms: an edit after
+    // publishing (a new version) drops the notice until it's published too.
+    const revision = version ? await getPublishedRevision(proposalId, version) : null;
+
     return NextResponse.json({
       success: true,
       proposal: result.proposal,
       expiryDate: result.expiryDate,
-      proposalVersion: result.proposal ? proposalVersion(result.proposal) : undefined,
+      proposalVersion: version,
+      ...(revision && { revision: { publishedAt: revision.publishedAt, note: revision.note } }),
     });
   } catch (error) {
     console.error("Error in proposal verify API:", error);

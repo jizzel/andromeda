@@ -1,4 +1,4 @@
-import type { ProposalAcceptance } from "@/types/proposal";
+import type { ProposalAcceptance, RevisionEmailStatus } from "@/types/proposal";
 
 /**
  * Dashboard row types and the UNAVAILABLE marker, kept free of server imports
@@ -58,5 +58,11 @@ export interface ChangeRequest {
   version?: string;
   /** True once the proposal has been revised since the request (versions differ). */
   revised: boolean;
+  /**
+   * Whether the current version was published as a revision (admin "Publish
+   * revision") and how its email went. Only meaningful when `revised`; null
+   * when saved but not published, `UNAVAILABLE` when the log can't be read.
+   */
+  publication: { at: string; email: RevisionEmailStatus; emailTo?: string } | null | typeof UNAVAILABLE;
 }
 

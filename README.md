@@ -74,7 +74,7 @@ proxy.ts                        # CSP + security headers (replaces middleware.ts
 - **Proposal acceptance** — Clients accept as presented or request changes; recorded in the `ProposalAcceptance` sheet tab. A change request leads to a revised proposal the client then accepts.
 - **Proposal versions** — Every response is pinned to a SHA-256 of the proposal terms, with the exact terms kept in `ProposalSnapshots`. A page left open across an edit can't submit stale terms.
 - **PDF export** — "Download PDF" renders the live proposal components with headless Chromium (`@sparticuz/chromium` on Vercel); "Print / Save as PDF" is the browser fallback.
-- **Admin dashboard** — `/admin`, signed in with a one-time code emailed to the site owner. Overview of every proposal's lifecycle state, response, version drift, asset and tracker progress, plus an editor: validated JSON (zod schemas mirroring the types), live preview, conflict detection against direct sheet edits, and duplication.
+- **Admin dashboard** — `/admin`, signed in with a one-time code emailed to the site owner. Overview of every proposal's lifecycle state, response, version drift, asset and tracker progress, plus an editor: validated JSON (zod schemas mirroring the types), live preview, conflict detection against direct sheet edits, duplication, structured forms for packages / payment plans / timeline, and **Publish revision** (records the revision, optionally extends the offer, emails the client a "revised proposal ready" link with a note; the client page shows a "Revised on …" notice).
 - **Asset checklist** — Post-acceptance content gathering at `/proposal/[id]/assets`, with required / recommended / optional priorities and live progress sync.
 - **Project tracker** — Live status timeline at `/proposal/[id]/tracker` with phases, milestones, dates, and notes. Composable templates with per-proposal additions.
 - **Client milestone approvals** — Clients can self-approve specific milestones (e.g. "Final approval") from the tracker; sends Joseph an email confirmation.
@@ -139,6 +139,7 @@ All tabs live in the `GOOGLE_PROPOSALS_SHEET_ID` spreadsheet; the service accoun
 | `ProposalSnapshots` | `proposalId \| proposalVersion \| capturedAt \| reason \| data` (data continues across columns F–Z for large proposals) | automatically on first use |
 | `AdminSignIns` | `nonce \| at \| event \| ip \| userAgent` (append-only sign-in log) | automatically on first use |
 | `SheetLocks` | `key \| token \| at \| event` (append-only lock log for admin saves) | automatically on first use |
+| `EngagementEvents` | `proposalId \| at \| event \| proposalVersion \| detail \| ip \| userAgent` (append-only engagement log: published revisions and their client emails) | automatically on first use |
 
 The profile vars are validated at module load (`constants/profile.ts`) — the build fails loudly rather than rendering with blanks. Without the Sheets/email vars, proposal verification and sheet-based posts silently return empty; the site still boots.
 
