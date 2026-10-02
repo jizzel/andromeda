@@ -55,7 +55,8 @@ export interface ProposalPackage {
 export interface PaymentMilestone {
   milestone: string;
   percentage: string | null;
-  amount: string;
+  /** `null` when the milestone is described by `percentage` alone (e.g. N'Joy's plans). */
+  amount: string | null;
 }
 
 export interface ProposalPaymentPlan {
@@ -242,7 +243,8 @@ export interface ProposalData {
   client: ProposalClient;
   title: string;
   subtitle: string;
-  issuedAt: string;
+  /** Shown as "Prepared on …" in the hero; older proposals don't have it. */
+  issuedAt?: string;
   totalDuration?: string;
   heroImage: string;
   contactEmail: string;

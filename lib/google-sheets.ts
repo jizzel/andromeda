@@ -1,3 +1,4 @@
+import { createHash, randomBytes } from "crypto";
 import { google } from "googleapis";
 import { unstable_cache } from "next/cache";
 import type {
@@ -180,6 +181,167 @@ export async function getProposalById(
   proposalId: string
 ): Promise<ProposalRecord | null> {
   return findAccessGatedRecordById<ProposalData>(SHEET_NAME, proposalId);
+}
+
+// --- Admin editing of Proposals rows ----------------------------------------
+// Writes are guarded by a hash of the row's raw cells as last read: if the row
+// changed since (e.g. edited directly on the sheet while the editor was open),
+// the save is refused instead of silently overwriting it.
+
+export interface ProposalRowInput {
+  accessCode: string;
+  expiryDate: string;
+  isActive: boolean;
+  /** Serialised `data` JSON, written verbatim to column E. */
+  dataJson: string;
+}
+
+export interface ProposalRowForEdit {
+  record: ProposalRecord;
+  /** SHA-256 of the raw A–E cells — pass back as `expectedRowHash` when saving. */
+  rowHash: string;
+}
+
+function hashRawRow(cells: unknown[]): string {
+  const normalised = [0, 1, 2, 3, 4].map((i) => String(cells[i] ?? ""));
+  return createHash("sha256").update(JSON.stringify(normalised)).digest("hex");
+}
+
+async function readRawProposalRows(): Promise<string[][]> {
+  const sheets = getGoogleSheetsClient();
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${SHEET_NAME}!A2:E`,
+  });
+  return (response.data.values || []) as string[][];
+}
+
+function rawRowToRecord(row: string[]): ProposalRecord | null {
+  try {
+    return {
+      id: row[COLUMNS.ID]?.trim(),
+      accessCode: row[COLUMNS.ACCESS_CODE]?.trim() ?? "",
+      expiryDate: row[COLUMNS.EXPIRY_DATE]?.trim() ?? "",
+      isActive: row[COLUMNS.IS_ACTIVE]?.trim().toLowerCase() === "true",
+      data: JSON.parse(row[COLUMNS.DATA]) as ProposalData,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** The row plus its hash, or null if the id doesn't exist (or its JSON is unreadable). */
+export async function getProposalRowForEdit(proposalId: string): Promise<ProposalRowForEdit | null> {
+  const row = (await readRawProposalRows()).find((r) => r[COLUMNS.ID]?.trim() === proposalId);
+  if (!row) return null;
+  const record = rawRowToRecord(row);
+  return record ? { record, rowHash: hashRawRow(row) } : null;
+}
+
+export type ProposalRowUpdate<R = never> =
+  | { status: "saved"; rowHash: string }
+  | { status: "conflict"; current: ProposalRowForEdit | null }
+  | { status: "rejected"; reason: R }
+  | { status: "not_found" }
+  | { status: "busy" };
+
+/**
+ * The lock every check-and-write on a proposal's terms or its client response
+ * takes (admin saves, duplication into the id, client acceptance), so those
+ * can't interleave: whichever runs second sees what the first wrote.
+ */
+export function withProposalLock<T>(proposalId: string, fn: (lock: SheetLock) => Promise<T>, options?: { attempts?: number }) {
+  return withSheetLock(`proposal:${proposalId}`, fn, options);
+}
+
+/**
+ * Overwrites A–E for `proposalId` only if the row still hashes to
+ * `expectedRowHash` and `guard` (given the current row) returns null. Runs
+ * under the proposal lock, so the checks and the write are atomic with respect
+ * to every other app save and to client responses: two saves from the same
+ * starting version can't both win, and an acceptance can't slip in between
+ * the guard's checks and the write. (Hand edits on the sheet can't take the
+ * lock; they're caught by the hash check.)
+ */
+export async function updateProposalRow<R = never>(
+  proposalId: string,
+  expectedRowHash: string,
+  input: ProposalRowInput,
+  guard?: (current: ProposalRowForEdit) => Promise<R | null>
+): Promise<ProposalRowUpdate<R>> {
+  const locked = await withProposalLock(proposalId, (lock) =>
+    writeProposalRowIfUnchanged(lock, proposalId, expectedRowHash, input, guard)
+  );
+  return locked.status === "busy" ? { status: "busy" } : locked.value;
+}
+
+async function writeProposalRowIfUnchanged<R>(
+  lock: SheetLock,
+  proposalId: string,
+  expectedRowHash: string,
+  input: ProposalRowInput,
+  guard?: (current: ProposalRowForEdit) => Promise<R | null>
+): Promise<Exclude<ProposalRowUpdate<R>, { status: "busy" }>> {
+  const rows = await readRawProposalRows();
+  const index = rows.findIndex((r) => r[COLUMNS.ID]?.trim() === proposalId);
+  if (index === -1) return { status: "not_found" };
+  const record = rawRowToRecord(rows[index]);
+  const rowHash = hashRawRow(rows[index]);
+  // Stale editor first: no point running checks for a save that would be refused.
+  if (rowHash !== expectedRowHash) return { status: "conflict", current: record ? { record, rowHash } : null };
+  if (!record) return { status: "not_found" };
+  if (guard) {
+    const reason = await guard({ record, rowHash });
+    if (reason !== null) return { status: "rejected", reason };
+  }
+
+  const cells = [proposalId, input.accessCode, input.expiryDate, input.isActive ? "TRUE" : "FALSE", input.dataJson];
+  const sheetRow = index + 2;
+  const sheets = getGoogleSheetsClient();
+  lock.assertHeld();
+  await sheets.spreadsheets.values.update(
+    {
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${SHEET_NAME}!A${sheetRow}:E${sheetRow}`,
+      valueInputOption: "RAW",
+      requestBody: { values: [cells] },
+    },
+    lock.requestOptions
+  );
+  return { status: "saved", rowHash: hashRawRow(cells) };
+}
+
+/** Adds a new proposal row. Refuses ids that already exist (atomically, under the id's lock). */
+export async function appendProposalRow(
+  proposalId: string,
+  input: ProposalRowInput
+): Promise<{ status: "created" } | { status: "exists" } | { status: "busy" }> {
+  const locked = await withProposalLock(proposalId, (lock) => appendProposalRowIfAbsent(lock, proposalId, input));
+  return locked.status === "busy" ? { status: "busy" } : locked.value;
+}
+
+async function appendProposalRowIfAbsent(
+  lock: SheetLock,
+  proposalId: string,
+  input: ProposalRowInput
+): Promise<{ status: "created" } | { status: "exists" }> {
+  const rows = await readRawProposalRows();
+  if (rows.some((r) => r[COLUMNS.ID]?.trim() === proposalId)) return { status: "exists" };
+  const sheets = getGoogleSheetsClient();
+  lock.assertHeld();
+  await sheets.spreadsheets.values.append(
+    {
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${SHEET_NAME}!A:E`,
+      valueInputOption: "RAW",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: {
+        values: [[proposalId, input.accessCode, input.expiryDate, input.isActive ? "TRUE" : "FALSE", input.dataJson]],
+      },
+    },
+    lock.requestOptions
+  );
+  return { status: "created" };
 }
 
 /**
@@ -435,17 +597,25 @@ export async function setAssetItemChecked(
 
 // ProposalAcceptance sheet columns: A:proposalId | B:status | C:counterNote | D:acceptedAt | E:packageId | F:paymentPlanId | G:proposalVersion
 
+/** The proposal's response, or null if it has none. Throws if the tab can't be read. */
+export async function readProposalAcceptance(proposalId: string): Promise<ProposalAcceptance | null> {
+  const sheets = getGoogleSheetsClient();
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${ACCEPTANCE_SHEET_NAME}!A2:G`,
+  });
+  const row = (response.data.values || []).find((r) => r[0]?.trim() === proposalId);
+  return row ? rowToAcceptance(row) : null;
+}
+
+/**
+ * Lenient variant for client-facing pages: a failed read is treated as "no
+ * response yet". Don't use it where the answer gates a decision (e.g. the admin
+ * save's accepted-terms check) — use `readProposalAcceptance`.
+ */
 export async function getProposalAcceptance(proposalId: string): Promise<ProposalAcceptance | null> {
   try {
-    const sheets = getGoogleSheetsClient();
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${ACCEPTANCE_SHEET_NAME}!A2:G`,
-    });
-    const rows = response.data.values || [];
-    const row = rows.find((r) => r[0]?.trim() === proposalId);
-    if (!row) return null;
-    return rowToAcceptance(row);
+    return await readProposalAcceptance(proposalId);
   } catch (error) {
     console.error("Failed to fetch proposal acceptance:", error);
     return null;
@@ -483,9 +653,11 @@ export async function getAllAcceptances(): Promise<Map<string, ProposalAcceptanc
 
 const acceptanceSheetIdCache = { value: null as number | null };
 
+/** Under `withProposalLock`, pass the lock so the write is deadline-checked. */
 export async function setProposalAcceptance(
   proposalId: string,
-  acceptance: Omit<ProposalAcceptance, "acceptedAt">
+  acceptance: Omit<ProposalAcceptance, "acceptedAt">,
+  lock?: SheetLock
 ): Promise<void> {
   const sheets = getGoogleSheetsClient();
   const acceptedAt = new Date().toISOString();
@@ -507,21 +679,28 @@ export async function setProposalAcceptance(
   const rows = response.data.values || [];
   const rowIndex = rows.findIndex((r) => r[0]?.trim() === proposalId);
 
+  lock?.assertHeld();
   if (rowIndex === -1) {
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${ACCEPTANCE_SHEET_NAME}!A:G`,
-      valueInputOption: "RAW",
-      requestBody: { values: [row] },
-    });
+    await sheets.spreadsheets.values.append(
+      {
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${ACCEPTANCE_SHEET_NAME}!A:G`,
+        valueInputOption: "RAW",
+        requestBody: { values: [row] },
+      },
+      lock?.requestOptions
+    );
   } else {
     const sheetRow = rowIndex + 2;
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${ACCEPTANCE_SHEET_NAME}!A${sheetRow}:G${sheetRow}`,
-      valueInputOption: "RAW",
-      requestBody: { values: [row] },
-    });
+    await sheets.spreadsheets.values.update(
+      {
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${ACCEPTANCE_SHEET_NAME}!A${sheetRow}:G${sheetRow}`,
+        valueInputOption: "RAW",
+        requestBody: { values: [row] },
+      },
+      lock?.requestOptions
+    );
   }
 }
 
@@ -563,6 +742,127 @@ async function ensureTab(
   ensuredTabs.add(title);
 }
 
+// Sheet locks — "SheetLocks" tab, append-only event log.
+// Columns: A:key | B:token | C:at | D:event (acquire | release)
+//
+// A mutex for read-check-write sequences across server instances, built the
+// same way as the sign-in ledger: Sheets serialises appends, so the order of
+// `acquire` rows is a total order. The holder is the earliest acquire for the
+// key that hasn't been released and is within its lease. Each caller appends
+// its acquire, reads the log, and proceeds only if it is the holder;
+// otherwise it releases its own row and reports `busy`. The lease bounds how
+// long a crashed instance can block others.
+//
+// Sheets has no conditional write, so the sheet can't refuse a write from a
+// holder whose lease has run out. Instead the holder never *starts* a write it
+// can't finish in time: `lock.assertHeld()` before each write refuses once the
+// safe window has passed (measured from before the acquire was appended, so it
+// errs early), and writes under the lock carry `lock.requestOptions`, a client
+// timeout that abandons a slow call instead of letting it land late. The
+// margins cover that timeout plus clock skew between instances (the lease is
+// judged against each reader's clock). Residual risk: a write that reaches
+// Google just before its timeout and is applied more than ~20 s late — ruling
+// that out needs a store with compare-and-swap. Normal holds take seconds.
+const LOCK_SHEET_NAME = "SheetLocks";
+const LOCK_HEADERS = ["key", "token", "at", "event"];
+const LOCK_LEASE_MS = 60_000;
+const LOCK_WRITE_TIMEOUT_MS = 10_000;
+const LOCK_CLOCK_SKEW_MS = 10_000;
+const LOCK_SAFE_MS = LOCK_LEASE_MS - LOCK_WRITE_TIMEOUT_MS - LOCK_CLOCK_SKEW_MS;
+
+/** Thrown by `assertHeld()` once the holder can no longer safely write. */
+export class SheetLockExpiredError extends Error {
+  constructor(key: string) {
+    super(`Sheet lock ${key} is past its safe window; refusing to write`);
+    this.name = "SheetLockExpiredError";
+  }
+}
+
+/** Handed to the critical section of `withSheetLock`. */
+export interface SheetLock {
+  /** Call immediately before each write; throws `SheetLockExpiredError` when out of time. */
+  assertHeld(): void;
+  /** googleapis per-request options for writes made under the lock. */
+  readonly requestOptions: { timeout: number };
+}
+
+async function appendLockEvent(key: string, token: string, event: "acquire" | "release"): Promise<void> {
+  const sheets = getGoogleSheetsClient();
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${LOCK_SHEET_NAME}!A:D`,
+    valueInputOption: "RAW",
+    insertDataOption: "INSERT_ROWS",
+    requestBody: { values: [[key, token, new Date().toISOString(), event]] },
+  });
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Runs `fn` while holding `key`. `busy` means another holder had it (after
+ * `attempts` tries, spaced 0.5–1.5 s apart) or `fn` ran out of time before a
+ * write — either way nothing was written past that point.
+ */
+export async function withSheetLock<T>(
+  key: string,
+  fn: (lock: SheetLock) => Promise<T>,
+  { attempts = 1 }: { attempts?: number } = {}
+): Promise<{ status: "ok"; value: T } | { status: "busy" }> {
+  for (let attempt = 1; ; attempt++) {
+    const result = await tryWithSheetLock(key, fn);
+    if (result !== "contended") return result;
+    if (attempt >= attempts) return { status: "busy" };
+    await sleep(500 + Math.random() * 1000);
+  }
+}
+
+async function tryWithSheetLock<T>(
+  key: string,
+  fn: (lock: SheetLock) => Promise<T>
+): Promise<{ status: "ok"; value: T } | { status: "busy" } | "contended"> {
+  const sheets = getGoogleSheetsClient();
+  await ensureTab(sheets, LOCK_SHEET_NAME, LOCK_HEADERS);
+  const token = randomBytes(12).toString("base64url");
+  const deadline = Date.now() + LOCK_SAFE_MS;
+  await appendLockEvent(key, token, "acquire");
+
+  try {
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${LOCK_SHEET_NAME}!A2:D`,
+    });
+    const events = (response.data.values || []).filter((r) => r[0]?.trim() === key);
+    const released = new Set(events.filter((r) => r[3]?.trim() === "release").map((r) => r[1]?.trim()));
+    const now = Date.now();
+    const holder = events.find(
+      (r) =>
+        r[3]?.trim() === "acquire" &&
+        !released.has(r[1]?.trim()) &&
+        now - new Date(r[2]).getTime() < LOCK_LEASE_MS
+    );
+    if (holder?.[1]?.trim() !== token) return "contended";
+    const lock: SheetLock = {
+      assertHeld() {
+        if (Date.now() >= deadline) throw new SheetLockExpiredError(key);
+      },
+      requestOptions: { timeout: LOCK_WRITE_TIMEOUT_MS },
+    };
+    try {
+      return { status: "ok", value: await fn(lock) };
+    } catch (error) {
+      if (!(error instanceof SheetLockExpiredError)) throw error;
+      console.warn(error.message);
+      return { status: "busy" };
+    }
+  } finally {
+    // Release whether we held it or not — a losing acquire must not block others.
+    await appendLockEvent(key, token, "release").catch((error) =>
+      console.error(`Failed to release sheet lock ${key} (expires with its lease):`, error)
+    );
+  }
+}
+
 // Proposal snapshots — "ProposalSnapshots" tab, append-only.
 // Columns: A:proposalId | B:proposalVersion | C:capturedAt | D:reason | E…Z:data
 // One row per (proposalId, proposalVersion): the exact terms a response was made against.
@@ -589,7 +889,8 @@ export async function saveProposalSnapshot(
   proposalId: string,
   proposalVersion: string,
   reason: SnapshotReason,
-  canonicalJson: string
+  canonicalJson: string,
+  lock?: SheetLock
 ): Promise<SnapshotResult> {
   const sheets = getGoogleSheetsClient();
   await ensureTab(sheets, SNAPSHOT_SHEET_NAME, SNAPSHOT_HEADERS);
@@ -610,12 +911,16 @@ export async function saveProposalSnapshot(
     result = "too_large";
   }
 
-  await sheets.spreadsheets.values.append({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${SNAPSHOT_SHEET_NAME}!A:Z`,
-    valueInputOption: "RAW",
-    requestBody: { values: [[proposalId, proposalVersion, new Date().toISOString(), reason, ...parts]] },
-  });
+  lock?.assertHeld();
+  await sheets.spreadsheets.values.append(
+    {
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${SNAPSHOT_SHEET_NAME}!A:Z`,
+      valueInputOption: "RAW",
+      requestBody: { values: [[proposalId, proposalVersion, new Date().toISOString(), reason, ...parts]] },
+    },
+    lock?.requestOptions
+  );
   return result;
 }
 

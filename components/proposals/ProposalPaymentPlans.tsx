@@ -9,7 +9,7 @@ import { useProposalDocument } from "./ProposalDocumentContext";
 interface PaymentStructure {
   milestone: string;
   percentage: string | null;
-  amount: string;
+  amount: string | null;
 }
 
 interface PaymentPlan {

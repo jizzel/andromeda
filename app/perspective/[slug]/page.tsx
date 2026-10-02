@@ -141,7 +141,7 @@ export default async function PostPage({ params }: PostPageProps) {
 
           {/* Content */}
           <div className="max-w-none">
-            {post.content && await MDXContent({ content: post.content })}
+            {post.content && (await MDXContent({ content: post.content }))}
           </div>
 
           {/* Related Posts */}
