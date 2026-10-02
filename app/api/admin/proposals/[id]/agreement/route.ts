@@ -76,6 +76,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
       templateHash: template.hash,
       proposalVersion: basis.acceptance.proposalVersion,
       selection: selectionOf(basis.acceptance),
+      acceptedAt: basis.acceptance.acceptedAt,
       provider: resolveProvider(contractAs),
       specialTerms,
       offerValidUntil,
@@ -88,17 +89,19 @@ export async function PUT(request: NextRequest, { params }: Params) {
       // The signed document must survive its replacement: make sure its
       // snapshot exists (signing writes it; this covers a record signed
       // before snapshots, or a lost write) before the record is overwritten.
-      if (!(await readAgreementSnapshot(id, current.agreementHash))) {
+      // This exact signature (hash + signedAt): the same content may have been signed before.
+      const signedAt = current.providerSignature?.signedAt ?? current.updatedAt;
+      if (!(await readAgreementSnapshot(id, current.agreementHash, signedAt))) {
         const pinned = loadTemplate(current.templateId, current.templateVersion);
         const text = pinned && pinned.hash === current.templateHash ? pinned.raw : "";
-        await saveAgreementSnapshot(id, current.agreementHash, "provider_signed", agreementSnapshotJson(current, clientNameOf(basis.snapshot), text), lock);
+        await saveAgreementSnapshot(id, current.agreementHash, signedAt, "provider_signed", agreementSnapshotJson(current, clientNameOf(basis.snapshot), text), lock);
       }
       await appendEngagementEvent(
         {
           proposalId: id,
           event: "agreement_signature_voided",
           proposalVersion: current.proposalVersion,
-          detail: { voidedHash: current.agreementHash, signedAt: current.providerSignature?.signedAt, snapshot: current.agreementHash },
+          detail: { voidedHash: current.agreementHash, signedAt, snapshot: { agreementHash: current.agreementHash, signedAt } },
           ...meta,
         },
         lock

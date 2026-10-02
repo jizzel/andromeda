@@ -40,6 +40,9 @@ export async function POST(request: NextRequest, { params }: Params) {
     if (basis.acceptance.proposalVersion !== record.proposalVersion) return { kind: "stale" } as const;
     // The chosen package / plan are part of what's signed: a corrected acceptance must be reviewed first.
     if (!sameSelection(record.selection ?? {}, selectionOf(basis.acceptance))) return { kind: "stale_selection" } as const;
+    // The acceptance date is shown in Schedule 2 and signed: it must be pinned
+    // (older drafts: re-save) and still match the acceptance.
+    if (!record.acceptedAt || record.acceptedAt !== basis.acceptance.acceptedAt) return { kind: "stale_acceptance" } as const;
     const template = loadTemplate(record.templateId, record.templateVersion);
     if (!template || template.hash !== record.templateHash) return { kind: "template_changed" } as const;
     const recomputed = agreementHash({ ...record, clientName: clientNameOf(basis.snapshot) });
@@ -55,7 +58,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     // Evidence first: the immutable copy is stored before the signed record,
     // and if it can't be, nothing is signed.
     try {
-      await saveAgreementSnapshot(id, recomputed, "provider_signed", agreementSnapshotJson(signed, clientNameOf(basis.snapshot), template.raw), lock);
+      await saveAgreementSnapshot(id, recomputed, signedAt, "provider_signed", agreementSnapshotJson(signed, clientNameOf(basis.snapshot), template.raw), lock);
     } catch (error) {
       if (error instanceof SheetLockExpiredError) throw error;
       console.error(`Agreement snapshot for ${id}@${recomputed} failed:`, error);
@@ -67,7 +70,7 @@ export async function POST(request: NextRequest, { params }: Params) {
         proposalId: id,
         event: "agreement_provider_signed",
         proposalVersion: record.proposalVersion,
-        detail: { agreementHash: recomputed, snapshot: recomputed, selection: record.selection, templateHash: record.templateHash, template: `${record.templateId}@${record.templateVersion}`, typedName: typedName.trim(), offerValidUntil: record.offerValidUntil },
+        detail: { agreementHash: recomputed, snapshot: { agreementHash: recomputed, signedAt }, selection: record.selection, templateHash: record.templateHash, template: `${record.templateId}@${record.templateVersion}`, typedName: typedName.trim(), offerValidUntil: record.offerValidUntil },
         ...meta,
       },
       lock
@@ -94,6 +97,8 @@ export async function POST(request: NextRequest, { params }: Params) {
       return json({ success: false, code: "stale", error: "The agreement changed since you previewed it. Reload and review before signing." }, 409);
     case "stale_selection":
       return json({ success: false, code: "stale", error: "The client's recorded package or payment plan changed since this agreement was prepared. Save the draft again to review it, then sign." }, 409);
+    case "stale_acceptance":
+      return json({ success: false, code: "stale", error: "The acceptance date isn't pinned in this agreement, or it changed since the agreement was prepared. Save the draft again to review it, then sign." }, 409);
     case "snapshot_failed":
       return json({ success: false, code: "snapshot_failed", error: "Couldn't store the signed copy, so nothing was signed. Try again." }, 503);
     default:

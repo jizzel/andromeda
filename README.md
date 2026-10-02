@@ -140,8 +140,8 @@ All tabs live in the `GOOGLE_PROPOSALS_SHEET_ID` spreadsheet; the service accoun
 | `ProposalSnapshots` | `proposalId \| proposalVersion \| capturedAt \| reason \| data` (data continues across columns F–Z for large proposals) | automatically on first use |
 | `AdminSignIns` | `nonce \| at \| event \| ip \| userAgent` (append-only sign-in log) | automatically on first use |
 | `SheetLocks` | `key \| token \| at \| event` (append-only lock log for admin saves) | automatically on first use |
-| `Agreements` | `proposalId \| status \| templateId \| templateVersion \| templateHash \| proposalVersion \| provider \| specialTerms \| offerValidUntil \| agreementHash \| providerSignature \| updatedAt \| selection` (one row per proposal) | automatically on first use |
-| `AgreementSnapshots` | `proposalId \| agreementHash \| capturedAt \| reason \| data` (append-only; the full signed agreement + terms text, chunked across E–Z) | automatically on first use |
+| `Agreements` | `proposalId \| status \| templateId \| templateVersion \| templateHash \| proposalVersion \| provider \| specialTerms \| offerValidUntil \| agreementHash \| providerSignature \| updatedAt \| selection \| clientName (reserved) \| acceptedAt` (one row per proposal) | automatically on first use |
+| `AgreementSnapshots` | `proposalId \| agreementHash \| capturedAt \| reason \| data` (append-only; one row per signing — hash + signedAt in C — with the full signed agreement + terms text, chunked across E–Z) | automatically on first use |
 | `EngagementEvents` | `proposalId \| at \| event \| proposalVersion \| detail \| ip \| userAgent` (append-only engagement log: published revisions and their client emails) | automatically on first use |
 
 The profile vars are validated at module load (`constants/profile.ts`) — the build fails loudly rather than rendering with blanks. Without the Sheets/email vars, proposal verification and sheet-based posts silently return empty; the site still boots.

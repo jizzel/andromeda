@@ -31,7 +31,7 @@ function sortKeysDeep(value: unknown): unknown {
 
 export type AgreementHashInput = Pick<
   AgreementRecord,
-  "proposalId" | "templateId" | "templateVersion" | "templateHash" | "proposalVersion" | "selection" | "provider" | "specialTerms" | "offerValidUntil"
+  "proposalId" | "templateId" | "templateVersion" | "templateHash" | "proposalVersion" | "selection" | "acceptedAt" | "provider" | "specialTerms" | "offerValidUntil"
 > & { clientName: string };
 
 /**
@@ -49,6 +49,9 @@ export function agreementHash(input: AgreementHashInput): string {
       proposalVersion: input.proposalVersion,
       // The version fixes the options offered; the selection fixes which ones the client took.
       selection: { packageId: input.selection?.packageId ?? null, paymentPlanId: input.selection?.paymentPlanId ?? null },
+      // Only when pinned: records prepared before it keep their original hash
+      // (an absent key serialises to nothing).
+      ...(input.acceptedAt && { acceptedAt: input.acceptedAt }),
       provider: input.provider,
       specialTerms: input.specialTerms.map(({ clause, text }) => ({ clause, text })),
       offerValidUntil: input.offerValidUntil,

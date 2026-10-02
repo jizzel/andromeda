@@ -58,6 +58,12 @@ export interface AgreementRecord {
   proposalVersion: string;
   /** Which of the version's packages / payment plans the client chose (Schedule 2). */
   selection: AgreementSelection;
+  /**
+   * When the client accepted, pinned from the acceptance at prepare time
+   * (shown in Schedule 2, part of the hash). Absent on records prepared
+   * before it was pinned: those must be re-saved before signing.
+   */
+  acceptedAt?: string;
   provider: ProviderIdentity;
   specialTerms: SpecialTerm[];
   /** YYYY-MM-DD: how long the provider-signed offer stays open for the client. */
