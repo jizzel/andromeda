@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import matter from "gray-matter";
 import type { ProviderIdentity } from "@/types/agreement";
+import { providerAffiliation } from "@/lib/agreements";
 
 /**
  * Agreement templates, versioned in the repo under `content/agreements/`.
@@ -14,8 +15,17 @@ import type { ProviderIdentity } from "@/types/agreement";
 
 const DIR = path.join(process.cwd(), "content/agreements");
 
-/** Every published template version. Add an entry (and a new file) for v2. */
-const REGISTRY = [{ id: "general-service-agreement", version: 1, file: "general-service-agreement-v1.md" }] as const;
+/**
+ * Every published template version. Add an entry (and a new file) for v2.
+ * `declaration` names the paragraph the client confirms when signing (the
+ * acceptance declaration, shown verbatim beside "Accept and Sign Agreement").
+ */
+const REGISTRY = [
+  { id: "general-service-agreement", version: 1, file: "general-service-agreement-v1.md", declaration: "29.3" },
+  // v2 (2026-10-03): client-facing wording — "This Service Agreement", a neutral
+  // §29.3 lead-in, and the provider's organisation (`[[provider.affiliation]]`).
+  { id: "general-service-agreement", version: 2, file: "general-service-agreement-v2.md", declaration: "29.3" },
+] as const;
 
 export interface TemplateClause {
   /** "6" for a clause, "6.2" for a paragraph within it. */
@@ -77,7 +87,15 @@ export function latestTemplate(id = "general-service-agreement"): AgreementTempl
 export function loadTemplate(id: string, version: number): AgreementTemplate | null {
   const entry = REGISTRY.find((t) => t.id === id && t.version === version);
   if (!entry) return null;
-  const raw = fs.readFileSync(path.join(DIR, entry.file), "utf8");
+  return parseTemplate(id, version, fs.readFileSync(path.join(DIR, entry.file), "utf8"));
+}
+
+/**
+ * A template from its exact text — the file on disk, or the copy stored in a
+ * signed agreement's snapshot (so a signed document renders from what was
+ * signed, whatever the repo holds now).
+ */
+export function parseTemplate(id: string, version: number, raw: string): AgreementTemplate {
   const { data, content } = matter(raw);
   const notes: string[] = [];
   const body = content.replace(DRAFTING_NOTES, (_, note: string) => {
@@ -97,12 +115,34 @@ export function loadTemplate(id: string, version: number): AgreementTemplate | n
   };
 }
 
+/**
+ * The client's acceptance declaration: the registered paragraph (e.g. 29.3)
+ * with its list, exactly as written in the template, without the paragraph
+ * number. Null if the template doesn't contain it — signing then fails closed.
+ */
+export function acceptanceDeclaration(template: AgreementTemplate): string | null {
+  const entry = REGISTRY.find((t) => t.id === template.id && t.version === template.version);
+  if (!entry) return null;
+  const lines = template.body.split("\n");
+  const marker = `**${entry.declaration}**`;
+  const start = lines.findIndex((line) => line.startsWith(`${marker} `));
+  if (start === -1) return null;
+  const out = [lines[start].slice(marker.length).trim()];
+  for (const line of lines.slice(start + 1)) {
+    if (/^\*\*\d+\.\d+\*\*/.test(line) || /^#{1,6} /.test(line)) break;
+    out.push(line);
+  }
+  return out.join("\n").trim();
+}
+
 /** The body with the provider placeholders filled (`[[provider.name]]` etc.). */
 export function fillTemplate(body: string, provider: ProviderIdentity): string {
   const values: Record<string, string> = {
     name: provider.name,
     role: provider.role,
-    tradingAs: provider.contractAs === "trading" && provider.tradingName ? `, trading as ${provider.tradingName}` : "",
+    affiliation: providerAffiliation(provider),
+    // The placeholder's name in v1 text signed before 2026-10-03 (kept in signed copies): same value.
+    tradingAs: providerAffiliation(provider),
     address: provider.address,
     email: provider.email,
   };

@@ -3,7 +3,7 @@
 import { ScrollReveal } from "@/components/animations/ScrollReveal";
 import { motion } from "framer-motion";
 import { useState } from "react";
-import { Calendar, Mail, Clock, ArrowRight, FileDown, FolderOpen, ListChecks, Printer, Loader2 } from "lucide-react";
+import { Calendar, Mail, Clock, ArrowRight, FileDown, FileSignature, FolderOpen, ListChecks, Printer, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/dates";
 import { openCalendlyPopup } from "@/lib/calendly";
@@ -30,8 +30,8 @@ export function ProposalCTA({
   assetsReady,
   trackerReady,
 }: ProposalCTAProps) {
-  const { trackProposalAssetsOpened, trackProposalTrackerOpened, trackProposalPdfDownloaded } = useAnalytics();
-  const { printMode, accessCode, recordedAcceptance, requestPrint, proposalVersion } = useProposalDocument();
+  const { trackProposalAssetsOpened, trackProposalTrackerOpened, trackProposalPdfDownloaded, trackProposalAgreementOpened } = useAnalytics();
+  const { printMode, accessCode, recordedAcceptance, requestPrint, proposalVersion, agreementStatus } = useProposalDocument();
   const [pdfState, setPdfState] = useState<"idle" | "loading" | "error">("idle");
   const formattedExpiry = expiryDate ? formatDate(expiryDate) : null;
   const acceptedAt =
@@ -150,7 +150,7 @@ export function ProposalCTA({
 
         {/* CTA Buttons */}
         <ScrollReveal delay={0.2}>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap items-center justify-center gap-4 mb-12">
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Button
                 size="lg"
@@ -162,6 +162,25 @@ export function ProposalCTA({
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </motion.div>
+
+            {agreementStatus && proposalId && (
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <Button
+                  asChild
+                  size="lg"
+                  className="bg-[var(--andromeda-accent-beige)] text-[var(--andromeda-primary)] hover:bg-[var(--andromeda-accent-beige)]/90 px-8 py-6 text-base font-semibold"
+                >
+                  <Link
+                    href={`/proposal/${proposalId}/agreement`}
+                    onClick={() => trackProposalAgreementOpened({ proposal_id: proposalId, status: agreementStatus })}
+                  >
+                    <FileSignature className="w-5 h-5 mr-2" />
+                    {agreementStatus === "sent" ? "Review and Sign Agreement" : "View Signed Agreement"}
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Link>
+                </Button>
+              </motion.div>
+            )}
 
             {assetsReady && proposalId && (
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>

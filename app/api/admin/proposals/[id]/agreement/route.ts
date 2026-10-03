@@ -4,10 +4,10 @@ import { isAdminRequest, isSameOrigin, requestMeta } from "@/lib/admin-auth";
 import { appendEngagementEvent, readAgreement, readAgreementSnapshot, saveAgreementSnapshot, withProposalLock, writeAgreement } from "@/lib/google-sheets";
 import { latestTemplate, listTemplates, loadTemplate } from "@/lib/agreement-templates";
 import { agreementHash, draftProblems, newSpecialTermId, resolveProvider, selectionOf } from "@/lib/agreements";
-import { agreementProvider } from "@/constants/agreement";
-import type { AgreementRecord, ContractAs, SpecialTerm } from "@/types/agreement";
+import { PROVIDER_ORGANISATIONS } from "@/constants/agreement";
+import { isProviderSigned, type AgreementRecord, type SpecialTerm } from "@/types/agreement";
 import { busy, json, readJsonBody } from "../edit";
-import { agreementSnapshotJson, clientNameOf, loadAgreementBasis } from "./context";
+import { agreementSnapshotJson, clientNameOf, loadAgreementBasis } from "@/lib/agreement-basis";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest, { params }: Params) {
     agreement,
     basis: basis.ok ? { proposalVersion: basis.acceptance.proposalVersion, acceptedAt: basis.acceptance.acceptedAt } : { code: basis.code, error: basis.error },
     templates: listTemplates(),
-    tradingNameAvailable: !!agreementProvider.tradingName,
+    organisations: PROVIDER_ORGANISATIONS,
   });
 }
 
@@ -35,7 +35,9 @@ export async function GET(request: NextRequest, { params }: Params) {
  * Create or update the draft agreement. Everything runs under the proposal
  * lock (shared with saves, publishing and client responses) and checks
  * `expectedUpdatedAt`, so two tabs can't overwrite each other. Changing a
- * provider-signed agreement voids the signature — only with `voidSignature`.
+ * provider-signed (or sent) agreement voids the signature — and withdraws the
+ * client's signing link — only with `voidSignature`. An executed agreement is
+ * a formed contract and can't be changed here.
  */
 async function handlePUT(request: NextRequest, { params }: Params) {
   if (!isAdminRequest(request)) return json({ success: false, error: "Unauthorized" }, 401);
@@ -47,7 +49,8 @@ async function handlePUT(request: NextRequest, { params }: Params) {
   const template =
     typeof body.templateVersion === "number" ? loadTemplate("general-service-agreement", body.templateVersion) : latestTemplate();
   if (!template) return json({ success: false, code: "invalid", error: "Unknown template version" }, 400);
-  const contractAs: ContractAs = body.contractAs === "trading" ? "trading" : "individual";
+  const organisation = typeof body.organisation === "string" ? body.organisation.trim() : "";
+  if (organisation && !PROVIDER_ORGANISATIONS.includes(organisation)) return json({ success: false, code: "invalid", errors: [`Unknown organisation "${organisation}"`] }, 400);
   const specialTerms: SpecialTerm[] = Array.isArray(body.specialTerms)
     ? (body.specialTerms as unknown[]).map((t) => {
         const term = (t ?? {}) as Partial<SpecialTerm>;
@@ -79,14 +82,15 @@ async function handlePUT(request: NextRequest, { params }: Params) {
       selection: selectionOf(basis.acceptance),
       clientName: clientNameOf(basis.snapshot),
       acceptedAt: basis.acceptance.acceptedAt,
-      provider: resolveProvider(contractAs),
+      provider: resolveProvider(organisation || undefined),
       specialTerms,
       offerValidUntil,
     };
     const hash = agreementHash(fields);
+    if (current?.status === "executed") return { kind: "executed", current } as const;
     if (current && current.agreementHash === hash) return { kind: "unchanged", record: current } as const;
 
-    if (current?.status === "provider_signed") {
+    if (current && isProviderSigned(current.status)) {
       if (body.voidSignature !== true) return { kind: "signed", current } as const;
       // The signed document must survive its replacement: make sure its
       // snapshot exists (signing writes it; this covers a record signed
@@ -103,21 +107,27 @@ async function handlePUT(request: NextRequest, { params }: Params) {
           proposalId: id,
           event: "agreement_signature_voided",
           proposalVersion: current.proposalVersion,
-          detail: { voidedHash: current.agreementHash, signedAt, snapshot: { agreementHash: current.agreementHash, signedAt } },
+          detail: {
+            voidedHash: current.agreementHash,
+            signedAt,
+            snapshot: { agreementHash: current.agreementHash, signedAt },
+            // A sent agreement's link dies with the signature (signer sessions are bound to its hash and status).
+            ...(current.status === "sent" && { withdrawnFromClient: true, sentAt: current.sentAt }),
+          },
           ...meta,
         },
         lock
       );
     }
 
-    const record: AgreementRecord = { ...fields, status: "draft", agreementHash: hash, providerSignature: null, updatedAt: new Date().toISOString() };
+    const record: AgreementRecord = { ...fields, status: "draft", agreementHash: hash, providerSignature: null, clientSignature: null, updatedAt: new Date().toISOString() };
     await writeAgreement(record, lock);
     await appendEngagementEvent(
       {
         proposalId: id,
         event: current ? "agreement_updated" : "agreement_prepared",
         proposalVersion: record.proposalVersion,
-        detail: { agreementHash: hash, template: `${template.id}@${template.version}`, templateHash: template.hash, contractAs: record.provider.contractAs, specialTerms: specialTerms.length, offerValidUntil },
+        detail: { agreementHash: hash, template: `${template.id}@${template.version}`, templateHash: template.hash, organisation: record.provider.organisation ?? null, specialTerms: specialTerms.length, offerValidUntil },
         ...meta,
       },
       lock
@@ -132,8 +142,21 @@ async function handlePUT(request: NextRequest, { params }: Params) {
       return json({ success: false, code: outcome.basis.code, error: outcome.basis.error }, outcome.basis.code === "unavailable" ? 503 : 409);
     case "conflict":
       return json({ success: false, code: "conflict", error: "The agreement changed since you opened it.", current: outcome.current }, 409);
+    case "executed":
+      return json({ success: false, code: "executed", error: "The client has signed this agreement — it's a formed contract and can't be changed here.", current: outcome.current }, 409);
     case "signed":
-      return json({ success: false, code: "signed", error: "You've signed this agreement. Saving changes voids your signature — confirm to continue.", current: outcome.current }, 409);
+      return json(
+        {
+          success: false,
+          code: "signed",
+          error:
+            outcome.current.status === "sent"
+              ? "You've signed and sent this agreement. Saving changes voids your signature and withdraws the client's signing link — confirm to continue."
+              : "You've signed this agreement. Saving changes voids your signature — confirm to continue.",
+          current: outcome.current,
+        },
+        409
+      );
     default:
       return json({ success: true, agreement: outcome.record, unchanged: outcome.kind === "unchanged" });
   }

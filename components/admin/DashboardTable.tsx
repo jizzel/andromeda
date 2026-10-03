@@ -408,8 +408,14 @@ function AgreementBadge({ value }: { value: DashboardRow["agreement"] }) {
       ? ["Agreement: unavailable", "text-[var(--andromeda-text-secondary)] bg-white/5"]
       : !value
         ? ["No agreement yet", "text-amber-500 bg-amber-500/10"]
-        : value.status === "provider_signed"
-          ? ["Agreement signed by you", "text-[var(--andromeda-success)] bg-[var(--andromeda-success)]/10"]
-          : ["Agreement draft", "text-[var(--andromeda-highlight)] bg-[var(--andromeda-highlight)]/10"];
+        : value.status === "executed"
+          ? ["Agreement executed", "text-[var(--andromeda-success)] bg-[var(--andromeda-success)]/10"]
+          : value.status === "sent"
+            ? value.changesRequested
+              ? ["Agreement: changes requested", "text-amber-500 bg-amber-500/10"]
+              : ["Agreement sent to client", "text-[var(--andromeda-success)] bg-[var(--andromeda-success)]/10"]
+            : value.status === "provider_signed"
+              ? ["Agreement signed by you", "text-[var(--andromeda-success)] bg-[var(--andromeda-success)]/10"]
+              : ["Agreement draft", "text-[var(--andromeda-highlight)] bg-[var(--andromeda-highlight)]/10"];
   return <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${tone}`}>{label}</span>;
 }

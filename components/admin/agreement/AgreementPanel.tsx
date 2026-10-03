@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowUp, CheckCircle2, Loader2, PenLine, Plus, Save, X } from "lucide-react";
-import type { AgreementRecord, ContractAs, SpecialTerm } from "@/types/agreement";
+import { ArrowDown, ArrowUp, CheckCircle2, Download, Loader2, Mail, MessageSquare, PenLine, Plus, Save, Send, X } from "lucide-react";
+import { isProviderSigned, type AgreementActivity, type AgreementRecord, type SpecialTerm } from "@/types/agreement";
 import type { TemplateClause } from "@/lib/agreement-templates";
+import { followUpIncomplete } from "@/lib/agreement-activity";
 import { MAX_SPECIAL_TERM_CHARS, MAX_SPECIAL_TERMS, PROVIDER_SIGNING_DECLARATION } from "@/constants/agreement";
 import { shortVersion } from "@/lib/proposal-version-label";
 import { AdminDialog, dialogButton } from "../AdminDialog";
@@ -19,15 +20,22 @@ interface AgreementPanelProps {
   templateChanged: boolean;
   providerName: string;
   providerRole: string;
-  tradingName?: string;
+  /** Organisations an agreement can name after Joseph's role. */
+  organisations: readonly string[];
   defaultOfferValidUntil: string;
+  /** Sends, change requests, executed-copy emails and onboarding for the current agreement; null if unreadable. */
+  activity: AgreementActivity | null;
+  /** The saved proposal's `client.email` — where the signing link goes. */
+  clientEmail: string | null;
+  /** Null when client signing is enabled; otherwise why it's off (shown instead of "Send"). */
+  clientSigningOff: string | null;
 }
 
-type Draft = { templateVersion: number; contractAs: ContractAs; offerValidUntil: string; specialTerms: SpecialTerm[] };
+type Draft = { templateVersion: number; organisation: string; offerValidUntil: string; specialTerms: SpecialTerm[] };
 
 const draftOf = (record: AgreementRecord | null, fallback: Draft): Draft =>
   record
-    ? { templateVersion: record.templateVersion, contractAs: record.provider.contractAs, offerValidUntil: record.offerValidUntil, specialTerms: record.specialTerms }
+    ? { templateVersion: record.templateVersion, organisation: record.provider.organisation ?? "", offerValidUntil: record.offerValidUntil, specialTerms: record.specialTerms }
     : fallback;
 
 const borderClass = "border-white/10 light:border-black/10";
@@ -35,7 +43,9 @@ const borderClass = "border-white/10 light:border-black/10";
 /**
  * Prepare and sign the agreement. Edits are saved as a draft (the preview on
  * the right renders the saved draft); signing pins exactly what's previewed.
- * Saving a change to a signed agreement voids the signature, after a confirm.
+ * Saving a change to a signed (or sent) agreement voids the signature — and
+ * withdraws the client's link — after a confirm. Once signed, the agreement is
+ * sent to the client from here; once the client signs, it's read-only.
  */
 export function AgreementPanel({
   proposalId,
@@ -45,13 +55,16 @@ export function AgreementPanel({
   templateChanged,
   providerName,
   providerRole,
-  tradingName,
+  organisations,
   defaultOfferValidUntil,
+  activity,
+  clientEmail,
+  clientSigningOff,
 }: AgreementPanelProps) {
   const router = useRouter();
   const initial = draftOf(record, {
     templateVersion: Math.max(...templates.map((t) => t.version)),
-    contractAs: "individual",
+    organisation: "",
     offerValidUntil: defaultOfferValidUntil,
     specialTerms: [],
   });
@@ -60,7 +73,8 @@ export function AgreementPanel({
   const [errors, setErrors] = useState<string[]>([]);
   const [confirmVoid, setConfirmVoid] = useState(false);
   const [signOpen, setSignOpen] = useState(false);
-  const signed = record?.status === "provider_signed";
+  const signed = !!record && isProviderSigned(record.status);
+  const executed = record?.status === "executed";
   const dirty = JSON.stringify(draft) !== JSON.stringify(initial);
   const clauseOptions = clauses;
   const topLevel = (number: string) => clauses.find((c) => c.number === number.split(".")[0])?.title;
@@ -80,6 +94,9 @@ export function AgreementPanel({
         router.refresh();
       } else if (body.code === "signed") {
         setConfirmVoid(true);
+      } else if (body.code === "executed") {
+        setErrors([body.error]);
+        router.refresh();
       } else if (body.code === "conflict") {
         setErrors(["The agreement changed in another tab or session. Reload the page to see the latest before saving."]);
       } else {
@@ -107,6 +124,12 @@ export function AgreementPanel({
     <div className="space-y-4 lg:sticky lg:top-6">
       <StatusCard record={record} templateChanged={templateChanged} />
 
+      {record && signed && (
+        <ClientCard proposalId={proposalId} record={record} activity={activity} clientEmail={clientEmail} clientSigningOff={clientSigningOff} />
+      )}
+
+      {/* An executed agreement is a formed contract: nothing here can change it. */}
+      <fieldset disabled={executed} className="space-y-4 min-w-0 disabled:opacity-60">
       <section className={`p-4 rounded-xl border ${borderClass} bg-[var(--andromeda-secondary)] space-y-4`}>
         <Field label="Terms">
           <select
@@ -123,23 +146,22 @@ export function AgreementPanel({
           </select>
         </Field>
 
-        <Field label="Contract as" hint={tradingName ? undefined : "Set AGREEMENT_PROVIDER_TRADING_NAME to offer a trading name."}>
-          <div className="space-y-1.5 text-sm">
-            <label className="flex items-start gap-2">
-              <input type="radio" name="contractAs" checked={draft.contractAs === "individual"} onChange={() => setDraft({ ...draft, contractAs: "individual" })} className="mt-1" />
-              <span>
-                {providerName}, {providerRole}
-              </span>
-            </label>
-            {tradingName && (
-              <label className="flex items-start gap-2">
-                <input type="radio" name="contractAs" checked={draft.contractAs === "trading"} onChange={() => setDraft({ ...draft, contractAs: "trading" })} className="mt-1" />
-                <span>
-                  {providerName}, trading as {tradingName}
-                </span>
-              </label>
-            )}
-          </div>
+        <Field label="Your organisation" hint="Shown after your role on the agreement. You're the party either way.">
+          <select
+            value={draft.organisation}
+            onChange={(e) => setDraft({ ...draft, organisation: e.target.value })}
+            className={`${inputClass} ${borderClass}`}
+          >
+            <option value="">None — {providerName}, {providerRole}</option>
+            {organisations.map((name) => (
+              <option key={name} value={name}>
+                {providerName}, {providerRole}, {name}
+              </option>
+            ))}
+          </select>
+          {record?.provider.contractAs === "trading" && record.provider.tradingName && !draft.organisation && (
+            <p className="mt-1 text-xs text-amber-500">This agreement was prepared &ldquo;trading as {record.provider.tradingName}&rdquo;; saving replaces that.</p>
+          )}
         </Field>
 
         <Field label="Offer open until" hint="How long the client has to sign once you've signed.">
@@ -205,6 +227,7 @@ export function AgreementPanel({
           <Plus className="w-3.5 h-3.5" /> Add special term
         </button>
       </section>
+      </fieldset>
 
       {errors.length > 0 && (
         <ul role="alert" className="p-3 rounded-lg border border-[var(--andromeda-error)]/30 bg-[var(--andromeda-error)]/5 text-sm text-[var(--andromeda-error)] space-y-1">
@@ -215,7 +238,7 @@ export function AgreementPanel({
       )}
 
       <div className="flex flex-wrap gap-2">
-        <button type="button" onClick={() => void save()} disabled={saving || (!dirty && !!record && !templateChanged)} className={dialogButton.primary}>
+        <button type="button" onClick={() => void save()} disabled={executed || saving || (!dirty && !!record && !templateChanged)} className={dialogButton.primary}>
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           {record ? "Save draft" : "Prepare agreement"}
         </button>
@@ -234,7 +257,11 @@ export function AgreementPanel({
         open={confirmVoid}
         onClose={() => setConfirmVoid(false)}
         title="This voids your signature"
-        description="You've signed this agreement. Saving these changes cancels that signature; you'll need to review and sign the changed agreement again."
+        description={
+          record?.status === "sent"
+            ? "You've signed this agreement and sent it to the client. Saving these changes cancels your signature and withdraws the client's signing link; you'll need to review, sign and send the changed agreement again."
+            : "You've signed this agreement. Saving these changes cancels that signature; you'll need to review and sign the changed agreement again."
+        }
         actions={
           <>
             <button type="button" data-autofocus onClick={() => setConfirmVoid(false)} className={dialogButton.secondary}>
@@ -257,14 +284,23 @@ function StatusCard({ record, templateChanged }: { record: AgreementRecord | nul
     return <p className={`p-4 rounded-xl border ${borderClass} text-sm`}>No agreement yet. Choose the terms and any special terms, then prepare it.</p>;
   }
   const signature = record.providerSignature;
+  const client = record.clientSignature;
   return (
     <div className={`p-4 rounded-xl border text-sm ${signature ? "border-[var(--andromeda-success)]/40 bg-[var(--andromeda-success)]/5" : `${borderClass}`}`}>
-      {signature ? (
+      {client ? (
+        <p className="flex items-start gap-2">
+          <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0 text-[var(--andromeda-success)]" />
+          <span>
+            <strong>Executed.</strong> Signed by both parties — the client on {new Date(client.signedAt).toLocaleString()} · agreement{" "}
+            <span className="font-mono">{shortVersion(record.agreementHash)}</span>.
+          </span>
+        </p>
+      ) : signature ? (
         <p className="flex items-start gap-2">
           <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0 text-[var(--andromeda-success)]" />
           <span>
             Signed by you on {new Date(signature.signedAt).toLocaleString()} · agreement <span className="font-mono">{shortVersion(signature.agreementHash)}</span>.
-            Awaiting the client once client signing is enabled.
+            {record.status === "sent" ? " Sent to the client — awaiting their signature." : " Send it to the client below."}
           </span>
         </p>
       ) : (
@@ -385,3 +421,193 @@ function MiniIcon({ title, onClick, disabled, children }: { title: string; onCli
     </button>
   );
 }
+
+const formatWhen = (iso: string) => new Date(iso).toLocaleString();
+
+/**
+ * The client side of a signed agreement: send (or resend) the signing link,
+ * the client's change requests, and once executed: their signature, the PDF,
+ * the executed-copy emails and onboarding.
+ */
+function ClientCard({
+  proposalId,
+  record,
+  activity,
+  clientEmail,
+  clientSigningOff,
+}: {
+  proposalId: string;
+  record: AgreementRecord;
+  activity: AgreementActivity | null;
+  clientEmail: string | null;
+  clientSigningOff: string | null;
+}) {
+  const router = useRouter();
+  const [busy, setBusy] = useState<"send" | "copy" | null>(null);
+  const [message, setMessage] = useState<{ tone: "error" | "ok"; text: string } | null>(null);
+  const base = `/api/admin/proposals/${encodeURIComponent(proposalId)}/agreement`;
+  const lastSend = activity?.sends.at(-1);
+  const client = record.clientSignature;
+  const incomplete = !!client && !!activity && followUpIncomplete(activity);
+
+  const send = async () => {
+    setBusy("send");
+    setMessage(null);
+    try {
+      const res = await fetch(`${base}/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ agreementHash: record.agreementHash, resend: record.status === "sent" }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!body.success) setMessage({ tone: "error", text: body.error || "Couldn't send the agreement." });
+      else if (body.email === "failed") setMessage({ tone: "error", text: "Marked as sent, but the email failed. Try “Resend link”." });
+      router.refresh();
+    } catch {
+      setMessage({ tone: "error", text: "Connection failed. Try again." });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  /** Completes what's missing; with `resend`, also sends the copy to both parties again. */
+  const followUp = async (resend: boolean) => {
+    setBusy("copy");
+    setMessage(null);
+    try {
+      const res = await fetch(`${base}/executed-copy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ resend }) });
+      const body = await res.json().catch(() => ({}));
+      setMessage(
+        body.success
+          ? { tone: "ok", text: resend ? "Executed copy sent to both parties." : "Follow-up complete." }
+          : { tone: "error", text: body.error || "Some steps failed — see below." }
+      );
+      router.refresh();
+    } catch {
+      setMessage({ tone: "error", text: "Connection failed. Try again." });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <section aria-label="Client" className={`p-4 rounded-xl border ${borderClass} bg-[var(--andromeda-secondary)] space-y-3 text-sm`}>
+      <h2 className="text-sm font-semibold">Client</h2>
+
+      {client ? (
+        <>
+          <dl className="grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1">
+            <dt className="text-[var(--andromeda-text-secondary)]">Signed by</dt>
+            <dd>
+              {client.legalName}
+              {client.organisation && `, for ${client.organisation}${client.capacity ? ` (${client.capacity})` : ""}`}
+            </dd>
+            <dt className="text-[var(--andromeda-text-secondary)]">Verified</dt>
+            <dd className="break-all">{client.email}</dd>
+            <dt className="text-[var(--andromeda-text-secondary)]">Signed</dt>
+            <dd>{formatWhen(client.signedAt)}</dd>
+          </dl>
+          {incomplete && (
+            <div role="status" className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/10">
+              <p className="text-amber-500">Follow-up incomplete — onboarding or an executed copy isn&apos;t recorded yet.</p>
+              <button type="button" onClick={() => void followUp(false)} disabled={busy !== null} className={`${dialogButton.primary} mt-2 inline-flex items-center gap-2`}>
+                {busy === "copy" ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} Complete follow-up
+              </button>
+            </div>
+          )}
+          <a href={`${base}/pdf`} className={`${dialogButton.secondary} inline-flex items-center gap-2`}>
+            <Download className="w-4 h-4" /> Executed PDF
+          </a>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--andromeda-text-secondary)]">Executed copy</p>
+            {activity?.executedEmails.length ? (
+              <ul className="mt-1 space-y-0.5">
+                {activity.executedEmails.map((m) => (
+                  <li key={m.recipient} className={m.status === "failed" ? "text-[var(--andromeda-error)]" : undefined}>
+                    {m.recipient === "client" ? "Client" : "You"}: {m.status === "sent" ? `sent${m.attached ? " with PDF" : " without the PDF"}` : "failed"} · {formatWhen(m.at)}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-1 text-[var(--andromeda-text-secondary)]">{activity ? "Not recorded yet (it sends right after signing)." : "Couldn't read the email log."}</p>
+            )}
+            <button type="button" onClick={() => void followUp(true)} disabled={busy !== null} className="mt-2 text-xs underline hover:text-[var(--andromeda-accent-beige)] disabled:opacity-50">
+              {busy === "copy" ? "Sending…" : "Resend executed copy"}
+            </button>
+          </div>
+          {activity?.onboarding && (
+            <p className="text-[var(--andromeda-text-secondary)]">
+              Onboarding: assets {ONBOARDING_ASSETS[activity.onboarding.assets]}; tracker {ONBOARDING_TRACKER[activity.onboarding.tracker]}.
+            </p>
+          )}
+        </>
+      ) : (
+        <>
+          {lastSend ? (
+            <p className="flex items-start gap-2">
+              <Mail className="w-4 h-4 mt-0.5 shrink-0 text-[var(--andromeda-text-secondary)]" />
+              <span>
+                Link sent to {lastSend.to} on {formatWhen(lastSend.sentAt)}
+                {lastSend.email === "failed" && <span className="text-[var(--andromeda-error)]"> — the email failed</span>}
+                {lastSend.email === "pending" && <span className="text-[var(--andromeda-text-secondary)]"> — email outcome not recorded</span>}.
+              </span>
+            </p>
+          ) : (
+            <p className="text-[var(--andromeda-text-secondary)]">
+              {clientEmail ? `The signing link goes to ${clientEmail}.` : "Add the client's email in the proposal settings to send the link."}
+            </p>
+          )}
+          {clientSigningOff ? (
+            <p className="text-amber-500">{clientSigningOff}</p>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void send()}
+              disabled={busy !== null || !clientEmail}
+              className={`${record.status === "sent" ? dialogButton.secondary : dialogButton.primary} inline-flex items-center gap-2`}
+            >
+              {busy === "send" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              {record.status === "sent" ? "Resend link" : "Send to client"}
+            </button>
+          )}
+          {!!activity?.changeRequests.length && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-[var(--andromeda-text-secondary)]">Changes requested</p>
+              <ul className="mt-1 space-y-2">
+                {activity.changeRequests.map((r) => (
+                  <li key={r.at} className={`p-2 rounded-lg border ${borderClass}`}>
+                    <p className="flex items-center gap-1.5 text-xs text-[var(--andromeda-text-secondary)]">
+                      <MessageSquare className="w-3.5 h-3.5" /> {formatWhen(r.at)}
+                    </p>
+                    <p className="mt-1 whitespace-pre-line">{r.note}</p>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-1 text-xs text-[var(--andromeda-text-secondary)]">To revise: edit and save (voids your signature and the link), then sign and send again.</p>
+            </div>
+          )}
+        </>
+      )}
+      {message && (
+        <p role={message.tone === "error" ? "alert" : "status"} className={message.tone === "error" ? "text-[var(--andromeda-error)]" : "text-[var(--andromeda-success)]"}>
+          {message.text}
+        </p>
+      )}
+    </section>
+  );
+}
+
+const ONBOARDING_ASSETS: Record<NonNullable<AgreementActivity["onboarding"]>["assets"], string> = {
+  unlocked: "unlocked",
+  already: "were already unlocked",
+  no_assets: "— no checklist on this proposal",
+  failed: "couldn't be unlocked (set assetsReady by hand)",
+};
+
+const ONBOARDING_TRACKER: Record<NonNullable<AgreementActivity["onboarding"]>["tracker"], string> = {
+  done: "milestone marked done",
+  already: "milestone already done",
+  not_seeded: "will mark it done when first opened",
+  no_milestone: "has no agreement milestone",
+  failed: "couldn't be updated",
+};

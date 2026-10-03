@@ -1,4 +1,5 @@
-import { createHmac, randomBytes, randomInt, timingSafeEqual } from "crypto";
+import { randomBytes, randomInt } from "crypto";
+import { hmac, nowSeconds as now, safeEqual, signToken, verifyToken } from "@/lib/signed-token";
 
 /**
  * Single-admin authentication for /admin. Stateless: everything lives in two
@@ -37,42 +38,12 @@ interface OtpPayload {
   h: string;
 }
 
-const now = () => Math.floor(Date.now() / 1000);
-
 function getSecret(): string | null {
   return process.env.ADMIN_SESSION_SECRET || null;
 }
 
-function hmac(secret: string, value: string): string {
-  return createHmac("sha256", secret).update(value).digest("base64url");
-}
-
-function safeEqual(a: string, b: string): boolean {
-  const left = Buffer.from(a);
-  const right = Buffer.from(b);
-  return left.length === right.length && timingSafeEqual(left, right);
-}
-
-function sign(payload: SessionPayload | OtpPayload, secret: string): string {
-  const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
-  return `${body}.${hmac(secret, body)}`;
-}
-
-function verify(token: string | undefined | null): Record<string, unknown> | null {
-  const secret = getSecret();
-  if (!secret || !token) return null;
-  const dot = token.indexOf(".");
-  if (dot <= 0) return null;
-  const body = token.slice(0, dot);
-  if (!safeEqual(hmac(secret, body), token.slice(dot + 1))) return null;
-  try {
-    const payload = JSON.parse(Buffer.from(body, "base64url").toString());
-    if (typeof payload?.exp !== "number" || payload.exp < now()) return null;
-    return payload;
-  } catch {
-    return null;
-  }
-}
+const sign = (payload: SessionPayload | OtpPayload, secret: string) => signToken(payload, secret);
+const verify = (token: string | undefined | null) => verifyToken(token, getSecret());
 
 function requireSecret(): string {
   const secret = getSecret();

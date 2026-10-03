@@ -1,0 +1,70 @@
+import { NextResponse, type NextRequest } from "next/server";
+import { getProposalById, readAgreement } from "@/lib/google-sheets";
+import { loadTemplate, type AgreementTemplate } from "@/lib/agreement-templates";
+import { clientSigningAllowed } from "@/lib/agreement-gate";
+import { accessCodeTag, AGREEMENT_SIGNER_COOKIE, readSignerSession, type SignerSession } from "@/lib/agreement-signer";
+import type { AgreementRecord } from "@/types/agreement";
+
+/**
+ * Shared by the client-facing agreement routes and pages. The client only
+ * ever sees an agreement once Joseph has signed and sent it, and only while
+ * client signing is enabled for its template (`clientSigningAllowed`). Server-only.
+ */
+
+export type ClientAgreement =
+  | { ok: true; record: AgreementRecord; template: AgreementTemplate }
+  | { ok: false; code: "not_available" | "unavailable" };
+
+/** The proposal's agreement if the client may see it: sent (open for signing) or executed. */
+export async function loadClientAgreement(proposalId: string): Promise<ClientAgreement> {
+  let record: AgreementRecord | null;
+  try {
+    record = await readAgreement(proposalId);
+  } catch (error) {
+    console.error(`Client agreement for ${proposalId}: unavailable:`, error);
+    return { ok: false, code: "unavailable" };
+  }
+  if (!record || (record.status !== "sent" && record.status !== "executed")) return { ok: false, code: "not_available" };
+  const template = loadTemplate(record.templateId, record.templateVersion);
+  // An executed agreement stays viewable whatever the gate says; one that's
+  // merely sent is only offered while client signing is enabled.
+  if (!template || (record.status === "sent" && !clientSigningAllowed(template))) return { ok: false, code: "not_available" };
+  return { ok: true, record, template };
+}
+
+/** What the proposal page offers: "Review and sign agreement" (sent) or "View signed agreement" (executed). Never throws. */
+export async function clientAgreementStatus(proposalId: string): Promise<"sent" | "executed" | null> {
+  const agreement = await loadClientAgreement(proposalId);
+  return agreement.ok && (agreement.record.status === "sent" || agreement.record.status === "executed") ? agreement.record.status : null;
+}
+
+/**
+ * Whether the access a signer token was obtained with still stands: the
+ * proposal is active and its access code is the one the signer entered.
+ * Deactivating a proposal or regenerating its code revokes live sessions.
+ * Unreadable → false (fail closed).
+ */
+export async function accessStillGranted(proposalId: string, codeTag: string): Promise<boolean> {
+  try {
+    const proposal = await getProposalById(proposalId);
+    return !!proposal?.isActive && accessCodeTag(proposal.accessCode) === codeTag;
+  } catch (error) {
+    console.error(`Agreement access check for ${proposalId} failed:`, error);
+    return false;
+  }
+}
+
+/** The signer session from a cookie value, if it's for this proposal, the agreement as it stands, and access still stands. */
+export async function authorisedSigner(cookieValue: string | undefined, proposalId: string, record: AgreementRecord): Promise<SignerSession | null> {
+  const session = readSignerSession(cookieValue, proposalId);
+  if (!session || session.agreementHash !== record.agreementHash) return null;
+  return (await accessStillGranted(proposalId, session.codeTag)) ? session : null;
+}
+
+/** `authorisedSigner` for a route request. */
+export const signerFor = (request: NextRequest, proposalId: string, record: AgreementRecord) =>
+  authorisedSigner(request.cookies.get(AGREEMENT_SIGNER_COOKIE)?.value, proposalId, record);
+
+export const clientJson = (body: Record<string, unknown>, status = 200) => NextResponse.json(body, { status });
+
+export const NOT_AVAILABLE = { success: false, code: "not_available", error: "There's no agreement waiting for your signature on this proposal." };

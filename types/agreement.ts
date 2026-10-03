@@ -1,14 +1,28 @@
 /**
  * Native agreements (roadmap mid-term #3): the General Service Agreement
  * template + per-engagement Special Terms + the accepted proposal version,
- * signed first by the Service Provider and then (PR 2) by the Client.
+ * signed first by the Service Provider and then by the Client.
  * One record per proposal in the `Agreements` sheet tab.
  */
 
-/** `draft` → `provider_signed`; PR 2 adds the client side (`executed`, …). */
-export type AgreementStatus = "draft" | "provider_signed";
+/**
+ * `draft` → `provider_signed` (Joseph signed: the offer) → `sent` (the client
+ * has been emailed the signing link) → `executed` (the client signed: the
+ * contract is formed, §30.1). Editing a provider-signed or sent agreement
+ * voids the signature (back to `draft`); an executed one can't be edited.
+ */
+export type AgreementStatus = "draft" | "provider_signed" | "sent" | "executed";
 
-/** Whether the provider contracts in their own name or under the trading name. */
+export const AGREEMENT_STATUSES: readonly AgreementStatus[] = ["draft", "provider_signed", "sent", "executed"];
+
+/** Whether the provider's signature is on the current record (the offer stands). */
+export const isProviderSigned = (status: AgreementStatus) => status !== "draft";
+
+/**
+ * The provider always contracts in Joseph's own name. "trading" only appears
+ * on records prepared before the organisation option replaced it (rendered
+ * as they were signed: "…, trading as X").
+ */
 export type ContractAs = "individual" | "trading";
 
 /** The provider block printed on the agreement, frozen into the record when prepared. */
@@ -16,8 +30,10 @@ export interface ProviderIdentity {
   contractAs: ContractAs;
   name: string;
   role: string;
-  /** Only when `contractAs` is "trading". */
+  /** Legacy: only on records with `contractAs` "trading". */
   tradingName?: string;
+  /** The organisation Joseph works with on this engagement, shown after his role ("…, Software Engineer, Avengh"). Not a party. */
+  organisation?: string;
   address: string;
   email: string;
 }
@@ -39,6 +55,30 @@ export interface ProviderSignature {
   agreementHash: string;
   ip: string;
   userAgent: string;
+}
+
+/**
+ * The client's signature (§29.3–29.4): who signed, in what capacity, the
+ * declaration they confirmed (verbatim from the pinned template), and how
+ * their control of the client email address was verified. Not part of
+ * `agreementHash` — the hash is what both parties sign.
+ */
+export interface ClientSignature {
+  legalName: string;
+  /** Empty when signing as an individual. */
+  organisation: string;
+  /** e.g. "Director"; empty when signing as an individual. */
+  capacity: string;
+  /** The address the one-time code was sent to (from the proposal data). */
+  email: string;
+  /** The template's §29.3 declaration, verbatim. */
+  declarationText: string;
+  signedAt: string;
+  agreementHash: string;
+  ip: string;
+  userAgent: string;
+  /** The one-time code challenge this signer redeemed, and when. */
+  verification: { nonce: string; verifiedAt: string };
 }
 
 /** The client's chosen options, pinned from the acceptance when the agreement is prepared. */
@@ -78,6 +118,10 @@ export interface AgreementRecord {
   agreementHash: string;
   providerSignature: ProviderSignature | null;
   updatedAt: string;
+  /** When the signing link was (last) emailed to the client; set while `sent` or `executed`. */
+  sentAt?: string;
+  /** Set once `executed`. */
+  clientSignature: ClientSignature | null;
 }
 
 /**
@@ -98,4 +142,20 @@ export interface AgreementSnapshot {
    */
   proposalJson?: string;
   capturedAt: string;
+}
+
+/**
+ * What happened to the current agreement after Joseph signed it, folded from
+ * its `EngagementEvents` (see `foldAgreementActivity`): signing-link emails,
+ * the client's change requests, the executed-copy emails and onboarding.
+ */
+export interface AgreementActivity {
+  /** Signing-link sends for the current agreement hash, oldest first. */
+  sends: { sentAt: string; to: string; email: "sent" | "failed" | "pending"; error?: string }[];
+  /** Change requests made against the current agreement hash, oldest first. */
+  changeRequests: { at: string; note: string }[];
+  /** Latest executed-copy email outcome per recipient. */
+  executedEmails: { recipient: "client" | "provider"; status: "sent" | "failed"; attached: boolean; at: string; error?: string }[];
+  /** Onboarding after execution; null until recorded. */
+  onboarding: { assets: "unlocked" | "already" | "no_assets" | "failed"; tracker: "done" | "already" | "not_seeded" | "no_milestone" | "failed"; at: string } | null;
 }

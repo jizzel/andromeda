@@ -17,9 +17,9 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
 
-  // The headless PDF route (/proposal/[id]/print) renders the document only,
-  // and the admin surface has its own header.
-  const isPrintRoute = /^\/proposal\/[^/]+\/print$/.test(pathname);
+  // The headless PDF routes (/proposal/[id]/print and /proposal/[id]/agreement/print)
+  // render the document only, and the admin surface has its own header.
+  const isPrintRoute = /^\/proposal\/[^/]+\/(agreement\/)?print$/.test(pathname);
   const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
   const isMinimalUI = MINIMAL_UI_ROUTES.includes(pathname) || isPrintRoute || isAdminRoute;
 

@@ -75,6 +75,10 @@ async function acceptedTermsGuard(
     return "acceptance_unavailable";
   }
   if (acceptance?.status !== "accepted" || confirmed) return null;
+  // Only a save that changes the terms needs confirming. Operational settings
+  // (asset/tracker switches, expiry, access code, …) never change the version,
+  // even when the saved terms already moved on from the accepted ones.
+  if (nextVersion === proposalVersion(current.record.data)) return null;
   const acceptedVersion = acceptance.proposalVersion ?? proposalVersion(current.record.data);
   return nextVersion === acceptedVersion ? null : "confirm_accepted_edit";
 }

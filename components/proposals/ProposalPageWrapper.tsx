@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { flushSync } from "react-dom";
-import type { ProposalDataUnion, ProposalAcceptance, ProposalRevisionNotice as Revision } from "@/types/proposal";
+import type { ClientAgreementStatus, ProposalDataUnion, ProposalAcceptance, ProposalRevisionNotice as Revision } from "@/types/proposal";
 import { ProposalAccessGate } from "./ProposalAccessGate";
 import { ProposalShell } from "./ProposalShell";
 import { ProposalDocumentProvider } from "./ProposalDocumentContext";
@@ -27,6 +27,7 @@ export function ProposalPageWrapper({ proposalId }: ProposalPageWrapperProps) {
   const [printMode, setPrintMode] = useState(false);
   const [proposalVersion, setProposalVersion] = useState<string | undefined>(undefined);
   const [revision, setRevision] = useState<Revision | null>(null);
+  const [agreementStatus, setAgreementStatus] = useState<ClientAgreementStatus | null>(null);
 
   // Print mode while the browser print dialog is open — whether opened from
   // the "Print / Save as PDF" button or Ctrl/Cmd+P. flushSync makes React
@@ -77,6 +78,7 @@ export function ProposalPageWrapper({ proposalId }: ProposalPageWrapperProps) {
     setAccessCode(code ?? "");
     setProposalVersion(typeof response?.proposalVersion === "string" ? response.proposalVersion : undefined);
     setRevision(revisionFrom(response?.revision));
+    setAgreementStatus(agreementStatusFrom(response?.agreement));
     trackProposalAccessed({ proposal_id: proposalId });
   };
 
@@ -97,6 +99,7 @@ export function ProposalPageWrapper({ proposalId }: ProposalPageWrapperProps) {
     setExpiryDate(data.expiryDate);
     setProposalVersion(data.proposalVersion);
     setRevision(revisionFrom(data.revision));
+    setAgreementStatus(agreementStatusFrom(data.agreement));
   }, [proposalId, accessCode]);
 
   if (!proposal) {
@@ -133,6 +136,7 @@ export function ProposalPageWrapper({ proposalId }: ProposalPageWrapperProps) {
         requestPrint,
         reloadProposal,
         onAcceptanceRecorded: setRecordedAcceptance,
+        agreementStatus,
       }}
     >
       {/* Accepted proposals are settled; a revision notice would only confuse. */}
@@ -155,4 +159,9 @@ export function ProposalPageWrapper({ proposalId }: ProposalPageWrapperProps) {
 function revisionFrom(value: unknown): Revision | null {
   const r = value as Partial<Revision> | undefined;
   return r && typeof r.publishedAt === "string" ? { publishedAt: r.publishedAt, note: typeof r.note === "string" ? r.note : "" } : null;
+}
+
+function agreementStatusFrom(value: unknown): ClientAgreementStatus | null {
+  const status = (value as { status?: unknown } | null | undefined)?.status;
+  return status === "sent" || status === "executed" ? status : null;
 }

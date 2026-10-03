@@ -1,11 +1,10 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 import { requireAdminPage } from "@/lib/admin-auth";
 import { getProposalAcceptance, getProposalRowForEdit, getProposalSnapshot } from "@/lib/google-sheets";
 import { proposalVersion } from "@/lib/proposal-version";
 import { shortVersion } from "@/lib/proposal-version-label";
 import { ProposalPrintView } from "@/components/proposals/ProposalPrintView";
+import { AdminBreadcrumb } from "@/components/admin/AdminBreadcrumb";
 import type { ProposalDataUnion } from "@/types/proposal";
 
 export const dynamic = "force-dynamic";
@@ -47,12 +46,14 @@ export default async function AdminProposalVersionPage({ params }: { params: Pro
     <div>
       <div className="sticky top-0 z-30 border-b border-white/10 light:border-black/10 bg-[var(--andromeda-primary)]/95 backdrop-blur">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-          <Link
-            href={`/admin/proposals/${encodeURIComponent(id)}/agreement`}
-            className="inline-flex items-center gap-1 text-[var(--andromeda-text-secondary)] hover:text-[var(--andromeda-accent-beige)]"
-          >
-            <ArrowLeft className="w-4 h-4" /> Agreement
-          </Link>
+          <AdminBreadcrumb
+            items={[
+              { label: "Proposals", href: "/admin" },
+              { label: row.record.data.client?.name ?? id, href: `/admin/proposals/${encodeURIComponent(id)}` },
+              { label: "Agreement", href: `/admin/proposals/${encodeURIComponent(id)}/agreement` },
+              { label: `Version ${shortVersion(version)}` },
+            ]}
+          />
           <p className="font-semibold">
             {isAccepted ? "Accepted version" : "Stored version"} <span className="font-mono">{shortVersion(version)}</span>
             {isAccepted && " — exactly as the client accepted it"}

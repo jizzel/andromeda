@@ -5,6 +5,7 @@ import type { AgreementRecord } from "@/types/agreement";
 import type { ProposalAcceptance, ProposalDataUnion } from "@/types/proposal";
 import type { AgreementTemplate } from "@/lib/agreement-templates";
 import { fillTemplate } from "@/lib/agreement-templates";
+import { providerAffiliation } from "@/lib/agreements";
 import { shortVersion } from "@/lib/proposal-version-label";
 
 interface AgreementDocumentProps {
@@ -12,9 +13,12 @@ interface AgreementDocumentProps {
   template: AgreementTemplate;
   /** The accepted proposal version (snapshot), incorporated as Schedule 2. */
   proposal: ProposalDataUnion;
-  acceptance: ProposalAcceptance;
-  /** Where the full accepted proposal can be reviewed (admin version view; PR 2: the client's). */
+  /** Only for records prepared before `acceptedAt` was pinned (their date falls back to the live acceptance). */
+  acceptance?: Pick<ProposalAcceptance, "acceptedAt">;
+  /** Where the full accepted proposal can be reviewed (the admin version view, or the client's). */
   fullProposalHref?: string;
+  /** Admin only: name the base terms (template, version, draft status) above the title. Clients see the engagement's agreement. */
+  showTemplateInfo?: boolean;
 }
 
 const formatDateTime = (iso: string) =>
@@ -34,10 +38,10 @@ const markdown = {
  * The agreement as the parties sign it: the pinned template text with the
  * provider block filled in, Schedule 1 (special terms), Schedule 2 (the
  * accepted proposal version), the signature blocks and every hash. Used by
- * the admin preview now and, unchanged, by the client page and the executed
- * PDF in PR 2 — so all three show the same document.
+ * the admin preview, the client's signing page and the executed PDF (which
+ * renders it from the signed snapshot) — so all three show the same document.
  */
-export async function AgreementDocument({ record, template, proposal, acceptance, fullProposalHref }: AgreementDocumentProps) {
+export async function AgreementDocument({ record, template, proposal, acceptance, fullProposalHref, showTemplateInfo = false }: AgreementDocumentProps) {
   const body = fillTemplate(template.body, record.provider);
   const clauseTitle = (number: string) => template.clauses.find((c) => c.number === number.split(".")[0])?.title;
   const packages = "packages" in proposal && Array.isArray(proposal.packages) ? proposal.packages : [];
@@ -46,18 +50,22 @@ export async function AgreementDocument({ record, template, proposal, acceptance
   const pkg = packages.find((p) => p.id === record.selection?.packageId);
   const plan = plans.find((p) => p.id === record.selection?.paymentPlanId);
   const signature = record.providerSignature;
+  const client = record.clientSignature;
+  const acceptedAt = record.acceptedAt ?? acceptance?.acceptedAt;
 
   return (
     <article className="text-sm leading-relaxed text-[var(--andromeda-text-secondary)]">
       <header className="mb-6">
-        <p className="text-xs font-semibold uppercase tracking-widest text-[var(--andromeda-accent-beige)]">
-          {template.title} · version {template.version}
-          {template.status === "draft" && " · draft for legal review"}
-        </p>
-        <h1 className="mt-1 text-2xl font-bold text-[var(--andromeda-text-primary)]">{template.title}</h1>
+        {showTemplateInfo && (
+          <p className="text-xs font-semibold uppercase tracking-widest text-[var(--andromeda-accent-beige)]">
+            Base terms: {template.title} · version {template.version}
+            {template.status === "draft" && " · draft for legal review"}
+          </p>
+        )}
+        <h1 className="mt-1 text-2xl font-bold text-[var(--andromeda-text-primary)]">Service Agreement — {proposal.title}</h1>
         <p className="mt-1">
           Between {record.provider.name}
-          {record.provider.contractAs === "trading" && record.provider.tradingName ? `, trading as ${record.provider.tradingName}` : ""} and {proposal.client.name}
+          {providerAffiliation(record.provider) && `, ${record.provider.role}${providerAffiliation(record.provider)}`} and {proposal.client.name}
         </p>
       </header>
 
@@ -94,7 +102,7 @@ export async function AgreementDocument({ record, template, proposal, acceptance
           <dt>Accepted on</dt>
           <dd className="text-[var(--andromeda-text-primary)]">
             {/* The pinned date (signed); older records fall back to the live acceptance, flagged. */}
-            {formatDateTime(record.acceptedAt ?? acceptance.acceptedAt)}
+            {acceptedAt ? formatDateTime(acceptedAt) : "—"}
             {!record.acceptedAt && <span className="ml-2 text-xs text-amber-500">(not pinned — re-save to pin)</span>}
           </dd>
           {pkg && (
@@ -138,6 +146,10 @@ export async function AgreementDocument({ record, template, proposal, acceptance
         <div className="p-4 rounded-lg border border-white/10 light:border-black/10">
           <p className="text-xs font-semibold uppercase tracking-wider text-[var(--andromeda-text-secondary)]">Service Provider — signed and offered</p>
           <p className="mt-2 text-[var(--andromeda-text-primary)]">{record.provider.name}</p>
+          <p>
+            {record.provider.role}
+            {providerAffiliation(record.provider)}
+          </p>
           <p>{record.provider.email}</p>
           {signature ? (
             <>
@@ -154,7 +166,25 @@ export async function AgreementDocument({ record, template, proposal, acceptance
         <div className="p-4 rounded-lg border border-white/10 light:border-black/10">
           <p className="text-xs font-semibold uppercase tracking-wider text-[var(--andromeda-text-secondary)]">Client — accept and sign</p>
           <p className="mt-2 text-[var(--andromeda-text-primary)]">{proposal.client.name}</p>
-          <p className="mt-2 italic">Awaiting the Client&apos;s signature.</p>
+          {client ? (
+            <>
+              <p className="mt-2">
+                Electronic signature: <span className="font-semibold text-[var(--andromeda-text-primary)]">{client.legalName}</span>
+              </p>
+              {client.organisation && (
+                <p>
+                  For {client.organisation}
+                  {client.capacity ? `, as ${client.capacity}` : ""}
+                </p>
+              )}
+              <p>Signed: {formatDateTime(client.signedAt)}</p>
+              <p className="mt-2 text-xs">
+                Identity verified by a one-time code sent to {client.email} ({formatDateTime(client.verification.verifiedAt)}).
+              </p>
+            </>
+          ) : (
+            <p className="mt-2 italic">Awaiting the Client&apos;s signature.</p>
+          )}
         </div>
       </section>
 
@@ -164,6 +194,11 @@ export async function AgreementDocument({ record, template, proposal, acceptance
           Terms {template.id}@{template.version} · {record.templateHash}
         </p>
         <p>Proposal version {record.proposalVersion}</p>
+        {client && signature && (
+          <p>
+            Executed {client.signedAt} · provider signature {signature.signedAt} · client verification {client.verification.nonce}
+          </p>
+        )}
       </footer>
     </article>
   );

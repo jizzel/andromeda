@@ -8,6 +8,7 @@ import {
 } from "@/emails/ProposalResponseNotice";
 import { AdminSignInCodeEmail, AdminSignInNoticeEmail } from "@/emails/AdminSignIn";
 import { ProposalRevisedEmail } from "@/emails/ProposalRevised";
+import { AgreementChangesRequestedEmail, AgreementExecutedEmail, AgreementReadyEmail, AgreementSignInCodeEmail } from "@/emails/Agreement";
 import { profile } from "@/constants/profile";
 
 interface SendMilestoneEmailArgs {
@@ -299,4 +300,143 @@ export async function sendProposalRevised(args: SendProposalRevisedArgs): Promis
     }
     throw new Error(`Resend send failed: ${result.error.message}`);
   }
+}
+
+// --- Agreements -----------------------------------------------------------------
+// Client-facing agreement emails go only to the proposal's saved `client.email`
+// (callers pass it from storage, never from a request), reply to Joseph, and
+// never contain the access code.
+
+function agreementEmailConfig() {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.NOTIFICATION_FROM_EMAIL;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  if (!apiKey || !from || !siteUrl) {
+    throw new Error("Missing RESEND_API_KEY, NOTIFICATION_FROM_EMAIL, or NEXT_PUBLIC_SITE_URL env vars");
+  }
+  return { resend: new Resend(apiKey), from, site: siteUrl.replace(/\/$/, "") };
+}
+
+function throwIfFailed(result: { error: { name: string; message: string } | null }): void {
+  if (!result.error) return;
+  if (result.error.name === "invalid_idempotent_request" || result.error.name === "concurrent_idempotent_requests") {
+    throw new DuplicateEmailError(`Resend already has this email from an earlier attempt (${result.error.message})`);
+  }
+  throw new Error(`Resend send failed: ${result.error.message}`);
+}
+
+const longDate = (iso: string) =>
+  new Date(iso.length === 10 ? `${iso}T00:00:00Z` : iso).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+
+const longDateTime = (iso: string) =>
+  new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "UTC", timeZoneName: "short" });
+
+export const agreementPageUrl = (site: string, proposalId: string) => `${site}/proposal/${encodeURIComponent(proposalId)}/agreement`;
+
+/** "Your agreement is ready to sign" — the signing link. */
+export async function sendAgreementReady(args: {
+  to: string;
+  clientName: string;
+  proposalId: string;
+  projectTitle: string;
+  offerValidUntil: string;
+  idempotencyKey: string;
+}): Promise<void> {
+  const { resend, from, site } = agreementEmailConfig();
+  const result = await resend.emails.send(
+    {
+      from,
+      to: args.to,
+      replyTo: profile.email,
+      subject: `${args.projectTitle} — your service agreement is ready to sign`,
+      react: AgreementReadyEmail({
+        clientName: args.clientName,
+        projectTitle: args.projectTitle,
+        agreementUrl: agreementPageUrl(site, args.proposalId),
+        validUntil: longDate(args.offerValidUntil),
+        senderName: profile.name,
+      }),
+    },
+    { idempotencyKey: args.idempotencyKey }
+  );
+  throwIfFailed(result);
+}
+
+/** The one-time code that verifies the signer controls the client address. */
+export async function sendAgreementSignInCode(args: { to: string; clientName: string; projectTitle: string; code: string; expiresInMinutes: number }): Promise<void> {
+  const { resend, from } = agreementEmailConfig();
+  const result = await resend.emails.send({
+    from,
+    to: args.to,
+    replyTo: profile.email,
+    subject: `Your signing code: ${args.code}`,
+    react: AgreementSignInCodeEmail(args),
+  });
+  throwIfFailed(result);
+}
+
+/** The executed agreement, to the client or to Joseph, with the PDF attached when it rendered. */
+export async function sendAgreementExecuted(args: {
+  to: string;
+  recipient: "client" | "provider";
+  clientName: string;
+  proposalId: string;
+  projectTitle: string;
+  signedBy: string;
+  signedAt: string;
+  agreementHash: string;
+  pdf: { filename: string; content: Buffer } | null;
+  assetsUnlocked: boolean;
+  idempotencyKey: string;
+}): Promise<void> {
+  const { resend, from, site } = agreementEmailConfig();
+  const result = await resend.emails.send(
+    {
+      from,
+      to: args.to,
+      ...(args.recipient === "client" && { replyTo: profile.email }),
+      subject: `${args.projectTitle} — service agreement signed`,
+      react: AgreementExecutedEmail({
+        recipient: args.recipient,
+        clientName: args.clientName,
+        projectTitle: args.projectTitle,
+        signedBy: args.signedBy,
+        signedAt: longDateTime(args.signedAt),
+        agreementHashShort: args.agreementHash.slice(0, 12),
+        attached: !!args.pdf,
+        agreementUrl: args.recipient === "client" ? agreementPageUrl(site, args.proposalId) : `${site}/admin/proposals/${encodeURIComponent(args.proposalId)}/agreement`,
+        assetsUrl: args.assetsUnlocked ? `${site}/proposal/${encodeURIComponent(args.proposalId)}/assets` : undefined,
+        senderName: profile.name,
+      }),
+      ...(args.pdf && { attachments: [{ filename: args.pdf.filename, content: args.pdf.content }] }),
+    },
+    { idempotencyKey: args.idempotencyKey }
+  );
+  throwIfFailed(result);
+}
+
+/** Tells Joseph the client asked for changes to the agreement. */
+export async function sendAgreementChangesRequested(args: {
+  clientName: string;
+  proposalId: string;
+  projectTitle: string;
+  note: string;
+  requestedAt: string;
+  agreementHash: string;
+}): Promise<void> {
+  const { resend, from, site } = agreementEmailConfig();
+  const result = await resend.emails.send({
+    from,
+    to: profile.email,
+    subject: `${args.projectTitle} — ${args.clientName} asked for changes to the agreement`,
+    react: AgreementChangesRequestedEmail({
+      clientName: args.clientName,
+      projectTitle: args.projectTitle,
+      note: args.note,
+      requestedAt: longDateTime(args.requestedAt),
+      agreementHashShort: args.agreementHash.slice(0, 12),
+      adminUrl: `${site}/admin/proposals/${encodeURIComponent(args.proposalId)}/agreement`,
+    }),
+  });
+  throwIfFailed(result);
 }

@@ -2,7 +2,7 @@ import { createHash } from "crypto";
 import puppeteer, { type Browser } from "puppeteer-core";
 import { NextResponse } from "next/server";
 import type { ProposalAcceptance, ProposalData } from "@/types/proposal";
-import { signPrintToken } from "@/lib/pdf-token";
+import { signPrintToken, type PrintPurpose } from "@/lib/pdf-token";
 
 /**
  * Server-side proposal PDF export. A headless Chromium loads the token-gated
@@ -36,9 +36,16 @@ async function launchBrowser(): Promise<Browser> {
   return puppeteer.launch({ executablePath, headless: true });
 }
 
-export async function renderProposalPdf(origin: string, proposalId: string): Promise<Buffer> {
-  const url = new URL(`/proposal/${encodeURIComponent(proposalId)}/print`, origin);
-  url.searchParams.set("token", signPrintToken(proposalId));
+export const renderProposalPdf = (origin: string, proposalId: string) => renderPrintRoute(origin, proposalId, "proposal");
+
+/** The executed agreement (`/proposal/[id]/agreement/print`, rendered from its signed snapshot). */
+export const renderAgreementPdf = (origin: string, proposalId: string) => renderPrintRoute(origin, proposalId, "agreement");
+
+const PRINT_PATHS: Record<PrintPurpose, string> = { proposal: "print", agreement: "agreement/print" };
+
+async function renderPrintRoute(origin: string, proposalId: string, purpose: PrintPurpose): Promise<Buffer> {
+  const url = new URL(`/proposal/${encodeURIComponent(proposalId)}/${PRINT_PATHS[purpose]}`, origin);
+  url.searchParams.set("token", signPrintToken(proposalId, 120, purpose));
 
   // Vercel Deployment Protection on previews: pass the bypass as query params so
   // Vercel sets a same-origin cookie. (setExtraHTTPHeaders would also send the
@@ -149,7 +156,7 @@ export function getOrRenderPdf(key: string, render: () => Promise<Buffer>): Prom
   return pending;
 }
 
-export function proposalPdfFilename(clientName: string, title: string): string {
+export function proposalPdfFilename(clientName: string, title: string, kind: "proposal" | "service-agreement" = "proposal"): string {
   const slug = (value: string) =>
     value
       .normalize("NFKD")
@@ -159,7 +166,7 @@ export function proposalPdfFilename(clientName: string, title: string): string {
       .replace(/^-+|-+$/g, "")
       .slice(0, 60);
   const base = [slug(clientName), slug(title)].filter(Boolean).join("-");
-  return base ? `${base}-proposal.pdf` : "proposal.pdf";
+  return base ? `${base}-${kind}.pdf` : `${kind}.pdf`;
 }
 
 /**
@@ -189,6 +196,46 @@ export async function proposalPdfResponse(args: {
     });
   } catch (error) {
     console.error("Proposal PDF generation failed:", error);
+    return NextResponse.json({ success: false, error: "PDF generation failed" }, { status: 500 });
+  }
+}
+
+const pdfResponse = (pdf: Buffer, filename: string) =>
+  new NextResponse(new Uint8Array(pdf), {
+    status: 200,
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Content-Length": String(pdf.length),
+      "Cache-Control": "private, no-store",
+    },
+  });
+
+/**
+ * The executed agreement's PDF, from cache or rendered. The key covers the
+ * agreement hash and both signatures — everything the document shows —
+ * so it can't serve a stale copy.
+ */
+export function getExecutedAgreementPdf(args: { origin: string; proposalId: string; agreementHash: string; providerSignedAt: string; clientSignedAt: string }): Promise<Buffer> {
+  const key = pdfCacheKey({ kind: "agreement", ...args, origin: undefined });
+  return getOrRenderPdf(key, () => renderAgreementPdf(args.origin, args.proposalId));
+}
+
+/** Shared by the client and admin executed-agreement downloads (after their own access checks). */
+export async function agreementPdfResponse(args: {
+  origin: string;
+  proposalId: string;
+  agreementHash: string;
+  providerSignedAt: string;
+  clientSignedAt: string;
+  clientName: string;
+  title: string;
+}): Promise<NextResponse> {
+  try {
+    const pdf = await getExecutedAgreementPdf(args);
+    return pdfResponse(pdf, proposalPdfFilename(args.clientName, args.title, "service-agreement"));
+  } catch (error) {
+    console.error("Agreement PDF generation failed:", error);
     return NextResponse.json({ success: false, error: "PDF generation failed" }, { status: 500 });
   }
 }
