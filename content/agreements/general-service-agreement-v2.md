@@ -1,15 +1,15 @@
 ---
 id: general-service-agreement
-version: 1
+version: 2
 title: General Service Agreement
 status: draft
 ---
 
-This General Service Agreement ("Agreement") governs the provision of services by the Service Provider to the Client in connection with the proposal identified in Schedule 2 and accepted by the Client through the Service Provider's online proposal and agreement portal (the "Portal").
+This Service Agreement ("Agreement") governs the provision of services by the Service Provider to the Client in connection with the proposal identified in Schedule 2 and accepted by the Client through the Service Provider's online proposal and agreement portal (the "Portal").
 
 ## 1. Parties
 
-**1.1** The Service Provider is [[provider.name]], [[provider.role]][[provider.tradingAs]], of [[provider.address]] ([[provider.email]]).
+**1.1** The Service Provider is [[provider.name]], [[provider.role]][[provider.affiliation]], of [[provider.address]] ([[provider.email]]).
 
 **1.2** The Client is the individual, business, organisation, or other entity identified in the accepted Proposal and represented by the person electronically signing this Agreement.
 
@@ -319,7 +319,7 @@ This General Service Agreement ("Agreement") governs the provision of services b
 
 **29.2** The Service Provider signs first, by typing its name and confirming its signature through the Portal. That signature constitutes the Service Provider's offer to enter into this Agreement on the terms recorded, which the Client accepts by signing.
 
-**29.3** By selecting **"Accept and Sign Agreement"**, the person signing for the Client confirms that:
+**29.3** By selecting **"Accept and Sign Agreement"**, the person signing confirms that:
 
 1. they have been given access to this Agreement and the incorporated Proposal before acceptance;
 2. they have reviewed and agree to both documents;
@@ -345,6 +345,6 @@ Open points for legal review (not rendered; listed in GUIDELINES/PLAN_AGREEMENTS
 - 29: name the Electronic Transactions Act, 2008 (Act 772) as the basis for electronic signatures.
 - 6.2 late-payment charges and 19.1 notice period depend on the Proposal; current proposals don't state them.
 - 19.4 refund wording.
-- 1.1 provider identity (legal name, trading name, address) — confirm what to state.
+- 1.1 provider identity (legal name, role, address) — Joseph contracts personally; an agreement may name the organisation he works with on the engagement after his role (e.g. "Software Engineer, Avengh") as a description, not a party. Confirm this is what should be stated.
 - 2.5 order of precedence.
 ```

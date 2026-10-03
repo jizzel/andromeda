@@ -20,7 +20,12 @@ const DIR = path.join(process.cwd(), "content/agreements");
  * `declaration` names the paragraph the client confirms when signing (the
  * acceptance declaration, shown verbatim beside "Accept and Sign Agreement").
  */
-const REGISTRY = [{ id: "general-service-agreement", version: 1, file: "general-service-agreement-v1.md", declaration: "29.3" }] as const;
+const REGISTRY = [
+  { id: "general-service-agreement", version: 1, file: "general-service-agreement-v1.md", declaration: "29.3" },
+  // v2 (2026-10-03): client-facing wording — "This Service Agreement", a neutral
+  // §29.3 lead-in, and the provider's organisation (`[[provider.affiliation]]`).
+  { id: "general-service-agreement", version: 2, file: "general-service-agreement-v2.md", declaration: "29.3" },
+] as const;
 
 export interface TemplateClause {
   /** "6" for a clause, "6.2" for a paragraph within it. */

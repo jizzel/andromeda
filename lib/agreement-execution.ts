@@ -68,13 +68,16 @@ export async function unlockOnboarding(record: AgreementRecord): Promise<Pick<On
       if (phase) {
         const row = await getTrackerRow(id, phase.id, AGREEMENT_SIGNED_MILESTONE);
         if (row?.state.status === "done") tracker = "already";
-        else if (row) {
+        else if (row || (await getTrackerStates(id)).length) {
+          // The row exists, or the tracker is seeded without it (e.g. the
+          // milestone was added to the template later — a later seed would add
+          // it as pending): mark it done now. `setTrackerMilestone` appends a
+          // missing row.
           await setTrackerMilestone(id, phase.id, AGREEMENT_SIGNED_MILESTONE, { status: "done", completedAt: signedAt });
           tracker = "done";
         } else {
-          // Not seeded yet (or seeded before this milestone existed): the first
-          // seed marks it done from the executed agreement (`getOrSeedTracker`).
-          tracker = (await getTrackerStates(id)).length ? "no_milestone" : "not_seeded";
+          // Not seeded yet: the first seed marks it done from the executed agreement (`getOrSeedTracker`).
+          tracker = "not_seeded";
         }
       }
     } catch (error) {
