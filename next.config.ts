@@ -1,5 +1,17 @@
 import type { NextConfig } from "next";
 
+// The client hub (/proposal/[id]) can only be entered through a session, so a
+// deployment without CLIENT_SESSION_SECRET would lock every client out of their
+// proposal even with the right access code. Fail Vercel builds loudly instead
+// of shipping that; locally, just warn so development isn't blocked.
+if (!process.env.CLIENT_SESSION_SECRET) {
+  const message =
+    "CLIENT_SESSION_SECRET is not set: clients can't open proposals (the hub's access-code sign-in needs it). " +
+    "Add it to the Vercel project (Production and Preview) — e.g. `openssl rand -hex 32`.";
+  if (process.env.VERCEL) throw new Error(message);
+  console.warn(`⚠ ${message}`);
+}
+
 const nextConfig: NextConfig = {
   // Headless Chromium for the proposal PDF export (lib/pdf.ts): keep these out of
   // the bundle, and make sure the compressed Chromium binary ships with the route.

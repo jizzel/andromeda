@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { withRouteTelemetry } from "@/lib/sheets-telemetry";
 import {
   verifyProposalAccess,
-  verifyEngagementAccess,
   getProposalAcceptance,
+  type AccessCodeMatcher,
   readProposalAcceptance,
   setProposalAcceptance,
   saveProposalSnapshot,
@@ -14,25 +14,16 @@ import {
 import type { AcceptanceStatus, ProposalAcceptance, ProposalData } from "@/types/proposal";
 import { sendProposalResponseNotice } from "@/lib/email";
 import { canonicalProposalJson, proposalVersion } from "@/lib/proposal-version";
+import { clientCredential, resolveClientAccess } from "@/lib/client-session";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const proposalId = searchParams.get("proposalId");
-  const accessCode = searchParams.get("accessCode");
-
-  if (!proposalId || !accessCode) {
-    return NextResponse.json(
-      { success: false, error: "proposalId and accessCode are required" },
-      { status: 400 }
-    );
-  }
+  const proposalId = searchParams.get("proposalId") ?? "";
 
   // Read-only: an accepted client can still see their acceptance after the
   // offer expires. Submitting (POST) stays on the stricter offer check.
-  const verification = await verifyEngagementAccess(proposalId, accessCode);
-  if (!verification.success) {
-    return NextResponse.json({ success: false, error: verification.error }, { status: 401 });
-  }
+  const access = await resolveClientAccess(request, proposalId, { accessCode: searchParams.get("accessCode") });
+  if (!access.ok) return NextResponse.json({ success: false, error: access.error, code: access.code }, { status: access.status });
 
   const acceptance = await getProposalAcceptance(proposalId);
   return NextResponse.json({ success: true, acceptance });
@@ -43,11 +34,8 @@ async function handlePOST(request: NextRequest) {
     const body = await request.json();
     const { proposalId, accessCode, status, counterNote, packageId, paymentPlanId, proposalVersion: renderedVersion } = body;
 
-    if (!proposalId || !accessCode || !status) {
-      return NextResponse.json(
-        { success: false, error: "proposalId, accessCode, and status are required" },
-        { status: 400 }
-      );
+    if (!proposalId || !status) {
+      return NextResponse.json({ success: false, error: "proposalId and status are required" }, { status: 400 });
     }
 
     if (status !== "accepted" && status !== "counter") {
@@ -64,12 +52,15 @@ async function handlePOST(request: NextRequest) {
       );
     }
 
-    if (typeof proposalId !== "string" || typeof accessCode !== "string") {
+    if (typeof proposalId !== "string" || (accessCode !== undefined && typeof accessCode !== "string")) {
       return NextResponse.json({ success: false, error: "Invalid request" }, { status: 400 });
     }
-    // Checked before taking the lock so unauthenticated requests never write
-    // lock rows; re-checked inside it against a fresh read.
-    const preCheck = await verifyProposalAccess(proposalId, accessCode);
+    // The access code, or the hub session. Checked before taking the lock so
+    // unauthenticated requests never write lock rows; re-checked inside it
+    // against a fresh read, with the same credential.
+    const credential = clientCredential(request, proposalId, accessCode);
+    if (!credential.ok) return NextResponse.json({ success: false, error: credential.error, code: credential.code }, { status: credential.status });
+    const preCheck = await verifyProposalAccess(proposalId, credential.match);
     if (!preCheck.success) {
       return NextResponse.json({ success: false, error: preCheck.error }, { status: 401 });
     }
@@ -83,7 +74,7 @@ async function handlePOST(request: NextRequest) {
       (lock) =>
         recordResponse(lock, {
           proposalId,
-          accessCode,
+          access: credential.match,
           status,
           counterNote: status === "counter" ? counterNote.trim() : undefined,
           packageId,
@@ -133,7 +124,8 @@ async function handlePOST(request: NextRequest) {
 
 type ResponseInput = {
   proposalId: string;
-  accessCode: string;
+  /** The access code or session matcher the request authenticated with. */
+  access: string | AccessCodeMatcher;
   status: AcceptanceStatus;
   counterNote: string | undefined;
   packageId: unknown;
@@ -161,9 +153,9 @@ const fail = (body: object, status: number): RecordOutcome => ({
 
 /** Checks the response against the current terms and records it. Call under the proposal lock. */
 async function recordResponse(lock: SheetLock, input: ResponseInput): Promise<RecordOutcome> {
-  const { proposalId, accessCode, status, counterNote: trimmedNote, packageId, paymentPlanId, renderedVersion } = input;
+  const { proposalId, access, status, counterNote: trimmedNote, packageId, paymentPlanId, renderedVersion } = input;
 
-  const verification = await verifyProposalAccess(proposalId, accessCode);
+  const verification = await verifyProposalAccess(proposalId, access);
   if (!verification.success) return fail({ error: verification.error }, 401);
   const proposal = verification.proposal;
   if (!proposal) return fail({ error: "Proposal not found" }, 404);

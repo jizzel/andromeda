@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-type ProposalAccessGateLabel = "proposal" | "tracker" | "assets" | "brief";
+type ProposalAccessGateLabel = "proposal" | "tracker" | "assets" | "agreement" | "brief";
 
 interface AccessGateCopy {
   title: string;
@@ -39,6 +39,12 @@ const LABEL_COPY: Record<ProposalAccessGateLabel, AccessGateCopy> = {
     subtitle: "Enter your access code to view your asset checklist",
     button: "View Assets",
     footerNoun: "asset checklist",
+  },
+  agreement: {
+    title: "Your Service Agreement",
+    subtitle: "Enter your proposal access code to review your agreement",
+    button: "Continue",
+    footerNoun: "agreement",
   },
   brief: {
     title: "Protected Brief",

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyEngagementAccess, getCheckedAssetItems, setAssetItemChecked } from "@/lib/google-sheets";
+import { getCheckedAssetItems, setAssetItemChecked } from "@/lib/google-sheets";
+import { resolveClientAccess } from "@/lib/client-session";
 import type { ProposalData } from "@/types/proposal";
 
 const ASSETS_NOT_AVAILABLE = "Asset checklist not available for this proposal";
@@ -13,18 +14,11 @@ function assetsAvailable(proposal: ProposalData): boolean {
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const proposalId = searchParams.get("proposalId");
-  const accessCode = searchParams.get("accessCode");
-
-  if (!proposalId || !accessCode) {
-    return NextResponse.json({ success: false, error: "proposalId and accessCode are required" }, { status: 400 });
-  }
-
-  const verification = await verifyEngagementAccess(proposalId, accessCode);
-  if (!verification.success || !verification.proposal) {
-    return NextResponse.json({ success: false, error: verification.error }, { status: 401 });
-  }
-  if (!assetsAvailable(verification.proposal)) {
+  const proposalId = searchParams.get("proposalId") ?? "";
+  // The hub session cookie authenticates; an explicit access code still works.
+  const access = await resolveClientAccess(request, proposalId, { accessCode: searchParams.get("accessCode") });
+  if (!access.ok) return NextResponse.json({ success: false, error: access.error, code: access.code }, { status: access.status });
+  if (!assetsAvailable(access.proposal)) {
     return NextResponse.json({ success: false, error: ASSETS_NOT_AVAILABLE }, { status: 404 });
   }
 
@@ -37,18 +31,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { proposalId, accessCode, itemId, checked } = body;
 
-    if (!proposalId || !accessCode || !itemId || typeof checked !== "boolean") {
-      return NextResponse.json(
-        { success: false, error: "proposalId, accessCode, itemId, and checked are required" },
-        { status: 400 }
-      );
+    if (typeof proposalId !== "string" || !proposalId || !itemId || typeof checked !== "boolean") {
+      return NextResponse.json({ success: false, error: "proposalId, itemId, and checked are required" }, { status: 400 });
     }
 
-    const verification = await verifyEngagementAccess(proposalId, accessCode);
-    if (!verification.success || !verification.proposal) {
-      return NextResponse.json({ success: false, error: verification.error }, { status: 401 });
-    }
-    if (!assetsAvailable(verification.proposal)) {
+    const access = await resolveClientAccess(request, proposalId, { accessCode: typeof accessCode === "string" ? accessCode : null });
+    if (!access.ok) return NextResponse.json({ success: false, error: access.error, code: access.code }, { status: access.status });
+    if (!assetsAvailable(access.proposal)) {
       return NextResponse.json({ success: false, error: ASSETS_NOT_AVAILABLE }, { status: 404 });
     }
 

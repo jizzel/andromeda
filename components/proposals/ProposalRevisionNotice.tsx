@@ -35,9 +35,7 @@ export function ProposalRevisionNotice({ proposalId, proposalVersion, revision }
       aria-label="Revision"
       className="print:hidden relative z-10 border-b border-[var(--andromeda-accent-beige)]/30 bg-[var(--andromeda-accent-beige)]/10"
     >
-      {/* pt-20 clears the site's fixed top buttons (Home, theme), which still
-          render on proposal routes — drop it with roadmap near-term #1. */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-20 pb-4 flex items-start gap-3">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex items-start gap-3">
         <RefreshCw className="w-4 h-4 mt-1 shrink-0 text-[var(--andromeda-accent-beige)]" aria-hidden />
         <div className="text-sm text-[var(--andromeda-text-primary)]">
           <p className="font-semibold">Revised on {formatDate(revision.publishedAt)}</p>

@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  getProposalById,
-  getTrackerRow,
-  setTrackerMilestone,
-  verifyEngagementAccess,
-} from "@/lib/google-sheets";
+import { getTrackerRow, setTrackerMilestone } from "@/lib/google-sheets";
+import { resolveClientAccess } from "@/lib/client-session";
 import { resolveTrackerPhases } from "@/constants/tracker-templates";
 import { sendClientApprovalNotice } from "@/lib/email";
 
@@ -17,22 +13,13 @@ export async function POST(request: NextRequest) {
   }
 
   const { proposalId, phaseId, milestoneId, accessCode } = body;
-  if (!proposalId || !phaseId || !milestoneId || !accessCode) {
-    return NextResponse.json(
-      { success: false, error: "proposalId, phaseId, milestoneId, and accessCode are required" },
-      { status: 400 }
-    );
+  if (!proposalId || !phaseId || !milestoneId) {
+    return NextResponse.json({ success: false, error: "proposalId, phaseId and milestoneId are required" }, { status: 400 });
   }
 
-  const verification = await verifyEngagementAccess(proposalId, accessCode);
-  if (!verification.success) {
-    return NextResponse.json({ success: false, error: verification.error }, { status: 401 });
-  }
-
-  const proposal = await getProposalById(proposalId);
-  if (!proposal) {
-    return NextResponse.json({ success: false, error: "Proposal not found" }, { status: 404 });
-  }
+  const access = await resolveClientAccess(request, proposalId, { accessCode });
+  if (!access.ok) return NextResponse.json({ success: false, error: access.error, code: access.code }, { status: access.status });
+  const proposal = { data: access.proposal };
   const tracker = proposal.data.tracker;
   if (!tracker || !proposal.data.trackerReady) {
     return NextResponse.json({ success: false, error: "Tracker not enabled" }, { status: 404 });

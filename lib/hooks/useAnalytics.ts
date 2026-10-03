@@ -181,6 +181,8 @@ export const useAnalytics = () => {
   const trackProposalTrackerPhaseViewed = (data: ProposalTrackerPhaseViewedEvent) => emit("proposal_tracker_phase_viewed", data);
   const trackBriefAccessed = (data: BriefAccessedEvent) => emit("brief_accessed", data);
   /** "Review and sign agreement" / "View signed agreement" clicked on the proposal page. */
+  /** A client hub tab was shown (incl. the first one after signing in). */
+  const trackClientHubTabViewed = (data: { proposal_id: string; tab: "proposal" | "agreement" | "assets" | "progress" }) => emit("client_hub_tab_viewed", data);
   const trackProposalAgreementOpened = (data: AgreementOpenedEvent) => emit("proposal_agreement_opened", data);
   /** The agreement document was shown to a verified signer. */
   const trackAgreementViewed = (data: AgreementEvent) => emit("agreement_viewed", data);
@@ -217,6 +219,7 @@ export const useAnalytics = () => {
     trackProposalTrackerPhaseViewed,
     trackBriefAccessed,
     trackProposalAgreementOpened,
+    trackClientHubTabViewed,
     trackAgreementViewed,
     trackAgreementCodeRequested,
     trackAgreementCodeVerified,

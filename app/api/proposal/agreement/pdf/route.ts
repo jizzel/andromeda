@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
-import { getProposalById, verifyEngagementAccess } from "@/lib/google-sheets";
+import { getProposalById } from "@/lib/google-sheets";
+import { resolveClientAccess } from "@/lib/client-session";
 import { agreementPdfResponse } from "@/lib/pdf";
 import { clientJson, loadClientAgreement, signerFor } from "@/lib/agreement-client";
 
@@ -8,7 +9,7 @@ export const maxDuration = 60;
 
 /**
  * The executed agreement as a PDF, for the client: with the proposal access
- * code, or — right after signing — the signer session that signed it.
+ * code or hub session, or — right after signing — the signer session.
  */
 export async function POST(request: NextRequest) {
   let body: { proposalId?: unknown; accessCode?: unknown };
@@ -26,10 +27,12 @@ export async function POST(request: NextRequest) {
     return clientJson({ success: false, error: "There's no signed agreement for this proposal yet." }, 404);
   }
   let title: string;
-  if (accessCode) {
-    const access = await verifyEngagementAccess(proposalId, accessCode);
-    if (!access.success || !access.proposal) return clientJson({ success: false, error: access.error ?? "Invalid access code." }, 401);
+  // The access code or the client hub session — or, right after signing, the signer session.
+  const access = await resolveClientAccess(request, proposalId, { accessCode });
+  if (access.ok) {
     title = access.proposal.title;
+  } else if (accessCode) {
+    return clientJson({ success: false, error: access.error }, access.status);
   } else if (await signerFor(request, proposalId, record)) {
     title = (await getProposalById(proposalId))?.data.title ?? "";
   } else {

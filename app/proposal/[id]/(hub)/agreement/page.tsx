@@ -10,7 +10,10 @@ import { AgreementDocument } from "@/components/agreements/AgreementDocument";
 import { AgreementNotice } from "@/components/agreements/AgreementNotice";
 import { AgreementSignInGate } from "@/components/agreements/AgreementSignInGate";
 import { ClientSigningForm } from "@/components/agreements/ClientSigningForm";
-import { ExecutedAgreementAccess } from "@/components/agreements/ExecutedAgreementAccess";
+import { ExecutedAgreementView } from "@/components/agreements/ExecutedAgreementView";
+import { loadExecutedAgreement } from "@/lib/executed-agreement";
+import { hubAccess } from "@/lib/client-session";
+import { HubAccessGate } from "@/components/proposals/hub/HubAccessGate";
 
 export const dynamic = "force-dynamic";
 
@@ -22,13 +25,19 @@ export const metadata: Metadata = {
 const formatDay = (date: string) => new Date(`${date}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 
 /**
- * The client's agreement page. Shown only once Joseph has signed and sent the
- * agreement (and client signing is enabled for its terms). The document and
- * signing form need a verified signer session (access code + emailed code);
- * a signed agreement offers the executed PDF behind the access code.
+ * The hub's Agreement tab (the hub session already proved the access code).
+ * Shown once Joseph has signed and sent the agreement (and client signing is
+ * enabled for its terms). Signing additionally needs a verified signer
+ * session — a code emailed to the client's address, kept as evidence. A
+ * signed agreement shows the executed document, rebuilt from its verified
+ * signed copy, with the PDF.
  */
 export default async function ClientAgreementPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  // Checked here, not only in the layout: layouts aren't re-rendered on
+  // navigation between tabs, so an expired or revoked session must not reach
+  // this server-rendered document by moving here from an open hub.
+  if (!(await hubAccess(id))) return <HubAccessGate proposalId={id} />;
   const agreement = await loadClientAgreement(id);
   if (!agreement.ok) {
     return agreement.code === "unavailable" ? (
@@ -42,7 +51,26 @@ export default async function ClientAgreementPage({ params }: { params: Promise<
     );
   }
   const { record, template } = agreement;
-  if (record.status === "executed") return <ExecutedAgreementAccess proposalId={id} agreementHash={record.agreementHash} />;
+  if (record.status === "executed") {
+    const executed = await loadExecutedAgreement(id);
+    if (!executed) {
+      return (
+        <AgreementNotice title="Agreement signed" proposalId={id}>
+          <p>Your agreement is signed by both parties. We couldn&apos;t display it just now — please contact {profile.email} for a copy.</p>
+        </AgreementNotice>
+      );
+    }
+    return (
+      <ExecutedAgreementView proposalId={id} agreementHash={executed.record.agreementHash} signedAt={formatDay(executed.record.clientSignature!.signedAt.slice(0, 10))}>
+        <AgreementDocument
+          record={executed.record}
+          template={executed.template}
+          proposal={executed.proposal}
+          fullProposalHref={`/proposal/${encodeURIComponent(id)}/agreement/proposal`}
+        />
+      </ExecutedAgreementView>
+    );
+  }
 
   const session = await authorisedSigner((await cookies()).get(AGREEMENT_SIGNER_COOKIE)?.value, id, record);
   if (!session) return <AgreementSignInGate proposalId={id} />;
@@ -70,7 +98,7 @@ export default async function ClientAgreementPage({ params }: { params: Promise<
   }
 
   return (
-    <main className="min-h-screen bg-[var(--andromeda-primary)] px-4 sm:px-6 pt-24 pb-16">
+    <main className="bg-[var(--andromeda-primary)] px-4 sm:px-6 pt-8 pb-16">
       <div className="max-w-6xl mx-auto">
         <header className="mb-6 max-w-3xl">
           <p className="text-xs font-semibold uppercase tracking-widest text-[var(--andromeda-accent-beige)] mb-1">{snapshot.snapshot.title}</p>
@@ -89,7 +117,7 @@ export default async function ClientAgreementPage({ params }: { params: Promise<
             />
           </section>
           {/* Sticky beside the long document, but never taller than the window: it scrolls on its own. */}
-          <div className="lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:overscroll-contain rounded-xl">
+          <div className="lg:sticky lg:top-36 lg:max-h-[calc(100vh-10rem)] lg:overflow-y-auto lg:overscroll-contain rounded-xl">
             <ClientSigningForm
               proposalId={id}
               agreementHash={record.agreementHash}

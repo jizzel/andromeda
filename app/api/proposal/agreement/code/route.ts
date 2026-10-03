@@ -1,14 +1,15 @@
 import type { NextRequest } from "next/server";
 import { isSameOrigin, requestMeta, throttle } from "@/lib/admin-auth";
-import { AGREEMENT_SIGNIN_LEDGER, recordSignInChallenge, verifyEngagementAccess } from "@/lib/google-sheets";
+import { AGREEMENT_SIGNIN_LEDGER, getProposalById, recordSignInChallenge } from "@/lib/google-sheets";
+import { resolveClientAccess } from "@/lib/client-session";
 import { accessCodeTag, AGREEMENT_OTP_COOKIE, AGREEMENT_OTP_TTL_SECONDS, createSignerChallenge, maskEmail, signerCookieOptions, signingConfigured } from "@/lib/agreement-signer";
 import { clientJson, loadClientAgreement, NOT_AVAILABLE } from "@/lib/agreement-client";
 import { sendAgreementSignInCode } from "@/lib/email";
 
 /**
- * Step 1 of signing in to sign: the proposal access code, then a one-time
- * code emailed to the proposal's saved `client.email` (never an address from
- * the request). The challenge cookie is bound to this proposal and the
+ * Step 1 of signing in to sign: the proposal access code (or the client hub
+ * session, which already proved it), then a one-time code emailed to the
+ * proposal's saved `client.email` (never an address from the request). The challenge cookie is bound to this proposal and the
  * agreement hash as it stands.
  */
 export async function POST(request: NextRequest) {
@@ -22,11 +23,11 @@ export async function POST(request: NextRequest) {
   }
   const proposalId = typeof body.proposalId === "string" ? body.proposalId.trim() : "";
   const accessCode = typeof body.accessCode === "string" ? body.accessCode.trim() : "";
-  if (!proposalId || !accessCode) return clientJson({ success: false, error: "Enter your access code." }, 400);
+  if (!proposalId) return clientJson({ success: false, error: "Proposal ID is required" }, 400);
   if (!throttle(`agreement-code-ip:${ip}`, 10, 60 * 60_000)) return clientJson({ success: false, error: "Too many requests. Try again later." }, 429);
 
-  const access = await verifyEngagementAccess(proposalId, accessCode);
-  if (!access.success || !access.proposal) return clientJson({ success: false, error: access.error ?? "Invalid access code." }, 401);
+  const access = await resolveClientAccess(request, proposalId, { accessCode });
+  if (!access.ok) return clientJson({ success: false, error: accessCode ? access.error : "Enter your access code.", code: access.code }, access.status);
   if (!signingConfigured()) {
     console.error("AGREEMENT_SIGNING_SECRET is not set — client agreement sign-in is disabled");
     return clientJson({ success: false, error: "Signing isn't available right now. Please contact us." }, 503);
@@ -42,7 +43,10 @@ export async function POST(request: NextRequest) {
   if (!throttle(`agreement-code:${proposalId}:hourly`, 5, 60 * 60_000)) return clientJson({ success: false, error: "Too many codes requested. Try again in an hour." }, 429);
 
   try {
-    const challenge = createSignerChallenge(proposalId, agreement.record.agreementHash, to, accessCodeTag(accessCode));
+    // Bind the signer to the access code in force (typed now, or proven by the hub session).
+    const code = accessCode || (await getProposalById(proposalId))?.accessCode || "";
+    if (!code) return clientJson({ success: false, error: "Couldn't load the proposal. Try again." }, 503);
+    const challenge = createSignerChallenge(proposalId, agreement.record.agreementHash, to, accessCodeTag(code));
     await recordSignInChallenge(AGREEMENT_SIGNIN_LEDGER, challenge.nonce, ip, userAgent, [proposalId]);
     await sendAgreementSignInCode({
       to,

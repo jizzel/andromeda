@@ -22,7 +22,7 @@ interface ProposalShellProps {
 
 /**
  * Picks the content shell for a proposal's `proposalType`. Shared by the live
- * page (`ProposalPageWrapper`) and the PDF print route (`ProposalPrintView`)
+ * page (the client hub's `ProposalTab`) and the PDF print route (`ProposalPrintView`)
  * so both render the identical component tree.
  */
 export function ProposalShell({ proposal, ...props }: ProposalShellProps) {

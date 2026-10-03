@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { AlertCircle, ArrowRight, Eye, EyeOff, Loader2, Mail, PenLine } from "lucide-react";
+import { AlertCircle, ArrowRight, Loader2, Mail, PenLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAnalytics } from "@/lib/hooks/useAnalytics";
 
@@ -11,22 +11,19 @@ interface AgreementSignInGateProps {
   proposalId: string;
 }
 
-const inputClass =
-  "w-full px-12 py-3 rounded-lg bg-[var(--andromeda-secondary)] border border-white/10 light:border-black/10 text-[var(--andromeda-text-primary)] placeholder:text-[var(--andromeda-text-secondary)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--andromeda-accent-beige)]/50 focus:border-transparent transition-all text-center text-lg tracking-widest";
 const primaryButton =
   "w-full bg-[var(--andromeda-accent-beige)] text-[var(--andromeda-primary)] hover:bg-[var(--andromeda-accent-beige)]/90 py-6 text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed";
 
 /**
- * Before the signing form: the proposal access code, then a one-time code
- * emailed to the client's address on file. On success the server sets a
- * signer session and the page re-renders with the agreement.
+ * Before the signing form: a one-time code emailed to the client's address on
+ * file, as evidence of who signs (§29.4). The hub session already proved the
+ * access code. On success the server sets a signer session and the page
+ * re-renders with the agreement.
  */
 export function AgreementSignInGate({ proposalId }: AgreementSignInGateProps) {
   const router = useRouter();
   const { trackAgreementCodeRequested, trackAgreementCodeVerified } = useAnalytics();
-  const [step, setStep] = useState<"access" | "code">("access");
-  const [accessCode, setAccessCode] = useState("");
-  const [showAccessCode, setShowAccessCode] = useState(false);
+  const [step, setStep] = useState<"request" | "code">("request");
   const [code, setCode] = useState("");
   const [sentTo, setSentTo] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +31,7 @@ export function AgreementSignInGate({ proposalId }: AgreementSignInGateProps) {
 
   const post = async (url: string, body: object) => {
     const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    return { ok: response.ok, data: (await response.json().catch(() => ({}))) as { error?: string; sentTo?: string } };
+    return { ok: response.ok, data: (await response.json().catch(() => ({}))) as { error?: string; sentTo?: string; code?: string } };
   };
 
   const requestCode = async (event?: FormEvent) => {
@@ -42,8 +39,12 @@ export function AgreementSignInGate({ proposalId }: AgreementSignInGateProps) {
     setBusy(true);
     setError(null);
     try {
-      const { ok, data } = await post("/api/proposal/agreement/code", { proposalId, accessCode: accessCode.trim() });
-      if (!ok) return setError(data.error ?? "Couldn't send the code. Try again.");
+      const { ok, data } = await post("/api/proposal/agreement/code", { proposalId });
+      if (!ok) {
+        setError(data.error ?? "Couldn't send the code. Try again.");
+        if (data.code === "signed_out") router.refresh(); // back to the hub's access code
+        return;
+      }
       trackAgreementCodeRequested({ proposal_id: proposalId });
       setSentTo(data.sentTo ?? "your email address");
       setCode("");
@@ -72,48 +73,23 @@ export function AgreementSignInGate({ proposalId }: AgreementSignInGateProps) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--andromeda-primary)] px-6 py-24">
+    <div className="flex items-center justify-center bg-[var(--andromeda-primary)] px-6 py-16">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="w-full max-w-md">
         <div className="flex justify-center mb-8">
           <div className="p-4 rounded-full bg-[var(--andromeda-accent-beige)]/10 border border-[var(--andromeda-accent-beige)]/30">
-            {step === "access" ? <PenLine className="w-8 h-8 text-[var(--andromeda-accent-beige)]" /> : <Mail className="w-8 h-8 text-[var(--andromeda-accent-beige)]" />}
+            {step === "request" ? <PenLine className="w-8 h-8 text-[var(--andromeda-accent-beige)]" /> : <Mail className="w-8 h-8 text-[var(--andromeda-accent-beige)]" />}
           </div>
         </div>
 
-        {step === "access" ? (
+        {step === "request" ? (
           <>
-            <h1 className="text-2xl md:text-3xl font-bold text-center text-[var(--andromeda-text-primary)] mb-3">Service Agreement</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-center text-[var(--andromeda-text-primary)] mb-3">Your service agreement</h1>
             <p className="text-center text-[var(--andromeda-text-secondary)] mb-8">
-              Enter your proposal access code. We&apos;ll then email a one-time code to the address on file to confirm it&apos;s you.
+              Your agreement is ready to review and sign. To confirm it&apos;s you, we&apos;ll email a one-time code to the address on file.
             </p>
             <form onSubmit={requestCode} className="space-y-4">
-              <div className="relative">
-                <label htmlFor="agreementAccessCode" className="sr-only">
-                  Access code
-                </label>
-                <input
-                  id="agreementAccessCode"
-                  type={showAccessCode ? "text" : "password"}
-                  value={accessCode}
-                  onChange={(e) => setAccessCode(e.target.value)}
-                  placeholder="Enter access code"
-                  className={`${inputClass} uppercase`}
-                  autoComplete="off"
-                  autoFocus
-                  disabled={busy}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowAccessCode(!showAccessCode)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-[var(--andromeda-text-secondary)]/50 hover:text-[var(--andromeda-text-primary)] transition-colors focus:outline-none"
-                  disabled={busy}
-                  aria-label={showAccessCode ? "Hide access code" : "Show access code"}
-                >
-                  {showAccessCode ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
               <ErrorNote error={error} />
-              <Button type="submit" disabled={busy || !accessCode.trim()} className={primaryButton}>
+              <Button type="submit" disabled={busy} className={primaryButton}>
                 {busy ? (
                   <>
                     <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Sending code…
@@ -144,7 +120,7 @@ export function AgreementSignInGate({ proposalId }: AgreementSignInGateProps) {
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/[^\d ]/g, ""))}
                 placeholder="000000"
-                className={inputClass}
+                className="w-full px-4 py-3 rounded-lg bg-[var(--andromeda-secondary)] border border-white/10 light:border-black/10 text-[var(--andromeda-text-primary)] placeholder:text-[var(--andromeda-text-secondary)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--andromeda-accent-beige)]/50 focus:border-transparent text-center text-lg tracking-widest"
                 autoFocus
                 disabled={busy}
               />
@@ -169,10 +145,6 @@ export function AgreementSignInGate({ proposalId }: AgreementSignInGateProps) {
             </form>
           </>
         )}
-
-        <p className="text-center text-xs text-[var(--andromeda-text-secondary)]/60 mt-8">
-          This agreement contains confidential information intended only for the recipient. If you received this link in error, please disregard.
-        </p>
       </motion.div>
     </div>
   );
