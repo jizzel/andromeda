@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, type ReactNode } from "react";
-import type { ProposalAcceptance } from "@/types/proposal";
+import type { ClientAgreementStatus, ProposalAcceptance } from "@/types/proposal";
 
 /**
  * Document-level state shared by the proposal section components, so the
@@ -27,6 +27,8 @@ interface ProposalDocumentValue {
   reloadProposal?: () => Promise<void>;
   /** Called after a response is saved, so the document reflects it without a reload. */
   onAcceptanceRecorded?: (acceptance: ProposalAcceptance) => void;
+  /** The service agreement, once sent to the client (live page only). */
+  agreementStatus?: ClientAgreementStatus | null;
 }
 
 const ProposalDocumentContext = createContext<ProposalDocumentValue>({ printMode: false });

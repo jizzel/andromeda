@@ -11,7 +11,7 @@ import type {
 } from "@/types/proposal";
 import type { CreativeBriefData } from "@/types/brief";
 import type { PublishedRevision } from "@/types/proposal";
-import type { AgreementRecord } from "@/types/agreement";
+import { AGREEMENT_STATUSES, type AgreementRecord, type AgreementStatus } from "@/types/agreement";
 
 export type { PublishedRevision };
 
@@ -755,6 +755,44 @@ async function ensureTab(
   ensuredTabs.add(title);
 }
 
+const migratedHeaders = new Set<string>();
+
+/**
+ * Adds header cells for columns appended to an existing tab's schema (an
+ * existing tab's header row isn't rewritten by `ensureTab`). Only fills blank
+ * cells beyond the current header — never renames or moves a column. Once per
+ * tab per instance.
+ */
+async function ensureHeaderColumns(sheets: SheetsClient, title: string, headers: string[], lock?: SheetLock): Promise<void> {
+  if (migratedHeaders.has(title)) return;
+  const current = (await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${title}!A1:${columnLetter(headers.length - 1)}1` })).data.values?.[0] ?? [];
+  if (current.length < headers.length) {
+    const start = current.length;
+    lock?.assertHeld();
+    await sheets.spreadsheets.values.update(
+      {
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${title}!${columnLetter(start)}1`,
+        valueInputOption: "RAW",
+        requestBody: { values: [headers.slice(start)] },
+      },
+      lock?.requestOptions
+    );
+  }
+  migratedHeaders.add(title);
+}
+
+/** 0-based column index → A1 letter (A…Z, AA…). */
+function columnLetter(index: number): string {
+  let n = index + 1;
+  let out = "";
+  while (n > 0) {
+    out = String.fromCharCode(65 + ((n - 1) % 26)) + out;
+    n = Math.floor((n - 1) / 26);
+  }
+  return out;
+}
+
 // Sheet locks — "SheetLocks" tab, append-only event log.
 // Columns: A:key | B:token | C:at | D:event (acquire | release)
 //
@@ -1049,7 +1087,13 @@ export type EngagementEventType =
   | "agreement_prepared"
   | "agreement_updated"
   | "agreement_provider_signed"
-  | "agreement_signature_voided";
+  | "agreement_signature_voided"
+  | "agreement_sent"
+  | "agreement_send_email"
+  | "agreement_client_signed"
+  | "agreement_changes_requested"
+  | "agreement_executed_email"
+  | "agreement_onboarding_unlocked";
 
 export interface EngagementEventInput {
   proposalId: string;
@@ -1081,6 +1125,8 @@ export async function appendEngagementEvent(input: EngagementEventInput, lock?: 
   return at;
 }
 
+export type EngagementEvent = EventRow;
+
 interface EventRow {
   proposalId: string;
   at: string;
@@ -1104,6 +1150,11 @@ async function readEngagementEvents(): Promise<EventRow[]> {
   });
 }
 
+/** One proposal's events in sheet (= time) order. Throws if the tab can't be read. */
+export async function readProposalEngagementEvents(proposalId: string): Promise<EngagementEvent[]> {
+  return (await readEngagementEvents()).filter((e) => e.proposalId === proposalId);
+}
+
 const text = (value: unknown) => (typeof value === "string" ? value : undefined);
 
 /**
@@ -1111,7 +1162,7 @@ const text = (value: unknown) => (typeof value === "string" ? value : undefined)
  * keyed by version. Email rows: `sending` reserves an attempt (see the publish
  * route), `sent` is final, `failed` counts a recorded failure.
  */
-function foldRevisions(rows: EventRow[]): Map<string, PublishedRevision> {
+export function foldRevisions(rows: EventRow[]): Map<string, PublishedRevision> {
   const byVersion = new Map<string, PublishedRevision>();
   for (const row of rows) {
     if (row.event === "revision_published") {
@@ -1164,13 +1215,14 @@ export async function getPublishedRevision(proposalId: string, version: string):
 }
 
 /** Every proposal's published revisions (all versions), for the dashboard. Throws on failure. */
-export async function getAllRevisionsByProposal(): Promise<Map<string, Map<string, PublishedRevision>>> {
+/** Every proposal's events, grouped, in sheet order (one read — the dashboard folds revisions and agreements from it). */
+export async function getAllEngagementEventsByProposal(): Promise<Map<string, EngagementEvent[]>> {
   const grouped = new Map<string, EventRow[]>();
   for (const row of await readEngagementEvents()) {
     if (!row.proposalId) continue;
     grouped.set(row.proposalId, [...(grouped.get(row.proposalId) ?? []), row]);
   }
-  return new Map([...grouped].map(([id, rows]) => [id, foldRevisions(rows)]));
+  return grouped;
 }
 
 // Agreements — "Agreements" tab, one row per proposal (anchored).
@@ -1179,12 +1231,13 @@ export async function getAllRevisionsByProposal(): Promise<Map<string, Map<strin
 //          M:selection (JSON — the client's chosen package / payment plan, pinned from the acceptance)
 //          N:clientName (pinned from the accepted snapshot; empty on records prepared before it was stored)
 //          O:acceptedAt (when the client accepted, pinned from the acceptance; empty on older records)
+//          P:sentAt (when the signing link was last emailed) | Q:clientSignature (JSON, once executed)
 // Current state only; every change is also an EngagementEvents row (the evidence trail).
 const AGREEMENTS_SHEET_NAME = "Agreements";
 const AGREEMENTS_HEADERS = [
   "proposalId", "status", "templateId", "templateVersion", "templateHash", "proposalVersion",
   "provider", "specialTerms", "offerValidUntil", "agreementHash", "providerSignature", "updatedAt", "selection",
-  "clientName", "acceptedAt",
+  "clientName", "acceptedAt", "sentAt", "clientSignature",
 ];
 const agreementsSheetIdCache = { value: null as number | null };
 
@@ -1195,7 +1248,7 @@ function rowToAgreement(r: string[]): AgreementRecord | null {
   try {
     return {
       proposalId: r[0].trim(),
-      status: r[1]?.trim() === "provider_signed" ? "provider_signed" : "draft",
+      status: parseAgreementStatus(r[1]),
       templateId: r[2]?.trim() ?? "",
       templateVersion: Number(r[3]),
       templateHash: r[4]?.trim() ?? "",
@@ -1211,10 +1264,19 @@ function rowToAgreement(r: string[]): AgreementRecord | null {
       // Verbatim, not trimmed: the name is part of the agreement hash, and
       // Sheets stores RAW strings exactly (incl. surrounding whitespace).
       clientName: r[13] ?? "",
+      sentAt: r[15]?.trim() || undefined,
+      clientSignature: r[16] ? JSON.parse(r[16]) : null,
     };
   } catch {
     return null; // a hand-edited, unreadable row
   }
+}
+
+/** Unknown statuses are unreadable, never silently read as a draft (which would allow editing a signed agreement). */
+function parseAgreementStatus(value: string | undefined): AgreementStatus {
+  const status = value?.trim() || "draft";
+  if (!(AGREEMENT_STATUSES as readonly string[]).includes(status)) throw new Error(`Unknown agreement status "${status}"`);
+  return status as AgreementStatus;
 }
 
 function agreementToRow(a: AgreementRecord): string[] {
@@ -1222,14 +1284,14 @@ function agreementToRow(a: AgreementRecord): string[] {
     a.proposalId, a.status, a.templateId, String(a.templateVersion), a.templateHash, a.proposalVersion,
     JSON.stringify(a.provider), JSON.stringify(a.specialTerms), a.offerValidUntil, a.agreementHash,
     a.providerSignature ? JSON.stringify(a.providerSignature) : "", a.updatedAt, JSON.stringify(a.selection ?? {}),
-    a.clientName ?? "", a.acceptedAt ?? "",
+    a.clientName ?? "", a.acceptedAt ?? "", a.sentAt ?? "", a.clientSignature ? JSON.stringify(a.clientSignature) : "",
   ];
 }
 
 async function readAgreementRows(): Promise<string[][]> {
   const sheets = getGoogleSheetsClient();
   await ensureTab(sheets, AGREEMENTS_SHEET_NAME, AGREEMENTS_HEADERS);
-  const response = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${AGREEMENTS_SHEET_NAME}!A2:O` });
+  const response = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${AGREEMENTS_SHEET_NAME}!A2:Q` });
   return (response.data.values || []) as string[][];
 }
 
@@ -1256,6 +1318,7 @@ export async function getAllAgreements(): Promise<Map<string, AgreementRecord>> 
 export async function writeAgreement(record: AgreementRecord, lock: SheetLock): Promise<void> {
   const sheets = getGoogleSheetsClient();
   await ensureTab(sheets, AGREEMENTS_SHEET_NAME, AGREEMENTS_HEADERS);
+  await ensureHeaderColumns(sheets, AGREEMENTS_SHEET_NAME, AGREEMENTS_HEADERS, lock);
   const sheetId = await getSheetId(sheets, AGREEMENTS_SHEET_NAME, agreementsSheetIdCache);
   const cells = agreementToRow(record);
   if (sheetId !== null && (await readRowByAnchor(sheets, AGREEMENTS_SHEET_NAME, sheetId, record.proposalId, lock))) {
@@ -1373,10 +1436,13 @@ const AGREEMENT_SNAPSHOT_HEADERS = ["proposalId", "agreementHash", "capturedAt",
  * Rows carry the signature's signedAt in column C — except rows written before
  * snapshots were keyed per signature, where C is the capture time (a few ms
  * later). Those are matched by the signature recorded inside their JSON, so
- * legacy evidence is found rather than treated as missing and rebuilt.
+ * legacy evidence is found rather than treated as missing and rebuilt. Only
+ * provider rows can be legacy: a client-signed row embeds the provider's
+ * signature too, and must never pass for it.
  */
 function snapshotRowIsSignature(row: string[], signedAt: string): boolean {
   if (row[2]?.trim() === signedAt) return true;
+  if (row[3]?.trim() !== "provider_signed") return false;
   try {
     const data = JSON.parse(row.slice(4).join("")) as { record?: { providerSignature?: { signedAt?: string } | null } };
     return data.record?.providerSignature?.signedAt === signedAt;
@@ -1394,7 +1460,7 @@ export async function saveAgreementSnapshot(
   proposalId: string,
   agreementHash: string,
   signedAt: string,
-  reason: "provider_signed",
+  reason: "provider_signed" | "client_signed",
   json: string,
   lock: SheetLock
 ): Promise<"stored" | "duplicate"> {
@@ -1774,8 +1840,9 @@ export async function getAllWeeklyUpdatesSent(): Promise<Set<string>> {
 }
 
 
-// Admin sign-in ledger — "AdminSignIns" tab, append-only event log.
-// Columns: A:nonce | B:at | C:event (issued | failed | matched) | D:ip | E:userAgent
+// Sign-in ledgers — append-only event logs for one-time codes.
+// "AdminSignIns":     A:nonce | B:at | C:event (issued | failed | matched) | D:ip | E:userAgent
+// "AgreementSignIns": the same, plus F:proposalId (client signers of an agreement)
 //
 // Attempt limits and single use must hold across server instances, and Sheets
 // has no compare-and-swap — so nothing is ever read-then-updated here. Each
@@ -1784,26 +1851,43 @@ export async function getAllWeeklyUpdatesSent(): Promise<Set<string>> {
 // total order of attempts. Each request then decides from that order alone:
 // it counts only if it is among the first `maxAttempts` attempts, and a
 // matching code wins only if no earlier attempt already matched. Doubles as an
-// audit log of admin sign-ins.
-const ADMIN_SIGNIN_SHEET_NAME = "AdminSignIns";
-const ADMIN_SIGNIN_HEADERS = ["nonce", "at", "event", "ip", "userAgent"];
+// audit log of sign-ins.
+export interface SignInLedger {
+  tab: string;
+  headers: string[];
+}
 
-export async function recordAdminSignInChallenge(nonce: string, ip: string, userAgent: string): Promise<void> {
+export const ADMIN_SIGNIN_LEDGER: SignInLedger = { tab: "AdminSignIns", headers: ["nonce", "at", "event", "ip", "userAgent"] };
+export const AGREEMENT_SIGNIN_LEDGER: SignInLedger = {
+  tab: "AgreementSignIns",
+  headers: ["nonce", "at", "event", "ip", "userAgent", "proposalId"],
+};
+
+async function appendLedgerEvent(ledger: SignInLedger, cells: string[]) {
   const sheets = getGoogleSheetsClient();
-  await ensureTab(sheets, ADMIN_SIGNIN_SHEET_NAME, ADMIN_SIGNIN_HEADERS);
-  await sheets.spreadsheets.values.append({
+  await ensureTab(sheets, ledger.tab, ledger.headers);
+  return sheets.spreadsheets.values.append({
     spreadsheetId: SPREADSHEET_ID,
-    range: `${ADMIN_SIGNIN_SHEET_NAME}!A:E`,
+    range: `${ledger.tab}!A:${columnLetter(ledger.headers.length - 1)}`,
     valueInputOption: "RAW",
     insertDataOption: "INSERT_ROWS",
-    requestBody: { values: [[nonce, new Date().toISOString(), "issued", ip, userAgent.slice(0, 300)]] },
+    requestBody: { values: [cells] },
   });
 }
 
-export type AdminSignInAttempt =
+/** Records that a code was issued for `nonce`. `extra` fills the ledger's columns after E. */
+export async function recordSignInChallenge(ledger: SignInLedger, nonce: string, ip: string, userAgent: string, extra: string[] = []): Promise<void> {
+  await appendLedgerEvent(ledger, [nonce, new Date().toISOString(), "issued", ip, userAgent.slice(0, 300), ...extra]);
+}
+
+export const recordAdminSignInChallenge = (nonce: string, ip: string, userAgent: string) =>
+  recordSignInChallenge(ADMIN_SIGNIN_LEDGER, nonce, ip, userAgent);
+
+export type SignInAttempt =
   /** `attemptNumber`: this attempt's 1-based position among the challenge's attempts. */
   | { status: "ok"; attemptNumber: number }
   | { status: "unknown" | "used" | "locked" };
+export type AdminSignInAttempt = SignInAttempt;
 
 function appendedRow(updatedRange: string | null | undefined): number | null {
   const match = updatedRange?.match(/!A(\d+)/);
@@ -1816,30 +1900,22 @@ function appendedRow(updatedRange: string | null | undefined): number | null {
  * challenge was never issued, `used` if an earlier attempt already redeemed
  * it, `locked` if this attempt is beyond `maxAttempts`, else `ok`.
  */
-export async function registerAdminSignInAttempt(
+export async function registerSignInAttempt(
+  ledger: SignInLedger,
   nonce: string,
   maxAttempts: number,
   matched: boolean,
   ip: string,
-  userAgent: string
-): Promise<AdminSignInAttempt> {
-  const sheets = getGoogleSheetsClient();
-  await ensureTab(sheets, ADMIN_SIGNIN_SHEET_NAME, ADMIN_SIGNIN_HEADERS);
-  const appended = await sheets.spreadsheets.values.append({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${ADMIN_SIGNIN_SHEET_NAME}!A:E`,
-    valueInputOption: "RAW",
-    insertDataOption: "INSERT_ROWS",
-    requestBody: {
-      values: [[nonce, new Date().toISOString(), matched ? "matched" : "failed", ip, userAgent.slice(0, 300)]],
-    },
-  });
+  userAgent: string,
+  extra: string[] = []
+): Promise<SignInAttempt> {
+  const appended = await appendLedgerEvent(ledger, [nonce, new Date().toISOString(), matched ? "matched" : "failed", ip, userAgent.slice(0, 300), ...extra]);
   const ownRow = appendedRow(appended.data.updates?.updatedRange);
   if (ownRow === null) throw new Error("Sign-in ledger append returned no row");
 
-  const response = await sheets.spreadsheets.values.get({
+  const response = await getGoogleSheetsClient().spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
-    range: `${ADMIN_SIGNIN_SHEET_NAME}!A2:C`,
+    range: `${ledger.tab}!A2:C`,
   });
   const events = (response.data.values || [])
     .map((r, i) => ({ row: i + 2, nonce: r[0]?.trim(), event: r[2]?.trim() }))
@@ -1853,3 +1929,6 @@ export async function registerAdminSignInAttempt(
   if (position >= maxAttempts) return { status: "locked" };
   return { status: "ok", attemptNumber: position + 1 };
 }
+
+export const registerAdminSignInAttempt = (nonce: string, maxAttempts: number, matched: boolean, ip: string, userAgent: string) =>
+  registerSignInAttempt(ADMIN_SIGNIN_LEDGER, nonce, maxAttempts, matched, ip, userAgent);

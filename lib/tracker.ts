@@ -3,6 +3,7 @@ import {
   appendTrackerRows,
   getProposalAcceptance,
   getTrackerStates,
+  readAgreement,
 } from "@/lib/google-sheets";
 import type {
   ProjectTrackerConfig,
@@ -13,7 +14,9 @@ import type {
 // "proposal-sent" is filled in manually on the sheet (its date predates anything
 // the app can observe), so only "proposal-accepted" auto-completes on first seed.
 const AUTO_DONE_ON_ACCEPTED = "proposal-accepted";
-const AUTO_DONE_ON_ASSETS_READY = "service-agreement-signed";
+// Done when the agreement is executed (native signing), or — for engagements
+// signed outside the app — when Joseph has unlocked assets by hand.
+export const AGREEMENT_SIGNED_MILESTONE = "service-agreement-signed";
 
 const milestoneKey = (phaseId: string, milestoneId: string) => `${phaseId}::${milestoneId}`;
 
@@ -31,6 +34,7 @@ export async function getOrSeedTracker(
 
   const acceptance = isFirstSeed ? await getProposalAcceptance(proposalId) : null;
   const acceptedAt = acceptance?.status === "accepted" ? acceptance.acceptedAt || new Date().toISOString() : null;
+  const agreementSignedAt = isFirstSeed ? await executedAgreementSignedAt(proposalId) : null;
   const now = new Date().toISOString();
 
   const missing: TrackerMilestoneState[] = phases.flatMap((phase) =>
@@ -38,14 +42,15 @@ export async function getOrSeedTracker(
       .filter((m) => !existingKeys.has(milestoneKey(phase.id, m.id)))
       .map<TrackerMilestoneState>((milestone) => {
         const isAcceptedMilestone = isFirstSeed && milestone.id === AUTO_DONE_ON_ACCEPTED && acceptedAt;
-        const isAgreementMilestone = isFirstSeed && milestone.id === AUTO_DONE_ON_ASSETS_READY && proposal.assetsReady;
+        const isAgreementMilestone = isFirstSeed && milestone.id === AGREEMENT_SIGNED_MILESTONE && (agreementSignedAt || proposal.assetsReady);
         const autoDone = Boolean(isAcceptedMilestone || isAgreementMilestone);
+        const completedAt = isAcceptedMilestone && acceptedAt ? acceptedAt : isAgreementMilestone && agreementSignedAt ? agreementSignedAt : now;
 
         return {
           phaseId: phase.id,
           milestoneId: milestone.id,
           status: autoDone ? "done" : "pending",
-          completedAt: autoDone ? (isAcceptedMilestone && acceptedAt ? acceptedAt : now) : undefined,
+          completedAt: autoDone ? completedAt : undefined,
           updatedAt: now,
         };
       })
@@ -55,4 +60,15 @@ export async function getOrSeedTracker(
 
   await appendTrackerRows(proposalId, missing);
   return [...existing, ...missing];
+}
+
+/** When the client signed the agreement, if it's executed. Unreadable → null (falls back to `assetsReady`). */
+async function executedAgreementSignedAt(proposalId: string): Promise<string | null> {
+  try {
+    const agreement = await readAgreement(proposalId);
+    return agreement?.status === "executed" ? (agreement.clientSignature?.signedAt ?? null) : null;
+  } catch (error) {
+    console.error(`Tracker seed for ${proposalId}: couldn't read the agreement:`, error);
+    return null;
+  }
 }

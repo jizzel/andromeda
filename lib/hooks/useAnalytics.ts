@@ -98,6 +98,23 @@ interface ProposalPdfDownloadedEvent {
   method: "generated" | "print";
 }
 
+interface AgreementEvent {
+  proposal_id: string;
+  /** First 12 hex characters of the agreement hash. */
+  agreement_hash_short: string;
+}
+
+interface AgreementOpenedEvent {
+  proposal_id: string;
+  /** What the CTA offered: signing (sent) or the signed copy (executed). */
+  status: "sent" | "executed";
+}
+
+interface AgreementPdfDownloadedEvent extends AgreementEvent {
+  /** Right after signing (signer session) or later with the access code. */
+  via: "session" | "access_code";
+}
+
 interface ProposalTrackerPhaseViewedEvent {
   proposal_id: string;
   phase_id: string;
@@ -149,6 +166,8 @@ export const useAnalytics = () => {
   const trackProposalAssetsOpened = (data: ProposalAssetsOpenedEvent) => emit("proposal_assets_opened", data);
   const trackProposalAssetItemToggled = (data: ProposalAssetItemToggledEvent) => emit("proposal_asset_item_toggled", data);
   const trackProposalUploadFolderOpened = (data: ProposalUploadFolderOpenedEvent) => emit("proposal_upload_folder_opened", data);
+  /** The asset guide (e.g. image-specification PDF) linked on the asset checklist was opened. */
+  const trackProposalAssetGuideOpened = (data: { proposal_id: string }) => emit("proposal_asset_guide_opened", data);
   const trackProposalTrackerOpened = (data: ProposalTrackerOpenedEvent) => emit("proposal_tracker_opened", data);
   const trackProposalPdfDownloaded = (data: ProposalPdfDownloadedEvent) => emit("proposal_pdf_downloaded", data);
   /** Revised-since-your-change-request banner shown (a revision reached the client). */
@@ -161,6 +180,15 @@ export const useAnalytics = () => {
   const trackProposalResponseReopened = (data: ProposalVersionEvent) => emit("proposal_response_reopened", data);
   const trackProposalTrackerPhaseViewed = (data: ProposalTrackerPhaseViewedEvent) => emit("proposal_tracker_phase_viewed", data);
   const trackBriefAccessed = (data: BriefAccessedEvent) => emit("brief_accessed", data);
+  /** "Review and sign agreement" / "View signed agreement" clicked on the proposal page. */
+  const trackProposalAgreementOpened = (data: AgreementOpenedEvent) => emit("proposal_agreement_opened", data);
+  /** The agreement document was shown to a verified signer. */
+  const trackAgreementViewed = (data: AgreementEvent) => emit("agreement_viewed", data);
+  const trackAgreementCodeRequested = (data: { proposal_id: string }) => emit("agreement_code_requested", data);
+  const trackAgreementCodeVerified = (data: { proposal_id: string }) => emit("agreement_code_verified", data);
+  const trackAgreementSigned = (data: AgreementEvent & { for_organisation: boolean }) => emit("agreement_signed", data);
+  const trackAgreementChangesRequested = (data: AgreementEvent) => emit("agreement_changes_requested", data);
+  const trackAgreementPdfDownloaded = (data: AgreementPdfDownloadedEvent) => emit("agreement_pdf_downloaded", data);
 
   return {
     trackBusinessCardOpened,
@@ -179,6 +207,7 @@ export const useAnalytics = () => {
     trackProposalAssetsOpened,
     trackProposalAssetItemToggled,
     trackProposalUploadFolderOpened,
+    trackProposalAssetGuideOpened,
     trackProposalTrackerOpened,
     trackProposalPdfDownloaded,
     trackProposalRevisionViewed,
@@ -187,5 +216,12 @@ export const useAnalytics = () => {
     trackProposalResponseReopened,
     trackProposalTrackerPhaseViewed,
     trackBriefAccessed,
+    trackProposalAgreementOpened,
+    trackAgreementViewed,
+    trackAgreementCodeRequested,
+    trackAgreementCodeVerified,
+    trackAgreementSigned,
+    trackAgreementChangesRequested,
+    trackAgreementPdfDownloaded,
   };
 };

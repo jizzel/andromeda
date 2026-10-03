@@ -2,12 +2,11 @@ import type { NextRequest } from "next/server";
 import { withRouteTelemetry } from "@/lib/sheets-telemetry";
 import { isAdminRequest, isSameOrigin, requestMeta } from "@/lib/admin-auth";
 import { appendEngagementEvent, readAgreement, saveAgreementSnapshot, SheetLockExpiredError, withProposalLock, writeAgreement } from "@/lib/google-sheets";
-import { loadTemplate } from "@/lib/agreement-templates";
-import { agreementHash, namesMatch, sameSelection, selectionOf } from "@/lib/agreements";
+import { namesMatch, offerClosed } from "@/lib/agreements";
+import { agreementSnapshotJson, signingFailureResponse, verifySigningBasis } from "@/lib/agreement-basis";
 import { PROVIDER_SIGNING_DECLARATION } from "@/constants/agreement";
-import type { AgreementRecord } from "@/types/agreement";
+import { isProviderSigned, type AgreementRecord } from "@/types/agreement";
 import { busy, json, readJsonBody } from "../../edit";
-import { agreementSnapshotJson, clientNameOf, loadAcceptedAcceptance, loadVerifiedSnapshot } from "../context";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -32,32 +31,12 @@ async function handlePOST(request: NextRequest, { params }: Params) {
   const locked = await withProposalLock(id, async (lock) => {
     const record = await readAgreement(id);
     if (!record) return { kind: "not_found" } as const;
-    if (record.status === "provider_signed") return { kind: "already_signed", record } as const;
+    if (isProviderSigned(record.status)) return { kind: "already_signed", record } as const;
     if (!namesMatch(typedName, record.provider.name)) return { kind: "name" } as const;
-    if (new Date() > new Date(record.offerValidUntil)) return { kind: "offer_expired" } as const;
-
-    // Still accepted, at the same version, with the same selection and date —
-    // checked against the current acceptance on every sign.
-    const accepted = await loadAcceptedAcceptance(id);
-    if (!accepted.ok) return { kind: "basis", basis: accepted } as const;
-    if (accepted.acceptance.proposalVersion !== record.proposalVersion) return { kind: "stale" } as const;
-    // The chosen package / plan are part of what's signed: a corrected acceptance must be reviewed first.
-    if (!sameSelection(record.selection ?? {}, selectionOf(accepted.acceptance))) return { kind: "stale_selection" } as const;
-    // The acceptance date is shown in Schedule 2 and signed: it must be pinned
-    // (older drafts: re-save) and still match the acceptance.
-    if (!record.acceptedAt || record.acceptedAt !== accepted.acceptance.acceptedAt) return { kind: "stale_acceptance" } as const;
-    // The incorporated terms are re-read and verified on every sign: the
-    // stored snapshot must still exist and hash to the pinned version, so a
-    // deleted or hand-edited snapshot can never sit under a signature. (It's
-    // also what supplies the client name for records prepared before it was pinned.)
-    const verified = await loadVerifiedSnapshot(id, record.proposalVersion);
-    if (!verified.ok) return { kind: "basis", basis: verified } as const;
-    const clientName = record.clientName || clientNameOf(verified.snapshot);
-    if (clientName !== clientNameOf(verified.snapshot)) return { kind: "stale" } as const;
-    const template = loadTemplate(record.templateId, record.templateVersion);
-    if (!template || template.hash !== record.templateHash) return { kind: "template_changed" } as const;
-    const recomputed = agreementHash({ ...record, clientName });
-    if (recomputed !== record.agreementHash || recomputed !== shownHash) return { kind: "stale" } as const;
+    if (offerClosed(record.offerValidUntil)) return { kind: "offer_expired" } as const;
+    const basis = await verifySigningBasis(record, shownHash);
+    if (!basis.ok) return { kind: "failed", failure: basis } as const;
+    const { template, clientName, agreementHash: recomputed } = basis;
 
     const signedAt = new Date().toISOString();
     const signed: AgreementRecord = {
@@ -70,7 +49,7 @@ async function handlePOST(request: NextRequest, { params }: Params) {
     // Evidence first: the immutable copy is stored before the signed record,
     // and if it can't be, nothing is signed.
     try {
-      await saveAgreementSnapshot(id, recomputed, signedAt, "provider_signed", agreementSnapshotJson(signed, clientName, template.raw, verified.snapshotJson), lock);
+      await saveAgreementSnapshot(id, recomputed, signedAt, "provider_signed", agreementSnapshotJson(signed, clientName, template.raw, basis.snapshotJson), lock);
     } catch (error) {
       if (error instanceof SheetLockExpiredError) throw error;
       console.error(`Agreement snapshot for ${id}@${recomputed} failed:`, error);
@@ -101,16 +80,10 @@ async function handlePOST(request: NextRequest, { params }: Params) {
       return json({ success: false, code: "name", error: "Type your full name exactly as it appears on the agreement." }, 400);
     case "offer_expired":
       return json({ success: false, code: "offer_expired", error: "The offer window has passed — set a new 'valid until' date first." }, 400);
-    case "basis":
-      return json({ success: false, code: outcome.basis.code, error: outcome.basis.error }, outcome.basis.code === "unavailable" ? 503 : 409);
-    case "template_changed":
-      return json({ success: false, code: "template_changed", error: "The terms file changed since this agreement was prepared. Re-save the agreement to pin the current text, review it, then sign." }, 409);
-    case "stale":
-      return json({ success: false, code: "stale", error: "The agreement changed since you previewed it. Reload and review before signing." }, 409);
-    case "stale_selection":
-      return json({ success: false, code: "stale", error: "The client's recorded package or payment plan changed since this agreement was prepared. Save the draft again to review it, then sign." }, 409);
-    case "stale_acceptance":
-      return json({ success: false, code: "stale", error: "The acceptance date isn't pinned in this agreement, or it changed since the agreement was prepared. Save the draft again to review it, then sign." }, 409);
+    case "failed": {
+      const { status, body } = signingFailureResponse(outcome.failure, "provider");
+      return json(body, status);
+    }
     case "snapshot_failed":
       return json({ success: false, code: "snapshot_failed", error: "Couldn't store the signed copy, so nothing was signed. Try again." }, 503);
     default:

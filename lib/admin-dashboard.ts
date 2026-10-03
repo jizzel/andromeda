@@ -3,10 +3,13 @@ import {
   getAllAgreements,
   getAllCheckedAssetsByProposal,
   getAllProposals,
-  getAllRevisionsByProposal,
+  getAllEngagementEventsByProposal,
+  foldRevisions,
   readAllTrackerStatesByProposal,
+  type EngagementEvent,
   type ProposalRecord,
 } from "@/lib/google-sheets";
+import { foldAgreementActivity } from "@/lib/agreement-activity";
 import { proposalVersion } from "@/lib/proposal-version";
 import { resolveTrackerPhases } from "@/constants/tracker-templates";
 import type { ProposalAcceptance, PublishedRevision, TrackerMilestoneState } from "@/types/proposal";
@@ -37,7 +40,9 @@ export function deriveRow(
   trackerSource: Source<TrackerMilestoneState[] | undefined>,
   now: Date,
   revisionsSource: Source<Map<string, PublishedRevision> | undefined> = undefined,
-  agreementSource: Source<AgreementRecord | undefined> = undefined
+  agreementSource: Source<AgreementRecord | undefined> = undefined,
+  /** Change requests the client made against the current agreement (from its events). */
+  agreementChangeRequests = 0
 ): DashboardRow {
   const responsesKnown = acceptanceSource !== UNAVAILABLE;
   const acceptance = responsesKnown ? acceptanceSource : undefined;
@@ -137,7 +142,11 @@ export function deriveRow(
       agreementSource === UNAVAILABLE
         ? UNAVAILABLE
         : agreementSource
-          ? { status: agreementSource.status, signedAt: agreementSource.providerSignature?.signedAt }
+          ? {
+              status: agreementSource.status,
+              signedAt: agreementSource.providerSignature?.signedAt,
+              changesRequested: agreementSource.status === "sent" && agreementChangeRequests > 0,
+            }
           : null,
   };
 }
@@ -160,25 +169,43 @@ function settle<T>(tab: string, read: Promise<T>): Promise<Settled<T>> {
   );
 }
 
+/** A proposal's events, or null when the tab couldn't be read. */
+function eventsOf(source: Settled<Map<string, EngagementEvent[]>>, id: string): EngagementEvent[] | null {
+  return source.ok ? (source.value.get(id) ?? []) : null;
+}
+
 function pick<T>(source: Settled<Map<string, T>>, id: string): Source<T | undefined> {
   return source.ok ? source.value.get(id) : UNAVAILABLE;
 }
 
 /** Throws if the Proposals tab itself can't be read — there's nothing to show without it. */
 export async function loadDashboard(now = new Date()): Promise<DashboardData> {
-  const [proposals, acceptances, assets, trackers, revisions, agreements] = await Promise.all([
+  const [proposals, acceptances, assets, trackers, events, agreements] = await Promise.all([
     getAllProposals(),
     settle("ProposalAcceptance", getAllAcceptances()),
     settle("ProposalAssets", getAllCheckedAssetsByProposal()),
     settle("ProjectTracker", readAllTrackerStatesByProposal()),
-    settle("EngagementEvents", getAllRevisionsByProposal()),
+    settle("EngagementEvents", getAllEngagementEventsByProposal()),
     settle("Agreements", getAllAgreements()),
   ]);
   const rows = proposals
-    .map((record) =>
-      deriveRow(record, pick(acceptances, record.id), pick(assets, record.id), pick(trackers, record.id), now, pick(revisions, record.id), pick(agreements, record.id))
-    )
+    .map((record) => {
+      const proposalEvents = eventsOf(events, record.id);
+      const agreement = pick(agreements, record.id);
+      const changeRequests =
+        proposalEvents && agreement && agreement !== UNAVAILABLE ? foldAgreementActivity(proposalEvents, agreement.agreementHash).changeRequests.length : 0;
+      return deriveRow(
+        record,
+        pick(acceptances, record.id),
+        pick(assets, record.id),
+        pick(trackers, record.id),
+        now,
+        events.ok ? foldRevisions(proposalEvents ?? []) : UNAVAILABLE,
+        agreement,
+        changeRequests
+      );
+    })
     .sort((a, b) => b.lastActivity.localeCompare(a.lastActivity));
-  const unavailable = [acceptances, assets, trackers, revisions, agreements].flatMap((source) => (source.ok ? [] : [source.tab]));
+  const unavailable = [acceptances, assets, trackers, events, agreements].flatMap((source) => (source.ok ? [] : [source.tab]));
   return { rows, unavailable };
 }

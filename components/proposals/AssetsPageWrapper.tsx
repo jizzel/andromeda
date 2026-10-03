@@ -30,7 +30,7 @@ function AssetsNotAvailable({ proposalId }: { proposalId: string }) {
           Asset Request Not Ready
         </h1>
         <p className="text-[var(--andromeda-text-secondary)] mb-8">
-          The asset request for this proposal hasn&apos;t been prepared yet. Please check back after signing the service agreement.
+          The asset request for this proposal hasn&apos;t been prepared yet. Please check back later.
         </p>
         <Link
           href={`/proposal/${proposalId}`}

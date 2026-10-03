@@ -72,7 +72,7 @@ const PRIORITY_PILL: Record<AssetItemPriority, { label: string; classes: string 
 };
 
 export function AssetsContent({ proposalId, accessCode, assets, clientName }: AssetsContentProps) {
-  const { trackProposalAssetItemToggled, trackProposalUploadFolderOpened } = useAnalytics();
+  const { trackProposalAssetItemToggled, trackProposalUploadFolderOpened, trackProposalAssetGuideOpened } = useAnalytics();
   const totalItems = assets.categories.reduce((sum, cat) => sum + cat.items.length, 0);
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -223,6 +223,25 @@ export function AssetsContent({ proposalId, accessCode, assets, clientName }: As
                     >
                       <FolderOpen className="w-4 h-4 mr-2" />
                       {assets.uploadLabel ?? "Open upload folder"}
+                    </a>
+                  </Button>
+                </motion.div>
+              )}
+              {assets.guideUrl && (
+                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="border-[var(--andromeda-accent-beige)]/40 bg-transparent text-[var(--andromeda-text-primary)] hover:bg-[var(--andromeda-accent-beige)]/10 hover:text-[var(--andromeda-text-primary)] font-semibold"
+                  >
+                    <a
+                      href={assets.guideUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => trackProposalAssetGuideOpened({ proposal_id: proposalId })}
+                    >
+                      <FileText className="w-4 h-4 mr-2" />
+                      {assets.guideLabel ?? "Asset guide"}
                     </a>
                   </Button>
                 </motion.div>

@@ -116,6 +116,8 @@ const assetRequest = z.strictObject({
   intro: str.optional(),
   uploadUrl: str.optional(),
   uploadLabel: str.optional(),
+  guideUrl: str.optional(),
+  guideLabel: str.optional(),
   deadline: str.optional(),
   categories: z.array(assetCategory),
   delayNotice: str.optional(),

@@ -160,6 +160,9 @@ export interface AssetRequest {
   intro?: string;
   uploadUrl?: string;
   uploadLabel?: string;
+  /** A guide for preparing the assets (e.g. an image-specification PDF), linked beside the upload button. */
+  guideUrl?: string;
+  guideLabel?: string;
   deadline?: string;
   categories: AssetCategory[];
   delayNotice?: string;
@@ -445,7 +448,11 @@ export interface VerifyAccessResponse {
   proposalVersion?: string;
   /** Set when Joseph published the current version as a revision (admin "Publish revision"). */
   revision?: ProposalRevisionNotice;
+  /** Set once the service agreement has been sent to the client (open for signing) or signed. */
+  agreement?: { status: ClientAgreementStatus };
 }
+
+export type ClientAgreementStatus = "sent" | "executed";
 
 export interface ProposalRevisionNotice {
   publishedAt: string;

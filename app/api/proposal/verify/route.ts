@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPublishedRevision, verifyEngagementAccess } from "@/lib/google-sheets";
 import type { VerifyAccessResponse } from "@/types/proposal";
 import { proposalVersion } from "@/lib/proposal-version";
+import { clientAgreementStatus } from "@/lib/agreement-client";
 
 export async function POST(request: NextRequest): Promise<NextResponse<VerifyAccessResponse>> {
   try {
@@ -36,7 +37,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<VerifyAcc
     const version = result.proposal ? proposalVersion(result.proposal) : undefined;
     // Only a revision published for exactly these terms: an edit after
     // publishing (a new version) drops the notice until it's published too.
-    const revision = version ? await getPublishedRevision(proposalId, version) : null;
+    const [revision, agreementStatus] = await Promise.all([
+      version ? getPublishedRevision(proposalId, version) : null,
+      clientAgreementStatus(proposalId),
+    ]);
 
     return NextResponse.json({
       success: true,
@@ -44,6 +48,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<VerifyAcc
       expiryDate: result.expiryDate,
       proposalVersion: version,
       ...(revision && { revision: { publishedAt: revision.publishedAt, note: revision.note } }),
+      ...(agreementStatus && { agreement: { status: agreementStatus } }),
     });
   } catch (error) {
     console.error("Error in proposal verify API:", error);

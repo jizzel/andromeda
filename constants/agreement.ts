@@ -6,18 +6,20 @@ import { profile } from "@/constants/profile";
  * The resolved block is frozen into each agreement record when it's prepared,
  * so changing these later never alters a prepared or signed agreement.
  *
- * `tradingName` is optional: when set, each agreement can contract either in
- * Joseph's own name ("name, role") or "name, trading as …"; when unset, only
- * the individual option is offered. Set AGREEMENT_PROVIDER_TRADING_NAME (server
- * env) to offer it.
+ * Joseph is always the contracting party. Each agreement may name the
+ * organisation he works with on that engagement, which is printed after his
+ * role — "Joseph Afriyie Attakorah, Software Engineer, Avengh" — as a
+ * description, not as a party.
  */
 export const agreementProvider = {
   legalName: profile.name,
   role: profile.title,
-  tradingName: process.env.AGREEMENT_PROVIDER_TRADING_NAME?.trim() || undefined,
   address: profile.location,
   email: profile.email,
 };
+
+/** Organisations an agreement can name after Joseph's role. Add one here to offer it. */
+export const PROVIDER_ORGANISATIONS: readonly string[] = ["Avengh", "Korah Labs"];
 
 /** Declaration the provider confirms when signing; stored verbatim with the signature. */
 export const PROVIDER_SIGNING_DECLARATION =
@@ -27,3 +29,6 @@ export const PROVIDER_SIGNING_DECLARATION =
 export const OFFER_VALID_DAYS = 14;
 export const MAX_SPECIAL_TERMS = 20;
 export const MAX_SPECIAL_TERM_CHARS = 2000;
+
+/** Longest change request a client can send about the agreement. */
+export const MAX_AGREEMENT_CHANGE_NOTE = 2000;

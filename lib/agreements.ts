@@ -1,20 +1,29 @@
 import { createHash, randomBytes } from "crypto";
 import { agreementProvider, MAX_SPECIAL_TERM_CHARS, MAX_SPECIAL_TERMS, OFFER_VALID_DAYS } from "@/constants/agreement";
 import { isoDate } from "@/lib/dates";
-import type { AgreementRecord, ContractAs, ProviderIdentity, SpecialTerm } from "@/types/agreement";
+import type { AgreementRecord, ProviderIdentity, SpecialTerm } from "@/types/agreement";
 import type { AgreementTemplate } from "@/lib/agreement-templates";
 
-/** The provider block for a "contract as" choice, from config. */
-export function resolveProvider(contractAs: ContractAs): ProviderIdentity {
-  const trading = contractAs === "trading" && !!agreementProvider.tradingName;
+/** The provider block from config, optionally naming an organisation (validated by the caller). */
+export function resolveProvider(organisation?: string): ProviderIdentity {
   return {
-    contractAs: trading ? "trading" : "individual",
+    contractAs: "individual",
     name: agreementProvider.legalName,
     role: agreementProvider.role,
-    ...(trading && { tradingName: agreementProvider.tradingName }),
+    ...(organisation && { organisation }),
     address: agreementProvider.address,
     email: agreementProvider.email,
   };
+}
+
+/**
+ * What follows the provider's name and role: ", Avengh" for an organisation,
+ * ", trading as X" on legacy records, else nothing.
+ */
+export function providerAffiliation(provider: ProviderIdentity): string {
+  if (provider.organisation) return `, ${provider.organisation}`;
+  if (provider.contractAs === "trading" && provider.tradingName) return `, trading as ${provider.tradingName}`;
+  return "";
 }
 
 function sortKeysDeep(value: unknown): unknown {
@@ -79,6 +88,9 @@ export function draftProblems(template: AgreementTemplate, specialTerms: Special
   else if (now > new Date(offerValidUntil)) problems.push("Offer valid until must be in the future");
   return problems;
 }
+
+/** Whether the provider-signed offer has closed (same rule as proposal offers: at the start of its date, UTC). */
+export const offerClosed = (offerValidUntil: string, now = new Date()) => !(now <= new Date(offerValidUntil));
 
 /** Typed-name check for signing: case- and whitespace-insensitive. */
 export const namesMatch = (typed: string, expected: string) =>
