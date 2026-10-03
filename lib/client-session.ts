@@ -21,8 +21,11 @@ import type { ProposalData } from "@/types/proposal";
  * - `SameSite=Lax`, so the first click from an email carries it; state-changing
  *   requests authenticated by the cookie must also be same-origin.
  *
- * Secret: CLIENT_SESSION_SECRET. Missing → no sessions (the access-code path
- * still works).
+ * Secret: CLIENT_SESSION_SECRET — required: the hub's pages can only be
+ * entered through a session, so `next.config.ts` fails Vercel builds without
+ * it. If it's somehow missing at runtime, sign-in refuses with "temporarily
+ * unavailable" and cookies don't validate (only explicit access codes on the
+ * APIs still work — the pages don't).
  */
 
 export const CLIENT_SESSION_TTL_SECONDS = 12 * 60 * 60;
