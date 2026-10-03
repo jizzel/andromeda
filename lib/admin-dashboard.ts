@@ -4,12 +4,14 @@ import {
   getAllCheckedAssetsByProposal,
   getAllProposals,
   getAllEngagementEventsByProposal,
+  getAllEngagementStates,
   foldRevisions,
   readAllTrackerStatesByProposal,
   type EngagementEvent,
   type ProposalRecord,
 } from "@/lib/google-sheets";
 import { foldAgreementActivity } from "@/lib/agreement-activity";
+import { computeEngagementGates, LOCKED_GATES, type EngagementGates } from "@/lib/engagement-gates";
 import { proposalVersion } from "@/lib/proposal-version";
 import { resolveTrackerPhases } from "@/constants/tracker-templates";
 import type { ProposalAcceptance, PublishedRevision, TrackerMilestoneState } from "@/types/proposal";
@@ -42,7 +44,9 @@ export function deriveRow(
   revisionsSource: Source<Map<string, PublishedRevision> | undefined> = undefined,
   agreementSource: Source<AgreementRecord | undefined> = undefined,
   /** Change requests the client made against the current agreement (from its events). */
-  agreementChangeRequests = 0
+  agreementChangeRequests = 0,
+  /** The client hub gates (lib/engagement-gates.ts); defaults to the proposal's own data with no agreement or overrides. */
+  gates: EngagementGates = computeEngagementGates(record.data, false, null)
 ): DashboardRow {
   const responsesKnown = acceptanceSource !== UNAVAILABLE;
   const acceptance = responsesKnown ? acceptanceSource : undefined;
@@ -75,7 +79,7 @@ export function deriveRow(
     assets = {
       done: required.filter((item) => checkedAssets?.has(item.id)).length,
       total: required.length,
-      unlocked: !!data.assetsReady,
+      unlocked: gates.assets.available,
     };
   }
 
@@ -91,7 +95,7 @@ export function deriveRow(
     tracker = {
       done: milestoneKeys.filter((key) => done.has(key)).length,
       total: milestoneKeys.length,
-      unlocked: !!data.trackerReady,
+      unlocked: gates.progress.available,
     };
   }
 
@@ -180,13 +184,14 @@ function pick<T>(source: Settled<Map<string, T>>, id: string): Source<T | undefi
 
 /** Throws if the Proposals tab itself can't be read — there's nothing to show without it. */
 export async function loadDashboard(now = new Date()): Promise<DashboardData> {
-  const [proposals, acceptances, assets, trackers, events, agreements] = await Promise.all([
+  const [proposals, acceptances, assets, trackers, events, agreements, overrides] = await Promise.all([
     getAllProposals(),
     settle("ProposalAcceptance", getAllAcceptances()),
     settle("ProposalAssets", getAllCheckedAssetsByProposal()),
     settle("ProjectTracker", readAllTrackerStatesByProposal()),
     settle("EngagementEvents", getAllEngagementEventsByProposal()),
     settle("Agreements", getAllAgreements()),
+    settle("EngagementState", getAllEngagementStates()),
   ]);
   const rows = proposals
     .map((record) => {
@@ -202,10 +207,14 @@ export async function loadDashboard(now = new Date()): Promise<DashboardData> {
         now,
         events.ok ? foldRevisions(proposalEvents ?? []) : UNAVAILABLE,
         agreement,
-        changeRequests
+        changeRequests,
+        // Same rule as the client hub; locked when either input is unreadable.
+        agreements.ok && overrides.ok
+          ? computeEngagementGates(record.data, agreements.value.get(record.id)?.status === "executed", overrides.value.get(record.id) ?? null)
+          : LOCKED_GATES
       );
     })
     .sort((a, b) => b.lastActivity.localeCompare(a.lastActivity));
-  const unavailable = [acceptances, assets, trackers, events, agreements].flatMap((source) => (source.ok ? [] : [source.tab]));
+  const unavailable = [acceptances, assets, trackers, events, agreements, overrides].flatMap((source) => (source.ok ? [] : [source.tab]));
   return { rows, unavailable };
 }

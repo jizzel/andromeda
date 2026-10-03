@@ -66,6 +66,8 @@ function ProposalTabView({ hub }: { hub: ReturnType<typeof useClientHub> }) {
         reloadProposal,
         onAcceptanceRecorded: recordAcceptance,
         agreementStatus,
+        assetsAvailable: hub.gates.assets.available,
+        progressAvailable: hub.gates.progress.available,
       }}
     >
       {/* Accepted proposals are settled; a revision notice would only confuse. */}

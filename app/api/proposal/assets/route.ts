@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCheckedAssetItems, setAssetItemChecked } from "@/lib/google-sheets";
 import { resolveClientAccess } from "@/lib/client-session";
+import { loadEngagement } from "@/lib/engagement";
 import type { ProposalData } from "@/types/proposal";
 
 const ASSETS_NOT_AVAILABLE = "Asset checklist not available for this proposal";
 
-// `assetsReady` is flipped on the sheet once the service agreement is signed.
-// Enforced here (not just by hiding the link) so the checklist can't be opened
-// or written to early by visiting /assets directly.
-function assetsAvailable(proposal: ProposalData): boolean {
-  return !!proposal.assets && !!proposal.assetsReady;
+// Open once the agreement is executed (or switched on in admin) — the same
+// gate as the hub's Assets tab (lib/engagement-gates.ts). Enforced here, not
+// just by hiding the tab, so the checklist can't be read or written early.
+async function assetsAvailable(proposalId: string, proposal: ProposalData): Promise<boolean> {
+  return (await loadEngagement(proposalId, proposal)).gates.assets.available;
 }
 
 export async function GET(request: NextRequest) {
@@ -18,7 +19,7 @@ export async function GET(request: NextRequest) {
   // The hub session cookie authenticates; an explicit access code still works.
   const access = await resolveClientAccess(request, proposalId, { accessCode: searchParams.get("accessCode") });
   if (!access.ok) return NextResponse.json({ success: false, error: access.error, code: access.code }, { status: access.status });
-  if (!assetsAvailable(access.proposal)) {
+  if (!(await assetsAvailable(proposalId, access.proposal))) {
     return NextResponse.json({ success: false, error: ASSETS_NOT_AVAILABLE }, { status: 404 });
   }
 
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     const access = await resolveClientAccess(request, proposalId, { accessCode: typeof accessCode === "string" ? accessCode : null });
     if (!access.ok) return NextResponse.json({ success: false, error: access.error, code: access.code }, { status: access.status });
-    if (!assetsAvailable(access.proposal)) {
+    if (!(await assetsAvailable(proposalId, access.proposal))) {
       return NextResponse.json({ success: false, error: ASSETS_NOT_AVAILABLE }, { status: 404 });
     }
 

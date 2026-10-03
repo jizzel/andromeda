@@ -17,6 +17,7 @@ function NotReady({ title, body }: { title: string; body: string }) {
 export function AssetsTab() {
   const hub = useClientHub();
   if (!availableTabs(hub).assets || !hub.proposal.assets) {
+    // Locked until the agreement is signed (or switched on in admin).
     return <NotReady title="Asset Request Not Ready" body="The asset request for this proposal hasn't been prepared yet. Please check back later." />;
   }
   return <AssetsContent proposalId={hub.proposalId} accessCode="" assets={hub.proposal.assets} clientName={hub.proposal.client.name} />;

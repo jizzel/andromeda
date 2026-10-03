@@ -8,6 +8,7 @@ import {
 } from "@/emails/ProposalResponseNotice";
 import { AdminSignInCodeEmail, AdminSignInNoticeEmail } from "@/emails/AdminSignIn";
 import { ProposalRevisedEmail } from "@/emails/ProposalRevised";
+import { TrackerLiveEmail } from "@/emails/TrackerLive";
 import { AgreementChangesRequestedEmail, AgreementExecutedEmail, AgreementReadyEmail, AgreementSignInCodeEmail } from "@/emails/Agreement";
 import { profile } from "@/constants/profile";
 
@@ -438,5 +439,34 @@ export async function sendAgreementChangesRequested(args: {
       adminUrl: `${site}/admin/proposals/${encodeURIComponent(args.proposalId)}/agreement`,
     }),
   });
+  throwIfFailed(result);
+}
+
+/** "Your project tracker is live" — once, when the client's Progress tab opens. */
+export async function sendTrackerLive(args: {
+  to: string;
+  clientName: string;
+  proposalId: string;
+  projectTitle: string;
+  completed: string[];
+  idempotencyKey: string;
+}): Promise<void> {
+  const { resend, from, site } = agreementEmailConfig();
+  const result = await resend.emails.send(
+    {
+      from,
+      to: args.to,
+      replyTo: profile.email,
+      subject: `${args.projectTitle} — your project tracker is live`,
+      react: TrackerLiveEmail({
+        clientName: args.clientName,
+        projectTitle: args.projectTitle,
+        completed: args.completed,
+        trackerUrl: `${site}/proposal/${encodeURIComponent(args.proposalId)}/tracker`,
+        senderName: profile.name,
+      }),
+    },
+    { idempotencyKey: args.idempotencyKey }
+  );
   throwIfFailed(result);
 }

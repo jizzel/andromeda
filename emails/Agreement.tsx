@@ -9,7 +9,7 @@ import { Body, Container, Head, Heading, Hr, Html, Link, Preview, Section, Text 
 
 const firstNameOf = (name: string) => name.trim().split(" ")[0] || name;
 
-function Frame({ preview, eyebrow: eyebrowText, title, subtitle, children }: { preview: string; eyebrow: string; title: string; subtitle: string; children: ReactNode }) {
+export function Frame({ preview, eyebrow: eyebrowText, title, subtitle, children }: { preview: string; eyebrow: string; title: string; subtitle: string; children: ReactNode }) {
   return (
     <Html>
       <Head />
@@ -297,3 +297,6 @@ const signoff: CSSProperties = {
   fontSize: "14px",
   margin: "16px 0 0 0",
 };
+
+/** Shared with other engagement emails that use `Frame` (e.g. TrackerLive). */
+export const engagementEmailStyles = { paragraph, noteBlock, noteLabel, noteText, ctaWrapper, cta, divider, metaText, signoff };

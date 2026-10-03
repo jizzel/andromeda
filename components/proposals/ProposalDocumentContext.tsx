@@ -29,6 +29,9 @@ interface ProposalDocumentValue {
   onAcceptanceRecorded?: (acceptance: ProposalAcceptance) => void;
   /** The service agreement, once sent to the client (live page only). */
   agreementStatus?: ClientAgreementStatus | null;
+  /** Whether the hub's Assets / Progress tabs are open (live page only; see lib/engagement-gates.ts). */
+  assetsAvailable?: boolean;
+  progressAvailable?: boolean;
 }
 
 const ProposalDocumentContext = createContext<ProposalDocumentValue>({ printMode: false });

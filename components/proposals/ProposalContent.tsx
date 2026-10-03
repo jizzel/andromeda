@@ -146,8 +146,6 @@ export function ProposalContent({ proposal, expiryDate, proposalId, accessCode, 
         clientName={proposal.client.name}
         contactEmail={proposal.contactEmail}
         proposalId={proposalId}
-        assetsReady={proposal.assetsReady}
-        trackerReady={proposal.trackerReady}
       />
 
       <ProposalAcceptance

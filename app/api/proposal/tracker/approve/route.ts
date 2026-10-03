@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTrackerRow, setTrackerMilestone } from "@/lib/google-sheets";
 import { resolveClientAccess } from "@/lib/client-session";
+import { loadEngagement } from "@/lib/engagement";
 import { resolveTrackerPhases } from "@/constants/tracker-templates";
 import { sendClientApprovalNotice } from "@/lib/email";
 
@@ -21,7 +22,7 @@ export async function POST(request: NextRequest) {
   if (!access.ok) return NextResponse.json({ success: false, error: access.error, code: access.code }, { status: access.status });
   const proposal = { data: access.proposal };
   const tracker = proposal.data.tracker;
-  if (!tracker || !proposal.data.trackerReady) {
+  if (!tracker || !(await loadEngagement(proposalId, proposal.data)).gates.progress.available) {
     return NextResponse.json({ success: false, error: "Tracker not enabled" }, { status: 404 });
   }
 

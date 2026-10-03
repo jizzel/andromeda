@@ -18,8 +18,6 @@ interface ProposalCTAProps {
   contactEmail?: string;
   contactPhone?: string;
   proposalId?: string;
-  assetsReady?: boolean;
-  trackerReady?: boolean;
 }
 
 export function ProposalCTA({
@@ -27,11 +25,9 @@ export function ProposalCTA({
   contactEmail = "joseph@attakorah.com",
   contactPhone,
   proposalId,
-  assetsReady,
-  trackerReady,
 }: ProposalCTAProps) {
   const { trackProposalAssetsOpened, trackProposalTrackerOpened, trackProposalPdfDownloaded, trackProposalAgreementOpened } = useAnalytics();
-  const { printMode, accessCode, recordedAcceptance, requestPrint, proposalVersion, agreementStatus } = useProposalDocument();
+  const { printMode, accessCode, recordedAcceptance, requestPrint, proposalVersion, agreementStatus, assetsAvailable, progressAvailable } = useProposalDocument();
   const [pdfState, setPdfState] = useState<"idle" | "loading" | "error">("idle");
   const formattedExpiry = expiryDate ? formatDate(expiryDate) : null;
   const acceptedAt =
@@ -203,7 +199,7 @@ export function ProposalCTA({
               </motion.div>
             )}
 
-            {assetsReady && proposalId && (
+            {assetsAvailable && proposalId && (
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                 <Button
                   asChild
@@ -222,7 +218,7 @@ export function ProposalCTA({
               </motion.div>
             )}
 
-            {trackerReady && proposalId && (
+            {progressAvailable && proposalId && (
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                 <Button
                   asChild

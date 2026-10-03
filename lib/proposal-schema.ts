@@ -161,6 +161,8 @@ const common = {
   revisions: revisions.optional(),
   exclusions: strList.optional(),
   assets: assetRequest.optional(),
+  // Legacy switches: the client hub's Assets / Progress overrides now live in the
+  // EngagementState tab (lib/engagement-gates.ts); still accepted until migrated.
   assetsReady: z.boolean().optional(),
   tracker: trackerConfig.optional(),
   trackerReady: z.boolean().optional(),

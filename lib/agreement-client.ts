@@ -24,12 +24,26 @@ export async function loadClientAgreement(proposalId: string): Promise<ClientAgr
     console.error(`Client agreement for ${proposalId}: unavailable:`, error);
     return { ok: false, code: "unavailable" };
   }
-  if (!record || (record.status !== "sent" && record.status !== "executed")) return { ok: false, code: "not_available" };
+  const offered = offeredToClient(record);
+  return offered ? { ok: true, ...offered } : { ok: false, code: "not_available" };
+}
+
+/**
+ * The record and its template if the client may see it: sent (and client
+ * signing enabled for its terms) or executed. An executed agreement stays
+ * viewable whatever the gate says.
+ */
+function offeredToClient(record: AgreementRecord | null): { record: AgreementRecord; template: AgreementTemplate } | null {
+  if (!record || (record.status !== "sent" && record.status !== "executed")) return null;
   const template = loadTemplate(record.templateId, record.templateVersion);
-  // An executed agreement stays viewable whatever the gate says; one that's
-  // merely sent is only offered while client signing is enabled.
-  if (!template || (record.status === "sent" && !clientSigningAllowed(template))) return { ok: false, code: "not_available" };
-  return { ok: true, record, template };
+  if (!template || (record.status === "sent" && !clientSigningAllowed(template))) return null;
+  return { record, template };
+}
+
+/** `clientAgreementStatus` for a record already read (e.g. by `loadEngagement`). */
+export function clientAgreementStatusOf(record: AgreementRecord | null): "sent" | "executed" | null {
+  const offered = offeredToClient(record);
+  return offered && (offered.record.status === "sent" || offered.record.status === "executed") ? offered.record.status : null;
 }
 
 /** What the proposal page offers: "Review and sign agreement" (sent) or "View signed agreement" (executed). Never throws. */

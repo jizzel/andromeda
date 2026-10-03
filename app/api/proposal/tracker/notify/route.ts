@@ -3,6 +3,7 @@ import { timingSafeEqual } from "crypto";
 import { getProposalById, getTrackerRow, markTrackerNotified } from "@/lib/google-sheets";
 import { resolveTrackerPhases } from "@/constants/tracker-templates";
 import { sendMilestoneEmail } from "@/lib/email";
+import { loadEngagement } from "@/lib/engagement";
 
 function constantTimeEqual(a: string, b: string): boolean {
   const aBuf = Buffer.from(a);
@@ -54,6 +55,12 @@ export async function POST(request: NextRequest) {
   const tracker = proposal.data.tracker;
   if (!tracker) {
     return NextResponse.json({ success: false, error: "Tracker not configured" }, { status: 400 });
+  }
+  // The client can't open the tracker (inactive proposal, or Progress locked —
+  // lib/engagement-gates.ts): don't email them about it. Not stamped as
+  // notified, and a 200 so the Apps Script doesn't treat it as a failure.
+  if (!proposal.isActive || !(await loadEngagement(proposalId, proposal.data)).gates.progress.available) {
+    return NextResponse.json({ success: true, skipped: "tracker_locked" });
   }
 
   const phases = resolveTrackerPhases(tracker);
