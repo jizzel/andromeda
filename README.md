@@ -120,6 +120,7 @@ PDF_RENDER_SECRET=                   # HMAC key for short-lived print-route toke
 CHROME_EXECUTABLE_PATH=              # Local dev only: path to an installed Chrome
 
 # Admin dashboard (/admin).
+CLIENT_SESSION_SECRET=               # HMAC key for client hub sessions (access code entered once, 12-hour cookie)
 ADMIN_SESSION_SECRET=                # HMAC key for admin session + sign-in-code cookies; rotate to sign out everyone
 AGREEMENT_SIGNING_SECRET=            # HMAC key for client agreement-signing cookies (emailed one-time code); missing → client signing fails closed
 AGREEMENT_CLIENT_SIGNING_ALLOW_DRAFT= # Testing only: "1" allows client signing on a draft template — honoured only on Vercel preview/development or local `next dev`

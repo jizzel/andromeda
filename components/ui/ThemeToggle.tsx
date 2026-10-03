@@ -1,12 +1,16 @@
 "use client";
 
-import { useTheme } from "@/components/providers/ThemeProvider";
+import { useOptionalTheme } from "@/components/providers/ThemeProvider";
 import { useAnalytics } from "@/lib/hooks/useAnalytics";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 
-export function ThemeToggle() {
-  const { theme, toggleTheme } = useTheme();
+/** `inline`: sits in a header instead of floating in the top-right corner. */
+export function ThemeToggle({ inline = false }: { inline?: boolean }) {
+  // Undefined until the provider mounts — the toggle can be rendered (e.g. in the
+  // client hub header) before then.
+  const themeContext = useOptionalTheme();
+  const theme = themeContext?.theme ?? "dark";
   const { trackThemeToggled } = useAnalytics();
   const [mounted, setMounted] = useState(false);
 
@@ -18,18 +22,18 @@ export function ThemeToggle() {
   const handleToggle = () => {
     const from = theme;
     const to = theme === "dark" ? "light" : "dark";
-    toggleTheme();
+    themeContext?.toggleTheme();
     trackThemeToggled({ from, to, method: "button" });
   };
 
-  if (!mounted) {
+  if (!mounted || !themeContext) {
     return null;
   }
 
   return (
     <motion.button
       onClick={handleToggle}
-      className="fixed top-6 right-6 z-40 p-3 rounded-full bg-[var(--andromeda-secondary)] border border-white/10 light:border-black/10 hover:opacity-80 transition-all duration-200"
+      className={`${inline ? "p-2" : "fixed top-6 right-6 z-40 p-3"} rounded-full bg-[var(--andromeda-secondary)] border border-white/10 light:border-black/10 hover:opacity-80 transition-all duration-200`}
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}

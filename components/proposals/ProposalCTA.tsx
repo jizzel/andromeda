@@ -3,7 +3,7 @@
 import { ScrollReveal } from "@/components/animations/ScrollReveal";
 import { motion } from "framer-motion";
 import { useState } from "react";
-import { Calendar, Mail, Clock, ArrowRight, FileDown, FileSignature, FolderOpen, ListChecks, Printer, Loader2 } from "lucide-react";
+import { Calendar, Mail, Clock, ArrowRight, CheckCircle2, FileDown, FileSignature, FolderOpen, ListChecks, Printer, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/dates";
 import { openCalendlyPopup } from "@/lib/calendly";
@@ -41,10 +41,12 @@ export function ProposalCTA({
   // The printed terms are the current version; flag it if acceptance was against another.
   const acceptedVersion = recordedAcceptance?.status === "accepted" ? recordedAcceptance.proposalVersion : undefined;
   const acceptedDifferentVersion = !!acceptedVersion && !!proposalVersion && acceptedVersion !== proposalVersion;
-  const canGeneratePdf = !!proposalId && !!accessCode;
+  // The live hub page (the only one with `requestPrint`): its session — or a
+  // held access code — authenticates the download. Not in the admin preview.
+  const canGeneratePdf = !!proposalId && !!requestPrint;
 
   const downloadPdf = async () => {
-    if (!proposalId || !accessCode || pdfState === "loading") return;
+    if (!canGeneratePdf || pdfState === "loading") return;
     setPdfState("loading");
     try {
       const res = await fetch("/api/proposal/pdf", {
@@ -122,8 +124,13 @@ export function ProposalCTA({
     >
       <div className="max-w-3xl mx-auto text-center">
         <ScrollReveal>
-          {/* Expiry Badge */}
-          {formattedExpiry && (
+          {/* Accepted: the offer window no longer matters — say where things stand. */}
+          {acceptedAt ? (
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/30 mb-8">
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" aria-hidden />
+              <span className="text-sm text-emerald-500 font-medium">Accepted on {acceptedAt}</span>
+            </div>
+          ) : formattedExpiry && (
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--andromeda-accent-beige)]/10 border border-[var(--andromeda-accent-beige)]/30 mb-8">
               <Clock className="w-4 h-4 text-[var(--andromeda-accent-beige)]" />
               <span className="text-sm text-[var(--andromeda-accent-beige)] font-medium">
@@ -132,20 +139,34 @@ export function ProposalCTA({
             </div>
           )}
 
-          <h2
-            id="cta-heading"
-            className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-[var(--andromeda-text-primary)]"
-          >
-            Ready to Transform Your
-            <span className="block text-[var(--andromeda-accent-beige)]">
-              Business?
-            </span>
-          </h2>
+          {acceptedAt ? (
+            <>
+              <h2 id="cta-heading" className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-[var(--andromeda-text-primary)]">
+                What&apos;s next
+              </h2>
+              <p className="text-lg text-[var(--andromeda-text-secondary)] mb-10 max-w-xl mx-auto">
+                Thank you for accepting this proposal. Everything for the engagement — your agreement, the assets we need and the
+                project&apos;s progress — opens here as each step is ready.
+              </p>
+            </>
+          ) : (
+            <>
+              <h2
+                id="cta-heading"
+                className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-[var(--andromeda-text-primary)]"
+              >
+                Ready to Transform Your
+                <span className="block text-[var(--andromeda-accent-beige)]">
+                  Business?
+                </span>
+              </h2>
 
-          <p className="text-lg text-[var(--andromeda-text-secondary)] mb-10 max-w-xl mx-auto">
-            Let&apos;s discuss this proposal and answer any questions you may have.
-            We&apos;re excited to help bring your vision to life.
-          </p>
+              <p className="text-lg text-[var(--andromeda-text-secondary)] mb-10 max-w-xl mx-auto">
+                Let&apos;s discuss this proposal and answer any questions you may have.
+                We&apos;re excited to help bring your vision to life.
+              </p>
+            </>
+          )}
         </ScrollReveal>
 
         {/* CTA Buttons */}
@@ -223,7 +244,7 @@ export function ProposalCTA({
         </ScrollReveal>
 
         {/* Document actions */}
-        {(canGeneratePdf || requestPrint) && (
+        {requestPrint && (
           <ScrollReveal delay={0.25}>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10 -mt-4">
               {canGeneratePdf && (
@@ -247,16 +268,14 @@ export function ProposalCTA({
                   )}
                 </Button>
               )}
-              {requestPrint && (
-                <button
-                  type="button"
-                  onClick={printProposal}
-                  className="flex items-center gap-2 text-sm text-[var(--andromeda-text-secondary)] hover:text-[var(--andromeda-accent-beige)] transition-colors"
-                >
-                  <Printer className="w-4 h-4" />
-                  Print / Save as PDF
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={printProposal}
+                className="flex items-center gap-2 text-sm text-[var(--andromeda-text-secondary)] hover:text-[var(--andromeda-accent-beige)] transition-colors"
+              >
+                <Printer className="w-4 h-4" />
+                Print / Save as PDF
+              </button>
             </div>
             {pdfState === "error" && (
               <p role="alert" className="text-sm text-[var(--andromeda-error)] -mt-6 mb-10">

@@ -4,7 +4,7 @@ import { FileText } from "lucide-react";
 /** A full-page message on the client agreement route (nothing to sign, can't be signed now, …). */
 export function AgreementNotice({ title, children, proposalId }: { title: string; children: React.ReactNode; proposalId: string }) {
   return (
-    <main className="min-h-screen flex items-center justify-center bg-[var(--andromeda-primary)] px-6 py-24">
+    <main className="flex items-center justify-center bg-[var(--andromeda-primary)] px-6 py-16">
       <div className="w-full max-w-md text-center">
         <div className="flex justify-center mb-8">
           <div className="p-4 rounded-full bg-[var(--andromeda-accent-beige)]/10 border border-[var(--andromeda-accent-beige)]/30">

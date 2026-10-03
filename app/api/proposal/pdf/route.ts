@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyEngagementAccess, getProposalAcceptance } from "@/lib/google-sheets";
+import { getProposalAcceptance } from "@/lib/google-sheets";
+import { resolveClientAccess } from "@/lib/client-session";
 import { proposalPdfResponse } from "@/lib/pdf";
 
 // Headless Chromium needs Node APIs and more than the default few seconds.
@@ -15,17 +16,13 @@ export async function POST(request: NextRequest) {
   }
 
   const { proposalId, accessCode } = body;
-  if (typeof proposalId !== "string" || !proposalId || typeof accessCode !== "string" || !accessCode) {
-    return NextResponse.json(
-      { success: false, error: "proposalId and accessCode are required" },
-      { status: 400 }
-    );
+  if (typeof proposalId !== "string" || !proposalId) {
+    return NextResponse.json({ success: false, error: "proposalId is required" }, { status: 400 });
   }
 
-  const verification = await verifyEngagementAccess(proposalId, accessCode.trim());
-  if (!verification.success || !verification.proposal) {
-    return NextResponse.json({ success: false, error: verification.error }, { status: 401 });
-  }
+  const access = await resolveClientAccess(request, proposalId, { accessCode: typeof accessCode === "string" ? accessCode : null });
+  if (!access.ok) return NextResponse.json({ success: false, error: access.error, code: access.code }, { status: access.status });
+  const verification = { proposal: access.proposal, expiryDate: access.expiryDate };
 
   return proposalPdfResponse({
     // Render against this deployment's own origin, so previews print themselves.

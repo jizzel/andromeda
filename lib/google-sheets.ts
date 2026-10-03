@@ -150,10 +150,16 @@ async function findAccessGatedRecordById<T>(
   return all.find((r) => r.id === id) || null;
 }
 
+/** How a request proves it may open a row: by its access code, or a session's fingerprint of it. */
+export type AccessCodeMatcher = (storedAccessCode: string) => boolean;
+
+/** Case-insensitive match against an access code the client typed. */
+export const matchesAccessCode = (accessCode: string): AccessCodeMatcher => (stored) => stored.toLowerCase() === accessCode.trim().toLowerCase();
+
 async function verifyAccessGated<T>(
   sheetName: string,
   id: string,
-  accessCode: string,
+  codeMatches: AccessCodeMatcher,
   messages: AccessVerifyMessages,
   /**
    * Called only when the row's expiry date has passed (and the access code
@@ -180,7 +186,7 @@ async function verifyAccessGated<T>(
       return { success: false, error: messages.expired };
     }
 
-    if (record.accessCode.toLowerCase() !== accessCode.toLowerCase()) {
+    if (!codeMatches(record.accessCode)) {
       return { success: false, error: "Invalid access code" };
     }
 
@@ -385,9 +391,10 @@ async function appendProposalRowIfAbsent(
  */
 export async function verifyProposalAccess(
   proposalId: string,
-  accessCode: string
+  accessCode: string | AccessCodeMatcher
 ): Promise<{ success: boolean; proposal?: ProposalData; expiryDate?: string; error?: string }> {
-  const result = await verifyAccessGated<ProposalData>(SHEET_NAME, proposalId, accessCode, {
+  const matcher = typeof accessCode === "string" ? matchesAccessCode(accessCode) : accessCode;
+  const result = await verifyAccessGated<ProposalData>(SHEET_NAME, proposalId, matcher, {
     notFound: "Proposal not found",
     inactive: "This proposal is no longer available",
     expired: "This proposal has expired",
@@ -406,12 +413,12 @@ export async function verifyProposalAccess(
  */
 export async function verifyEngagementAccess(
   proposalId: string,
-  accessCode: string
+  accessCode: string | AccessCodeMatcher
 ): Promise<{ success: boolean; proposal?: ProposalData; expiryDate?: string; error?: string }> {
   const result = await verifyAccessGated<ProposalData>(
     SHEET_NAME,
     proposalId,
-    accessCode,
+    typeof accessCode === "string" ? matchesAccessCode(accessCode) : accessCode,
     {
       notFound: "Proposal not found",
       inactive: "This proposal is no longer available",
@@ -437,7 +444,7 @@ export async function verifyBriefAccess(
   briefId: string,
   accessCode: string
 ): Promise<{ success: boolean; brief?: CreativeBriefData; expiryDate?: string; error?: string }> {
-  const result = await verifyAccessGated<CreativeBriefData>(BRIEF_SHEET_NAME, briefId, accessCode, {
+  const result = await verifyAccessGated<CreativeBriefData>(BRIEF_SHEET_NAME, briefId, matchesAccessCode(accessCode), {
     notFound: "Brief not found",
     inactive: "This brief is no longer available",
     expired: "This brief has expired",

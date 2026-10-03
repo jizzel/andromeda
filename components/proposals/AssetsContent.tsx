@@ -15,7 +15,6 @@ import {
   Share2,
   Clock,
   FolderOpen,
-  ArrowLeft,
   CheckCircle2,
   AlertCircle,
 } from "lucide-react";
@@ -23,7 +22,6 @@ import { Button } from "@/components/ui/button";
 import { ScrollReveal } from "@/components/animations/ScrollReveal";
 import { useAnalytics } from "@/lib/hooks/useAnalytics";
 import type { AssetCategoryItem, AssetItemPriority, AssetRequest } from "@/types/proposal";
-import Link from "next/link";
 
 interface AssetsContentProps {
   proposalId: string;
@@ -174,16 +172,9 @@ export function AssetsContent({ proposalId, accessCode, assets, clientName }: As
   return (
     <main className="min-h-screen bg-[var(--andromeda-primary)]">
       {/* Hero */}
-      <section className="relative w-full py-20 px-6 bg-gradient-to-b from-[var(--andromeda-secondary)] to-[var(--andromeda-primary)]">
+      <section className="relative w-full pt-10 md:pt-14 pb-16 px-6 bg-gradient-to-b from-[var(--andromeda-secondary)] to-[var(--andromeda-primary)]">
         <div className="max-w-4xl mx-auto">
           <ScrollReveal>
-            <Link
-              href={`/proposal/${proposalId}`}
-              className="inline-flex items-center gap-2 text-sm text-[var(--andromeda-text-secondary)] hover:text-[var(--andromeda-accent-beige)] transition-colors mb-8"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to proposal
-            </Link>
 
             <p className="text-sm font-medium text-[var(--andromeda-accent-beige)] uppercase tracking-widest mb-3">
               {clientName}

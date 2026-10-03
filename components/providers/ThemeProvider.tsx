@@ -52,6 +52,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** The theme context, or undefined before the provider has mounted (it renders no context until then). */
+export function useOptionalTheme(): ThemeContextType | undefined {
+  return useContext(ThemeContext);
+}
+
 export function useTheme() {
   const context = useContext(ThemeContext);
   if (context === undefined) {

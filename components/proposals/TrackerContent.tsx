@@ -11,7 +11,6 @@ import {
   MapPin,
   Share2,
   ListChecks,
-  ArrowLeft,
   AlertCircle,
   CircleDot,
   Clock,
@@ -30,7 +29,6 @@ import type {
   TrackerPhase,
   TrackerStatus,
 } from "@/types/proposal";
-import Link from "next/link";
 
 interface TrackerContentProps {
   proposalId: string;
@@ -257,14 +255,7 @@ export function TrackerContent({ proposalId, accessCode, clientName, proposalTit
   return (
     <main className="min-h-screen bg-[var(--andromeda-primary)] pb-24">
       {/* Hero */}
-      <section className="relative px-6 pt-16 md:pt-24 pb-12 max-w-4xl mx-auto">
-        <Link
-          href={`/proposal/${proposalId}`}
-          className="inline-flex items-center gap-2 text-sm text-[var(--andromeda-text-secondary)] hover:text-[var(--andromeda-accent-beige)] transition-colors mb-8"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to proposal
-        </Link>
+      <section className="relative px-6 pt-10 md:pt-14 pb-12 max-w-4xl mx-auto">
 
         <ScrollReveal>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--andromeda-accent-beige)]/10 border border-[var(--andromeda-accent-beige)]/30 text-xs text-[var(--andromeda-accent-beige)] mb-4">
@@ -464,13 +455,6 @@ export function TrackerContent({ proposalId, accessCode, clientName, proposalTit
               ? `Last updated ${formatDate(lastUpdatedAt)}`
               : "Updates from Joseph will appear here as the project progresses."}
           </p>
-          <Link
-            href={`/proposal/${proposalId}`}
-            className="inline-flex items-center gap-2 text-sm text-[var(--andromeda-accent-beige)] hover:underline"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to proposal
-          </Link>
         </div>
       </section>
 

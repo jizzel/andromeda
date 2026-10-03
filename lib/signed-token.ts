@@ -45,3 +45,12 @@ export function verifyToken(token: string | undefined | null, secret: string | n
     return null;
   }
 }
+
+/**
+ * Keyed fingerprint of a proposal access code, normalised the way access
+ * checks compare codes (trimmed, case-insensitive). Lets a token remember
+ * which code it was obtained with without containing it.
+ */
+export function accessCodeTag(secret: string, accessCode: string): string {
+  return hmac(secret, `access-code|${accessCode.trim().toLowerCase()}`).slice(0, 22);
+}

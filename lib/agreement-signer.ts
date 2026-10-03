@@ -1,5 +1,5 @@
 import { randomBytes, randomInt } from "crypto";
-import { hmac, nowSeconds, safeEqual, signToken, verifyToken } from "@/lib/signed-token";
+import { accessCodeTag as codeTagWith, hmac, nowSeconds, safeEqual, signToken, verifyToken } from "@/lib/signed-token";
 
 /**
  * Client signer verification for agreements: before the client can see the
@@ -136,7 +136,7 @@ export function signerCookieOptions(maxAgeSeconds: number) {
  * which code it was obtained with without containing it.
  */
 export function accessCodeTag(accessCode: string): string {
-  return hmac(requireSecret(), `access-code|${accessCode.trim().toLowerCase()}`).slice(0, 22);
+  return codeTagWith(requireSecret(), accessCode);
 }
 
 /** "j•••@gmail.com" — enough for the client to recognise the address. */

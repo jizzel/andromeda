@@ -22,6 +22,11 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const isPrintRoute = /^\/proposal\/[^/]+\/(agreement\/)?print$/.test(pathname);
   const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
   const isMinimalUI = MINIMAL_UI_ROUTES.includes(pathname) || isPrintRoute || isAdminRoute;
+  // Client-facing pages drop the portfolio marketing chrome. The proposal hub
+  // has its own header (home link, theme toggle); briefs keep a floating home
+  // link and theme toggle. Both keep the footer.
+  const isClientHub = !isPrintRoute && pathname.startsWith("/proposal/");
+  const isBrief = pathname.startsWith("/brief/");
 
   useEffect(() => {
     const id = setTimeout(() => setMounted(true), 0);
@@ -30,7 +35,13 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      {mounted && !isMinimalUI && (
+      {mounted && !isMinimalUI && isBrief && (
+        <div className="print:hidden">
+          <HomeButton />
+          <ThemeToggle />
+        </div>
+      )}
+      {mounted && !isMinimalUI && !isClientHub && !isBrief && (
         <div className="print:hidden">
           <IdentityAnchor />
           <HomeButton />
