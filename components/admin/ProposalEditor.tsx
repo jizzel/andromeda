@@ -31,6 +31,8 @@ import { DiffView } from "./DiffView";
 import type { PreviewMessage } from "./ProposalPreview";
 import { AdminDialog, dialogButton } from "./AdminDialog";
 import { Field, REVEAL_CARD_EVENT, Toggle } from "./forms/fields";
+import { EngagementSwitches, type EngagementStateInitial } from "./EngagementSwitches";
+import type { GateInputs } from "@/lib/engagement-gates";
 import { FormErrorBoundary, SectionForms } from "./forms/SectionForms";
 import { PublishRevisionDialog, type PublishOptions } from "./PublishRevisionDialog";
 import { canonicalProposalJson } from "@/lib/proposal-terms";
@@ -53,6 +55,8 @@ interface ProposalEditorProps {
   /** The revision published for the loaded version, if any. */
   publishedRevision: PublishedRevision | null;
   clientLink: string;
+  /** The client hub's Assets / Progress switches; null if unreadable. */
+  engagement: EngagementStateInitial | null;
 }
 
 interface Settings {
@@ -143,7 +147,7 @@ function extendExpiry(current: string, days: number): string {
 /** Terms as the publish diff shows them: canonical (key-sorted, operational keys removed), pretty-printed. */
 const termsText = (data: object) => pretty(JSON.parse(canonicalProposalJson(data)));
 
-export function ProposalEditor({ proposalId, initial, acceptance, changeRequestSnapshot, publishedRevision, clientLink }: ProposalEditorProps) {
+export function ProposalEditor({ proposalId, initial, acceptance, changeRequestSnapshot, publishedRevision, clientLink, engagement }: ProposalEditorProps) {
   const router = useRouter();
   // Where a guarded link was going when the "unsaved changes" dialog opened (null = closed).
   const [leaveTo, setLeaveTo] = useState<string | null>(null);
@@ -855,24 +859,18 @@ export function ProposalEditor({ proposalId, initial, acceptance, changeRequestS
                 className="w-full px-2 py-1.5 rounded bg-[var(--andromeda-primary)] border border-white/10 light:border-black/10 text-sm disabled:opacity-50"
               />
             </Field>
-            <Field label="Asset checklist">
-              <Toggle
-                disabled={!canEditData}
-                checked={!!dataObj?.assetsReady}
-                onChange={(v) => updateData((d) => (v ? (d.assetsReady = true) : delete d.assetsReady))}
-                on="Unlocked"
-                off="Locked"
-              />
-            </Field>
-            <Field label="Project tracker">
-              <Toggle
-                disabled={!canEditData}
-                checked={!!dataObj?.trackerReady}
-                onChange={(v) => updateData((d) => (v ? (d.trackerReady = true) : delete d.trackerReady))}
-                on="Unlocked"
-                off="Locked"
-              />
-            </Field>
+            {/* Saved immediately to the EngagementState tab, not the JSON draft. */}
+            <EngagementSwitches
+              proposalId={proposalId}
+              data={(dataObj ?? {}) as GateInputs}
+              initial={engagement}
+              onLegacyFlagsSuperseded={() =>
+                updateData((d) => {
+                  delete d.assetsReady;
+                  delete d.trackerReady;
+                })
+              }
+            />
           </div>
 
           <div

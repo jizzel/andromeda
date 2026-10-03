@@ -145,6 +145,7 @@ All tabs live in the `GOOGLE_PROPOSALS_SHEET_ID` spreadsheet; the service accoun
 | `SheetLocks` | `key \| token \| at \| event` (append-only lock log for admin saves) | automatically on first use |
 | `Agreements` | `proposalId \| status \| templateId \| templateVersion \| templateHash \| proposalVersion \| provider \| specialTerms \| offerValidUntil \| agreementHash \| providerSignature \| updatedAt \| selection \| clientName \| acceptedAt \| sentAt \| clientSignature` (one row per proposal; status `draft` → `provider_signed` → `sent` → `executed`) | automatically on first use; missing header cells for new columns are added on the next write |
 | `AgreementSnapshots` | `proposalId \| agreementHash \| capturedAt \| reason \| data` (append-only; one row per signing — hash + signedAt in C, reason `provider_signed` or `client_signed` — with the full signed agreement, terms text and accepted proposal, chunked across E–Z) | automatically on first use |
+| `EngagementState` | `proposalId \| assets \| tracker \| updatedAt` (one row per proposal; client hub Assets / Progress overrides: `auto` — open once the agreement is signed — `on` or `off`) | automatically on first use |
 | `AgreementSignIns` | `nonce \| at \| event \| ip \| userAgent \| proposalId` (append-only log of client signing codes: issued / failed / matched) | automatically on first use |
 | `EngagementEvents` | `proposalId \| at \| event \| proposalVersion \| detail \| ip \| userAgent` (append-only engagement log: published revisions and their client emails) | automatically on first use |
 

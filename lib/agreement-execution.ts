@@ -1,19 +1,18 @@
 import {
   appendEngagementEvent,
   getProposalById,
-  getProposalRowForEdit,
   readProposalEngagementEvents,
   getTrackerRow,
   getTrackerStates,
   setTrackerMilestone,
-  updateProposalRowLocked,
-  withProposalLock,
+  readEngagementState,
 } from "@/lib/google-sheets";
 import { resolveTrackerPhases } from "@/constants/tracker-templates";
 import { AGREEMENT_SIGNED_MILESTONE } from "@/lib/tracker";
 import { getExecutedAgreementPdf, proposalPdfFilename } from "@/lib/pdf";
 import { DuplicateEmailError, sendAgreementExecuted } from "@/lib/email";
 import { foldAgreementActivity, onboardingFailed } from "@/lib/agreement-activity";
+import { computeEngagementGates } from "@/lib/engagement-gates";
 import { profile } from "@/constants/profile";
 import type { AgreementActivity, AgreementRecord } from "@/types/agreement";
 import type { ProjectTrackerConfig } from "@/types/proposal";
@@ -30,9 +29,11 @@ import type { ProjectTrackerConfig } from "@/types/proposal";
 type Onboarding = NonNullable<AgreementActivity["onboarding"]>;
 
 /**
- * Execution unlocks onboarding: the asset checklist (`assetsReady`, an
- * operational key, so the proposal version doesn't change) and the tracker's
- * "service agreement signed" milestone. Manual flags remain an override.
+ * Execution unlocks onboarding. The Assets and Progress tabs open by
+ * themselves once the agreement is executed (`auto` gates,
+ * lib/engagement-gates.ts) — nothing is written to the proposal; this records
+ * whether that's in effect (`derived`, or `off` when switched off by hand) and
+ * marks the tracker's "service agreement signed" milestone done.
  */
 export async function unlockOnboarding(record: AgreementRecord): Promise<Pick<Onboarding, "assets" | "tracker">> {
   const id = record.proposalId;
@@ -41,24 +42,14 @@ export async function unlockOnboarding(record: AgreementRecord): Promise<Pick<On
   let assets: Onboarding["assets"] = "failed";
   let trackerConfig: ProjectTrackerConfig | null = null;
   try {
-    const locked = await withProposalLock(id, async (lock) => {
-      const row = await getProposalRowForEdit(id);
-      if (!row) return { assets: "failed" as const, tracker: null };
-      const { data, accessCode, expiryDate, isActive } = row.record;
-      const tracker = data.trackerReady && data.tracker ? data.tracker : null;
-      if (!data.assets) return { assets: "no_assets" as const, tracker };
-      if (data.assetsReady) return { assets: "already" as const, tracker };
-      const saved = await updateProposalRowLocked(lock, id, row.rowHash, {
-        accessCode,
-        expiryDate,
-        isActive,
-        dataJson: JSON.stringify({ ...data, assetsReady: true }),
-      });
-      return { assets: saved.status === "saved" ? ("unlocked" as const) : ("failed" as const), tracker };
-    });
-    if (locked.status === "ok") ({ assets, tracker: trackerConfig } = locked.value);
+    const [proposal, overrides] = await Promise.all([getProposalById(id), readEngagementState(id)]);
+    if (proposal) {
+      const gates = computeEngagementGates(proposal.data, record.status === "executed", overrides);
+      assets = !proposal.data.assets ? "no_assets" : gates.assets.available ? "derived" : "off";
+      trackerConfig = proposal.data.tracker ?? null;
+    }
   } catch (error) {
-    console.error(`Onboarding for ${id}: couldn't unlock assets:`, error);
+    console.error(`Onboarding for ${id}: couldn't read the proposal or its engagement state:`, error);
   }
 
   let tracker: Onboarding["tracker"] = "no_milestone";
@@ -231,7 +222,7 @@ export async function completeExecutionFollowUp(
     emails = await sendExecutedCopies(origin, record, {
       recipients,
       keySuffix: Object.fromEntries(recipients.map((r) => [r, executedEmailKeySuffix(events, record.agreementHash, r, sentTo.has(r))])),
-      assetsUnlocked: assets === "unlocked" || assets === "already",
+      assetsUnlocked: assets === "derived" || assets === "unlocked" || assets === "already",
       projectTitle: options.projectTitle ?? proposal?.data.title ?? record.proposalId,
       clientName: options.clientName ?? record.clientName,
     });

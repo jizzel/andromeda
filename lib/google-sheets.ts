@@ -12,6 +12,8 @@ import type {
 import type { CreativeBriefData } from "@/types/brief";
 import type { PublishedRevision } from "@/types/proposal";
 import { AGREEMENT_STATUSES, type AgreementRecord, type AgreementStatus } from "@/types/agreement";
+import { ENGAGEMENT_OVERRIDES, type EngagementOverride, type EngagementOverrides } from "@/lib/engagement-gates";
+import { forgetEngagement } from "@/lib/engagement-cache";
 
 export type { PublishedRevision };
 
@@ -1323,15 +1325,77 @@ export async function getAllAgreements(): Promise<Map<string, AgreementRecord>> 
 
 /** Creates or replaces a proposal's agreement row, through its anchor. Call under the proposal lock. */
 export async function writeAgreement(record: AgreementRecord, lock: SheetLock): Promise<void> {
-  const sheets = getGoogleSheetsClient();
-  await ensureTab(sheets, AGREEMENTS_SHEET_NAME, AGREEMENTS_HEADERS);
-  await ensureHeaderColumns(sheets, AGREEMENTS_SHEET_NAME, AGREEMENTS_HEADERS, lock);
-  const sheetId = await getSheetId(sheets, AGREEMENTS_SHEET_NAME, agreementsSheetIdCache);
-  const cells = agreementToRow(record);
-  if (sheetId !== null && (await readRowByAnchor(sheets, AGREEMENTS_SHEET_NAME, sheetId, record.proposalId, lock))) {
-    if (await writeRowByAnchor(sheets, sheetId, record.proposalId, cells, lock)) return;
+  // The hub gates remember this (lib/engagement-cache.ts): forget it before and
+  // after the write, so a concurrent read can't keep the old value.
+  forgetEngagement(record.proposalId);
+  try {
+    const sheets = getGoogleSheetsClient();
+    await ensureTab(sheets, AGREEMENTS_SHEET_NAME, AGREEMENTS_HEADERS);
+    await ensureHeaderColumns(sheets, AGREEMENTS_SHEET_NAME, AGREEMENTS_HEADERS, lock);
+    const sheetId = await getSheetId(sheets, AGREEMENTS_SHEET_NAME, agreementsSheetIdCache);
+    const cells = agreementToRow(record);
+    if (sheetId !== null && (await readRowByAnchor(sheets, AGREEMENTS_SHEET_NAME, sheetId, record.proposalId, lock))) {
+      if (await writeRowByAnchor(sheets, sheetId, record.proposalId, cells, lock)) return;
+    }
+    await appendAnchoredRow(sheets, AGREEMENTS_SHEET_NAME, sheetId, cells, lock);
+  } finally {
+    forgetEngagement(record.proposalId);
   }
-  await appendAnchoredRow(sheets, AGREEMENTS_SHEET_NAME, sheetId, cells, lock);
+}
+
+// Engagement state — "EngagementState" tab, one row per proposal (anchored).
+// Columns: A:proposalId | B:assets | C:tracker | D:updatedAt
+// Manual overrides (`auto | on | off`) for the client hub's Assets and Progress
+// tabs; `auto` follows the lifecycle (open once the agreement is executed).
+// No row = auto, or the legacy JSON flags (see lib/engagement-gates.ts).
+const ENGAGEMENT_STATE_SHEET_NAME = "EngagementState";
+const ENGAGEMENT_STATE_HEADERS = ["proposalId", "assets", "tracker", "updatedAt"];
+const engagementStateSheetIdCache = { value: null as number | null };
+
+function parseOverride(value: string | undefined): EngagementOverride {
+  const v = value?.trim().toLowerCase() || "auto";
+  return (ENGAGEMENT_OVERRIDES as readonly string[]).includes(v) ? (v as EngagementOverride) : "auto";
+}
+
+async function readEngagementStateRows(): Promise<string[][]> {
+  const sheets = getGoogleSheetsClient();
+  await ensureTab(sheets, ENGAGEMENT_STATE_SHEET_NAME, ENGAGEMENT_STATE_HEADERS);
+  const response = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${ENGAGEMENT_STATE_SHEET_NAME}!A2:D` });
+  return (response.data.values || []) as string[][];
+}
+
+const rowToOverrides = (r: string[]): EngagementOverrides => ({ assets: parseOverride(r[1]), tracker: parseOverride(r[2]) });
+
+/** A proposal's overrides row, or null if it has none. Throws if the tab can't be read. */
+export async function readEngagementState(proposalId: string): Promise<EngagementOverrides | null> {
+  const row = (await readEngagementStateRows()).find((r) => r[0]?.trim() === proposalId);
+  return row ? rowToOverrides(row) : null;
+}
+
+/** Every proposal's overrides row (dashboard, cron). Throws on read failure. */
+export async function getAllEngagementStates(): Promise<Map<string, EngagementOverrides>> {
+  const map = new Map<string, EngagementOverrides>();
+  for (const r of await readEngagementStateRows()) if (r[0]?.trim()) map.set(r[0].trim(), rowToOverrides(r));
+  return map;
+}
+
+/** Creates or replaces a proposal's overrides row, through its anchor. Call under the proposal lock. */
+export async function writeEngagementState(proposalId: string, overrides: EngagementOverrides, lock: SheetLock): Promise<void> {
+  // The hub gates remember this (lib/engagement-cache.ts): forget it before and
+  // after the write, so a concurrent read can't keep the old value.
+  forgetEngagement(proposalId);
+  try {
+    const sheets = getGoogleSheetsClient();
+    await ensureTab(sheets, ENGAGEMENT_STATE_SHEET_NAME, ENGAGEMENT_STATE_HEADERS);
+    const sheetId = await getSheetId(sheets, ENGAGEMENT_STATE_SHEET_NAME, engagementStateSheetIdCache);
+    const cells = [proposalId, overrides.assets, overrides.tracker, new Date().toISOString()];
+    if (sheetId !== null && (await readRowByAnchor(sheets, ENGAGEMENT_STATE_SHEET_NAME, sheetId, proposalId, lock))) {
+      if (await writeRowByAnchor(sheets, sheetId, proposalId, cells, lock)) return;
+    }
+    await appendAnchoredRow(sheets, ENGAGEMENT_STATE_SHEET_NAME, sheetId, cells, lock);
+  } finally {
+    forgetEngagement(proposalId);
+  }
 }
 
 // Proposal snapshots — "ProposalSnapshots" tab, append-only.

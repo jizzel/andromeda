@@ -4,7 +4,9 @@ import {
   getProposalAcceptance,
   getTrackerStates,
   readAgreement,
+  readEngagementState,
 } from "@/lib/google-sheets";
+import { effectiveOverrides } from "@/lib/engagement-gates";
 import type {
   ProjectTrackerConfig,
   ProposalDataUnion,
@@ -15,7 +17,7 @@ import type {
 // the app can observe), so only "proposal-accepted" auto-completes on first seed.
 const AUTO_DONE_ON_ACCEPTED = "proposal-accepted";
 // Done when the agreement is executed (native signing), or — for engagements
-// signed outside the app — when Joseph has unlocked assets by hand.
+// signed outside the app — when Joseph has switched the Assets tab on by hand.
 export const AGREEMENT_SIGNED_MILESTONE = "service-agreement-signed";
 
 const milestoneKey = (phaseId: string, milestoneId: string) => `${phaseId}::${milestoneId}`;
@@ -35,6 +37,7 @@ export async function getOrSeedTracker(
   const acceptance = isFirstSeed ? await getProposalAcceptance(proposalId) : null;
   const acceptedAt = acceptance?.status === "accepted" ? acceptance.acceptedAt || new Date().toISOString() : null;
   const agreementSignedAt = isFirstSeed ? await executedAgreementSignedAt(proposalId) : null;
+  const signedOutsideApp = isFirstSeed && !agreementSignedAt ? await assetsSwitchedOn(proposalId, proposal) : false;
   const now = new Date().toISOString();
 
   const missing: TrackerMilestoneState[] = phases.flatMap((phase) =>
@@ -42,7 +45,7 @@ export async function getOrSeedTracker(
       .filter((m) => !existingKeys.has(milestoneKey(phase.id, m.id)))
       .map<TrackerMilestoneState>((milestone) => {
         const isAcceptedMilestone = isFirstSeed && milestone.id === AUTO_DONE_ON_ACCEPTED && acceptedAt;
-        const isAgreementMilestone = isFirstSeed && milestone.id === AGREEMENT_SIGNED_MILESTONE && (agreementSignedAt || proposal.assetsReady);
+        const isAgreementMilestone = isFirstSeed && milestone.id === AGREEMENT_SIGNED_MILESTONE && (agreementSignedAt || signedOutsideApp);
         const autoDone = Boolean(isAcceptedMilestone || isAgreementMilestone);
         const completedAt = isAcceptedMilestone && acceptedAt ? acceptedAt : isAgreementMilestone && agreementSignedAt ? agreementSignedAt : now;
 
@@ -62,7 +65,7 @@ export async function getOrSeedTracker(
   return [...existing, ...missing];
 }
 
-/** When the client signed the agreement, if it's executed. Unreadable → null (falls back to `assetsReady`). */
+/** When the client signed the agreement, if it's executed. Unreadable → null (falls back to the Assets switch). */
 async function executedAgreementSignedAt(proposalId: string): Promise<string | null> {
   try {
     const agreement = await readAgreement(proposalId);
@@ -70,5 +73,15 @@ async function executedAgreementSignedAt(proposalId: string): Promise<string | n
   } catch (error) {
     console.error(`Tracker seed for ${proposalId}: couldn't read the agreement:`, error);
     return null;
+  }
+}
+
+/** Assets switched on by hand (override row, or the legacy JSON flag) — the "signed outside the app" signal. Unreadable → false. */
+async function assetsSwitchedOn(proposalId: string, proposal: ProposalDataUnion): Promise<boolean> {
+  try {
+    return effectiveOverrides(proposal, await readEngagementState(proposalId)).overrides.assets === "on";
+  } catch (error) {
+    console.error(`Tracker seed for ${proposalId}: couldn't read the engagement state:`, error);
+    return false;
   }
 }

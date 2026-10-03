@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import { getProposalAcceptance, getPublishedRevision } from "@/lib/google-sheets";
 import { hubAccess } from "@/lib/client-session";
-import { clientAgreementStatus } from "@/lib/agreement-client";
+import { clientAgreementStatusOf } from "@/lib/agreement-client";
+import { loadEngagement } from "@/lib/engagement";
 import { proposalVersion } from "@/lib/proposal-version";
 import { ClientHubProvider } from "@/components/proposals/hub/ClientHubProvider";
 import { ClientHubHeader } from "@/components/proposals/hub/ClientHubHeader";
@@ -29,9 +30,10 @@ export default async function ClientHubLayout({ children, params }: { children: 
 
   const proposal = access.proposal as ProposalDataUnion;
   const version = proposalVersion(proposal);
-  const [acceptance, agreementStatus, revision] = await Promise.all([
+  const [acceptance, engagement, revision] = await Promise.all([
     getProposalAcceptance(id),
-    clientAgreementStatus(id),
+    // Agreement + overrides: the Assets/Progress gates and the Agreement tab, one read each.
+    loadEngagement(id, proposal),
     // Only a revision published for exactly these terms.
     getPublishedRevision(id, version),
   ]);
@@ -44,8 +46,9 @@ export default async function ClientHubLayout({ children, params }: { children: 
         expiryDate: access.expiryDate,
         proposalVersion: version,
         acceptance,
-        agreementStatus,
+        agreementStatus: clientAgreementStatusOf(engagement.agreement),
         revision: revision ? { publishedAt: revision.publishedAt, note: revision.note } : null,
+        gates: engagement.gates,
       }}
     >
       <ClientHubHeader />

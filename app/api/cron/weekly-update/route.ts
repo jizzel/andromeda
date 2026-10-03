@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  getAllAgreements,
+  getAllEngagementStates,
   getAllProposals,
   getAllTrackerStatesByProposal,
   getAllWeeklyNotes,
@@ -7,6 +9,7 @@ import {
   markWeeklyUpdateSent,
 } from "@/lib/google-sheets";
 import { resolveTrackerPhases } from "@/constants/tracker-templates";
+import { computeEngagementGates } from "@/lib/engagement-gates";
 import { sendWeeklyUpdate } from "@/lib/email";
 import {
   daysBefore,
@@ -78,6 +81,19 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  // Whether each client's Progress tab is open (lib/engagement-gates.ts). If
+  // the state behind it can't be read, no tracker counts as open — skip
+  // rather than email about a tab the client may not be able to see.
+  let progressOpen: (proposal: (typeof proposals)[number]) => boolean;
+  try {
+    const [agreements, overrides] = await Promise.all([getAllAgreements(), getAllEngagementStates()]);
+    progressOpen = (p) =>
+      computeEngagementGates(p.data, agreements.get(p.id)?.status === "executed", overrides.get(p.id) ?? null).progress.available;
+  } catch (error) {
+    console.error("Weekly update cron: engagement state unavailable — skipping all trackers this run", error);
+    progressOpen = () => false;
+  }
+
   // Process all proposals in parallel. processProposal is now self-contained
   // (in-memory filters + at most one Resend send + one append for the
   // idempotency stamp), so concurrency is bounded by Resend's rate limits
@@ -95,6 +111,7 @@ export async function GET(request: NextRequest) {
         states: statesByProposal.get(proposal.id) ?? [],
         note: notesByKey.get(`${proposal.id}::${weekEndingDate}`),
         alreadySent: sentKeys.has(`${proposal.id}::${weekEndingDate}`),
+        trackerOpen: progressOpen(proposal),
       })
     )
   );
@@ -115,6 +132,8 @@ interface ProcessProposalArgs {
   states: TrackerMilestoneState[];
   note: string | undefined;
   alreadySent: boolean;
+  /** The client's Progress tab is open (agreement executed, or switched on). */
+  trackerOpen: boolean;
 }
 
 async function processProposal({
@@ -127,10 +146,11 @@ async function processProposal({
   states,
   note,
   alreadySent,
+  trackerOpen,
 }: ProcessProposalArgs): Promise<SendResult> {
   const { id: proposalId, data } = proposal;
 
-  if (!data.trackerReady || !data.tracker) {
+  if (!trackerOpen || !data.tracker) {
     return { proposalId, status: "skipped", reason: "tracker-not-ready" };
   }
   if (!data.client.email) {

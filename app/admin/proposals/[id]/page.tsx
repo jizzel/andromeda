@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { requireAdminPage } from "@/lib/admin-auth";
-import { getProposalAcceptance, getProposalRowForEdit, getProposalSnapshot, getPublishedRevision } from "@/lib/google-sheets";
+import { getProposalAcceptance, getProposalRowForEdit, getProposalSnapshot, getPublishedRevision, readAgreement, readEngagementState } from "@/lib/google-sheets";
+import type { EngagementStateInitial } from "@/components/admin/EngagementSwitches";
 import { proposalVersion } from "@/lib/proposal-version";
 import { profile } from "@/constants/profile";
 import { ProposalEditor } from "@/components/admin/ProposalEditor";
@@ -18,15 +19,27 @@ async function changeRequestSnapshot(id: string, version: string | undefined): P
   }
 }
 
+/** The Assets / Progress switches and what "auto" depends on; null if either can't be read. */
+async function engagementState(id: string): Promise<EngagementStateInitial | null> {
+  try {
+    const [overrides, agreement] = await Promise.all([readEngagementState(id), readAgreement(id)]);
+    return { overrides, agreementExecuted: agreement?.status === "executed" };
+  } catch (error) {
+    console.error(`Engagement state for ${id}:`, error);
+    return null;
+  }
+}
+
 export default async function AdminProposalEditorPage({ params }: { params: Promise<{ id: string }> }) {
   await requireAdminPage();
   const { id } = await params;
   const [row, acceptance] = await Promise.all([getProposalRowForEdit(id), getProposalAcceptance(id)]);
   if (!row) notFound();
   const version = proposalVersion(row.record.data);
-  const [requestSnapshot, publishedRevision] = await Promise.all([
+  const [requestSnapshot, publishedRevision, engagement] = await Promise.all([
     changeRequestSnapshot(id, acceptance?.status === "counter" ? acceptance.proposalVersion : undefined),
     getPublishedRevision(id, version),
+    engagementState(id),
   ]);
 
   return (
@@ -44,6 +57,7 @@ export default async function AdminProposalEditorPage({ params }: { params: Prom
       changeRequestSnapshot={requestSnapshot}
       publishedRevision={publishedRevision}
       clientLink={`${profile.siteUrl}/proposal/${id}`}
+      engagement={engagement}
     />
   );
 }

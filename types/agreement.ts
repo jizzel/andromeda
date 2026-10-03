@@ -157,5 +157,10 @@ export interface AgreementActivity {
   /** Latest executed-copy email outcome per recipient. */
   executedEmails: { recipient: "client" | "provider"; status: "sent" | "failed"; attached: boolean; at: string; error?: string }[];
   /** Onboarding after execution; null until recorded. */
-  onboarding: { assets: "unlocked" | "already" | "no_assets" | "failed"; tracker: "done" | "already" | "not_seeded" | "no_milestone" | "failed"; at: string } | null;
+  /**
+   * `assets`: `derived` (open because the agreement is executed) or `off`
+   * (switched off by hand); `unlocked` / `already` appear on events recorded
+   * before Assets opened by itself.
+   */
+  onboarding: { assets: "derived" | "off" | "unlocked" | "already" | "no_assets" | "failed"; tracker: "done" | "already" | "not_seeded" | "no_milestone" | "failed"; at: string } | null;
 }

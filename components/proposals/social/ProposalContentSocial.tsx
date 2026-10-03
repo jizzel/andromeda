@@ -114,8 +114,6 @@ export function ProposalContentSocial({
         clientName={proposal.client.name}
         contactEmail={proposal.contactEmail}
         proposalId={proposalId}
-        assetsReady={proposal.assetsReady}
-        trackerReady={proposal.trackerReady}
       />
 
       <ProposalAcceptance

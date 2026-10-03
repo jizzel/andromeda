@@ -598,10 +598,12 @@ function ClientCard({
 }
 
 const ONBOARDING_ASSETS: Record<NonNullable<AgreementActivity["onboarding"]>["assets"], string> = {
+  derived: "open (the agreement is signed)",
+  off: "kept locked — switched off in the proposal editor",
   unlocked: "unlocked",
   already: "were already unlocked",
   no_assets: "— no checklist on this proposal",
-  failed: "couldn't be unlocked (set assetsReady by hand)",
+  failed: "state couldn't be read — check the Assets switch in the proposal editor",
 };
 
 const ONBOARDING_TRACKER: Record<NonNullable<AgreementActivity["onboarding"]>["tracker"], string> = {
