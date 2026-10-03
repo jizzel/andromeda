@@ -1,7 +1,8 @@
-import type { NextRequest } from "next/server";
+import { after, type NextRequest } from "next/server";
 import { isAdminRequest, isSameOrigin } from "@/lib/admin-auth";
 import { getProposalById, readAgreement, readEngagementState, withProposalLock, writeEngagementState } from "@/lib/google-sheets";
 import { computeEngagementGates, effectiveOverrides, ENGAGEMENT_OVERRIDES, type EngagementOverride } from "@/lib/engagement-gates";
+import { announceTrackerLive } from "@/lib/tracker-live";
 import { busy, json, readJsonBody } from "../edit";
 
 type Params = { params: Promise<{ id: string }> };
@@ -33,10 +34,16 @@ export async function PUT(request: NextRequest, { params }: Params) {
       assets: isOverride(body.assets) ? body.assets : current.assets,
       tracker: isOverride(body.tracker) ? body.tracker : current.tracker,
     };
+    const executed = agreement?.status === "executed";
+    const before = computeEngagementGates(proposal.data, executed, row);
     await writeEngagementState(id, next, lock);
-    return { overrides: next, gates: computeEngagementGates(proposal.data, agreement?.status === "executed", next) };
+    const gates = computeEngagementGates(proposal.data, executed, next);
+    return { overrides: next, gates, progressOpened: !before.progress.available && gates.progress.available };
   });
   if (locked.status === "busy") return busy();
   if (!locked.value) return json({ success: false, error: "Proposal not found" }, 404);
-  return json({ success: true, ...locked.value });
+  const { progressOpened, ...result } = locked.value;
+  // Progress just opened: the "tracker is live" email (once per proposal), after the response.
+  if (progressOpened) after(() => announceTrackerLive(id).then(() => undefined));
+  return json({ success: true, ...result });
 }

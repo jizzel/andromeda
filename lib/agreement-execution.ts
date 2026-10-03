@@ -13,6 +13,7 @@ import { getExecutedAgreementPdf, proposalPdfFilename } from "@/lib/pdf";
 import { DuplicateEmailError, sendAgreementExecuted } from "@/lib/email";
 import { foldAgreementActivity, onboardingFailed } from "@/lib/agreement-activity";
 import { computeEngagementGates } from "@/lib/engagement-gates";
+import { announceTrackerLive } from "@/lib/tracker-live";
 import { profile } from "@/constants/profile";
 import type { AgreementActivity, AgreementRecord } from "@/types/agreement";
 import type { ProjectTrackerConfig } from "@/types/proposal";
@@ -227,6 +228,8 @@ export async function completeExecutionFollowUp(
       clientName: options.clientName ?? record.clientName,
     });
   }
+  // Progress opens with the executed agreement: tell the client once (lib/tracker-live.ts).
+  await announceTrackerLive(record.proposalId);
   return { onboarding, emails };
 }
 

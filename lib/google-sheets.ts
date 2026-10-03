@@ -1102,7 +1102,8 @@ export type EngagementEventType =
   | "agreement_client_signed"
   | "agreement_changes_requested"
   | "agreement_executed_email"
-  | "agreement_onboarding_unlocked";
+  | "agreement_onboarding_unlocked"
+  | "tracker_live_email";
 
 export interface EngagementEventInput {
   proposalId: string;
@@ -1352,9 +1353,10 @@ const ENGAGEMENT_STATE_SHEET_NAME = "EngagementState";
 const ENGAGEMENT_STATE_HEADERS = ["proposalId", "assets", "tracker", "updatedAt"];
 const engagementStateSheetIdCache = { value: null as number | null };
 
-function parseOverride(value: string | undefined): EngagementOverride {
+/** Blank = auto; an unrecognised value is null (the caller locks that tab — never treated as auto). */
+function parseOverride(value: string | undefined): EngagementOverride | null {
   const v = value?.trim().toLowerCase() || "auto";
-  return (ENGAGEMENT_OVERRIDES as readonly string[]).includes(v) ? (v as EngagementOverride) : "auto";
+  return (ENGAGEMENT_OVERRIDES as readonly string[]).includes(v) ? (v as EngagementOverride) : null;
 }
 
 async function readEngagementStateRows(): Promise<string[][]> {
@@ -1364,7 +1366,14 @@ async function readEngagementStateRows(): Promise<string[][]> {
   return (response.data.values || []) as string[][];
 }
 
-const rowToOverrides = (r: string[]): EngagementOverrides => ({ assets: parseOverride(r[1]), tracker: parseOverride(r[2]) });
+function rowToOverrides(r: string[]): EngagementOverrides {
+  const assets = parseOverride(r[1]);
+  const tracker = parseOverride(r[2]);
+  const invalid = [...(assets ? [] : ["assets" as const]), ...(tracker ? [] : ["tracker" as const])];
+  if (invalid.length) console.warn(`EngagementState row for ${r[0]?.trim()}: unrecognised value(s) for ${invalid.join(", ")} — locked`);
+  // Unrecognised → off (locked), flagged so admin can explain it.
+  return { assets: assets ?? "off", tracker: tracker ?? "off", ...(invalid.length && { invalid }) };
+}
 
 /** A proposal's overrides row, or null if it has none. Throws if the tab can't be read. */
 export async function readEngagementState(proposalId: string): Promise<EngagementOverrides | null> {
@@ -1757,6 +1766,19 @@ export async function setTrackerMilestone(
       },
     });
   }
+}
+
+/**
+ * Done milestones whose client email hasn't gone out (notifiedAt empty) —
+ * e.g. completed while the client's Progress tab was locked. Throws on read failure.
+ */
+export async function getUnnotifiedDoneMilestones(proposalId: string): Promise<{ phaseId: string; milestoneId: string }[]> {
+  const sheets = getGoogleSheetsClient();
+  const response = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${TRACKER_SHEET_NAME}!A2:I` });
+  return (response.data.values || [])
+    .filter((row) => row[0]?.trim() === proposalId && row[3]?.trim() === "done" && !row[8]?.trim())
+    .map((row) => ({ phaseId: row[1]?.trim() ?? "", milestoneId: row[2]?.trim() ?? "" }))
+    .filter((m) => m.phaseId && m.milestoneId);
 }
 
 export async function markTrackerNotified(

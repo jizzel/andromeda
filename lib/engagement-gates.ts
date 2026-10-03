@@ -17,6 +17,13 @@ export type EngagementOverride = "auto" | "on" | "off";
 export interface EngagementOverrides {
   assets: EngagementOverride;
   tracker: EngagementOverride;
+  /**
+   * Switches whose sheet cell held an unrecognised, non-blank value (e.g. a
+   * typo). They read as `off` and lock their tab with reason
+   * `invalid_override` — never as `auto`, which could open a tab that was
+   * meant to stay locked.
+   */
+  invalid?: ("assets" | "tracker")[];
 }
 
 export const ENGAGEMENT_OVERRIDES: readonly EngagementOverride[] = ["auto", "on", "off"];
@@ -27,6 +34,7 @@ export type GateReason =
   | "legacy_flag" // no EngagementState row; the old JSON switch is on
   | "override_off"
   | "awaiting_agreement" // auto, agreement not executed yet
+  | "invalid_override" // unrecognised value in the EngagementState tab — locked
   | "not_configured" // no checklist / tracker in the proposal
   | "unavailable"; // state couldn't be read — locked (fail closed)
 
@@ -64,8 +72,9 @@ export function effectiveOverrides(data: GateInputs, row: EngagementOverrides | 
   return { overrides: { assets: legacy.assets ? "on" : "auto", tracker: legacy.tracker ? "on" : "auto" }, legacy };
 }
 
-function gate(configured: boolean, override: EngagementOverride, legacy: boolean, agreementExecuted: boolean): Gate {
+function gate(configured: boolean, override: EngagementOverride, legacy: boolean, agreementExecuted: boolean, invalid: boolean): Gate {
   if (!configured) return { available: false, reason: "not_configured" };
+  if (invalid) return { available: false, reason: "invalid_override" };
   if (override === "off") return { available: false, reason: "override_off" };
   if (override === "on") return { available: true, reason: legacy ? "legacy_flag" : "override_on" };
   return agreementExecuted ? { available: true, reason: "agreement_executed" } : { available: false, reason: "awaiting_agreement" };
@@ -74,8 +83,8 @@ function gate(configured: boolean, override: EngagementOverride, legacy: boolean
 export function computeEngagementGates(data: GateInputs, agreementExecuted: boolean, row: EngagementOverrides | null): EngagementGates {
   const { overrides, legacy } = effectiveOverrides(data, row);
   return {
-    assets: gate(!!data.assets, overrides.assets, legacy.assets, agreementExecuted),
-    progress: gate(!!data.tracker, overrides.tracker, legacy.tracker, agreementExecuted),
+    assets: gate(!!data.assets, overrides.assets, legacy.assets, agreementExecuted, !!overrides.invalid?.includes("assets")),
+    progress: gate(!!data.tracker, overrides.tracker, legacy.tracker, agreementExecuted, !!overrides.invalid?.includes("tracker")),
   };
 }
 
@@ -92,6 +101,8 @@ export function gateExplanation(g: Gate): string {
       return "Locked — switched off manually";
     case "awaiting_agreement":
       return "Locked until the agreement is signed";
+    case "invalid_override":
+      return "Locked — unrecognised value in the EngagementState tab (choose a setting to fix it)";
     case "not_configured":
       return "Not set up in this proposal";
     case "unavailable":
