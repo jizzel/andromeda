@@ -57,6 +57,12 @@ export function PackagesForm({ data, issues, onChange, acceptance, requestDelete
               })
             }
           >
+            {/* A package-level problem, e.g. no payment plan applies to it. */}
+            {issues.at(path) && (
+              <p role="alert" data-path={path} tabIndex={-1} className="text-xs text-[var(--andromeda-error)]">
+                {issues.at(path)}
+              </p>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <TextField label="Name" path={`${path}.name`} value={pkg.name ?? ""} onChange={(v) => set(index, { name: v })} error={issues.at(`${path}.name`)} />
               <TextField

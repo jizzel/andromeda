@@ -32,6 +32,14 @@ const markdown = {
   ul: (props: ComponentPropsWithoutRef<"ul">) => <ul className="mb-3 ml-5 list-disc space-y-1" {...props} />,
   ol: (props: ComponentPropsWithoutRef<"ol">) => <ol className="mb-3 ml-5 list-decimal space-y-1" {...props} />,
   strong: (props: ComponentPropsWithoutRef<"strong">) => <strong className="font-semibold text-[var(--andromeda-text-primary)]" {...props} />,
+  // GFM tables (e.g. the licence's summary table).
+  table: (props: ComponentPropsWithoutRef<"table">) => (
+    <div className="mb-4 overflow-x-auto print-avoid-break">
+      <table className="w-full border-collapse text-left text-[13px]" {...props} />
+    </div>
+  ),
+  th: (props: ComponentPropsWithoutRef<"th">) => <th className="border-b border-white/15 light:border-black/15 px-2 py-1 font-semibold empty:hidden" {...props} />,
+  td: (props: ComponentPropsWithoutRef<"td">) => <td className="border-b border-white/10 light:border-black/10 px-2 py-1.5 align-top first:w-[34%]" {...props} />,
 };
 
 /**
@@ -62,7 +70,9 @@ export async function AgreementDocument({ record, template, proposal, acceptance
             {template.status === "draft" && " · draft for legal review"}
           </p>
         )}
-        <h1 className="mt-1 text-2xl font-bold text-[var(--andromeda-text-primary)]">Service Agreement — {proposal.title}</h1>
+        <h1 className="mt-1 text-2xl font-bold text-[var(--andromeda-text-primary)]">
+          {template.clientTitle} — {proposal.title}
+        </h1>
         <p className="mt-1">
           Between {record.provider.name}
           {providerAffiliation(record.provider) && `, ${record.provider.role}${providerAffiliation(record.provider)}`} and {proposal.client.name}
@@ -144,7 +154,7 @@ export async function AgreementDocument({ record, template, proposal, acceptance
 
       <section className="mt-10 grid gap-4 sm:grid-cols-2">
         <div className="p-4 rounded-lg border border-white/10 light:border-black/10">
-          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--andromeda-text-secondary)]">Service Provider — signed and offered</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--andromeda-text-secondary)]">{template.parties.provider} — signed and offered</p>
           <p className="mt-2 text-[var(--andromeda-text-primary)]">{record.provider.name}</p>
           <p>
             {record.provider.role}
@@ -164,7 +174,7 @@ export async function AgreementDocument({ record, template, proposal, acceptance
           <p className="mt-2">Offer open until {formatDay(record.offerValidUntil)}.</p>
         </div>
         <div className="p-4 rounded-lg border border-white/10 light:border-black/10">
-          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--andromeda-text-secondary)]">Client — accept and sign</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--andromeda-text-secondary)]">{template.parties.client} — accept and sign</p>
           <p className="mt-2 text-[var(--andromeda-text-primary)]">{proposal.client.name}</p>
           {client ? (
             <>

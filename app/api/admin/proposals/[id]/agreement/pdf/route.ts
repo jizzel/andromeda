@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { isAdminRequest } from "@/lib/admin-auth";
 import { getProposalById, readAgreement } from "@/lib/google-sheets";
+import { clientTitleOf } from "@/lib/agreement-templates";
 import { agreementPdfResponse } from "@/lib/pdf";
 import { json } from "../../edit";
 
@@ -20,6 +21,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     providerSignedAt: record.providerSignature.signedAt,
     clientSignedAt: record.clientSignature.signedAt,
     clientName: record.clientName,
+    documentTitle: clientTitleOf(record),
     title: proposal?.data.title ?? id,
   });
 }

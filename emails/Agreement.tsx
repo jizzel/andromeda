@@ -30,6 +30,8 @@ export function Frame({ preview, eyebrow: eyebrowText, title, subtitle, children
 
 interface AgreementReadyEmailProps {
   clientName: string;
+  /** e.g. "Service Agreement", "Software Licence and Service Agreement". */
+  documentTitle: string;
   projectTitle: string;
   agreementUrl: string;
   /** Formatted, e.g. "16 October 2026". */
@@ -37,12 +39,12 @@ interface AgreementReadyEmailProps {
   senderName: string;
 }
 
-export function AgreementReadyEmail({ clientName, projectTitle, agreementUrl, validUntil, senderName }: AgreementReadyEmailProps) {
+export function AgreementReadyEmail({ clientName, documentTitle, projectTitle, agreementUrl, validUntil, senderName }: AgreementReadyEmailProps) {
   return (
-    <Frame preview={`Your service agreement for ${projectTitle} is ready to sign.`} eyebrow={projectTitle} title="Your agreement is ready to sign" subtitle="The final step before work begins.">
+    <Frame preview={`Your ${documentTitle.toLowerCase()} for ${projectTitle} is ready to sign.`} eyebrow={projectTitle} title="Your agreement is ready to sign" subtitle="The final step before work begins.">
       <Text style={paragraph}>Hi {firstNameOf(clientName)},</Text>
       <Text style={paragraph}>
-        Thank you for accepting the proposal for <strong>{projectTitle}</strong>. Your service agreement for this engagement — which
+        Thank you for accepting the proposal for <strong>{projectTitle}</strong>. Your {documentTitle.toLowerCase()} for this engagement — which
         includes the proposal exactly as you accepted it — is ready for you to review and sign. I&apos;ve already signed it.
       </Text>
       <Section style={ctaWrapper}>
@@ -86,6 +88,7 @@ export function AgreementSignInCodeEmail({ clientName, projectTitle, code, expir
 
 interface AgreementExecutedEmailProps {
   recipient: "client" | "provider";
+  documentTitle: string;
   clientName: string;
   projectTitle: string;
   signedBy: string;
@@ -100,11 +103,11 @@ interface AgreementExecutedEmailProps {
   senderName: string;
 }
 
-export function AgreementExecutedEmail({ recipient, clientName, projectTitle, signedBy, signedAt, agreementHashShort, attached, agreementUrl, assetsUrl, senderName }: AgreementExecutedEmailProps) {
+export function AgreementExecutedEmail({ recipient, documentTitle, clientName, projectTitle, signedBy, signedAt, agreementHashShort, attached, agreementUrl, assetsUrl, senderName }: AgreementExecutedEmailProps) {
   const toClient = recipient === "client";
   return (
     <Frame
-      preview={`The service agreement for ${projectTitle} is signed by both parties.`}
+      preview={`The ${documentTitle.toLowerCase()} for ${projectTitle} is signed by both parties.`}
       eyebrow={projectTitle}
       title="Agreement signed"
       subtitle="Signed by both parties — the agreement is in effect."
@@ -113,11 +116,11 @@ export function AgreementExecutedEmail({ recipient, clientName, projectTitle, si
       <Text style={paragraph}>
         {toClient ? (
           <>
-            Thank you — the service agreement for <strong>{projectTitle}</strong> is now signed by both parties.
+            Thank you — the {documentTitle.toLowerCase()} for <strong>{projectTitle}</strong> is now signed by both parties.
           </>
         ) : (
           <>
-            {clientName} has signed the service agreement for <strong>{projectTitle}</strong>.
+            {clientName} has signed the {documentTitle.toLowerCase()} for <strong>{projectTitle}</strong>.
           </>
         )}{" "}
         {attached ? "The executed agreement is attached for your records." : "The executed agreement is available on the agreement page."}

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdminPage } from "@/lib/admin-auth";
 import { getProposalRowForEdit, readAgreement, readProposalEngagementEvents } from "@/lib/google-sheets";
-import { latestTemplate, listTemplates, loadTemplate } from "@/lib/agreement-templates";
+import { latestTemplate, listTemplates, loadTemplate, suggestedTemplateId } from "@/lib/agreement-templates";
 import { agreementProvider, PROVIDER_ORGANISATIONS } from "@/constants/agreement";
 import { defaultOfferValidUntil } from "@/lib/agreements";
 import { shortVersion } from "@/lib/proposal-version-label";
@@ -51,7 +51,10 @@ export default async function AdminAgreementPage({ params }: { params: Promise<{
     }
     executedError = !executed;
   }
-  const template = executed?.template ?? (record ? loadTemplate(record.templateId, record.templateVersion) : null) ?? latestTemplate();
+  // Terms scoped to this proposal and its accepted package (e.g. IIA Ghana's licence), else the default.
+  const suggested = suggestedTemplateId(id, basis.ok ? basis.acceptance.packageId : null);
+  const template =
+    executed?.template ?? (record ? loadTemplate(record.templateId, record.templateVersion) : null) ?? latestTemplate(suggested) ?? latestTemplate();
   if (!template) throw new Error("No agreement template is registered");
   const templateChanged = !!record && record.status !== "executed" && record.templateHash !== template.hash;
   const data = row.record.data;
@@ -105,8 +108,8 @@ export default async function AdminAgreementPage({ params }: { params: Promise<{
             key={record?.updatedAt ?? "new"}
             proposalId={id}
             record={record}
-            templates={listTemplates()}
-            clauses={template.clauses}
+            templates={listTemplates(id)}
+            suggestedTemplateId={suggested}
             templateChanged={templateChanged}
             providerName={agreementProvider.legalName}
             providerRole={agreementProvider.role}

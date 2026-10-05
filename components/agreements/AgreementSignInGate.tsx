@@ -9,6 +9,8 @@ import { useAnalytics } from "@/lib/hooks/useAnalytics";
 
 interface AgreementSignInGateProps {
   proposalId: string;
+  /** The agreement's client-facing title, e.g. "Service Agreement". */
+  documentTitle?: string;
 }
 
 const primaryButton =
@@ -16,11 +18,11 @@ const primaryButton =
 
 /**
  * Before the signing form: a one-time code emailed to the client's address on
- * file, as evidence of who signs (§29.4). The hub session already proved the
+ * file, as evidence of who signs (the electronic-signature clause). The hub session already proved the
  * access code. On success the server sets a signer session and the page
  * re-renders with the agreement.
  */
-export function AgreementSignInGate({ proposalId }: AgreementSignInGateProps) {
+export function AgreementSignInGate({ proposalId, documentTitle = "Service Agreement" }: AgreementSignInGateProps) {
   const router = useRouter();
   const { trackAgreementCodeRequested, trackAgreementCodeVerified } = useAnalytics();
   const [step, setStep] = useState<"request" | "code">("request");
@@ -83,7 +85,7 @@ export function AgreementSignInGate({ proposalId }: AgreementSignInGateProps) {
 
         {step === "request" ? (
           <>
-            <h1 className="text-2xl md:text-3xl font-bold text-center text-[var(--andromeda-text-primary)] mb-3">Your service agreement</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-center text-[var(--andromeda-text-primary)] mb-3">Your {documentTitle.toLowerCase()}</h1>
             <p className="text-center text-[var(--andromeda-text-secondary)] mb-8">
               Your agreement is ready to review and sign. To confirm it&apos;s you, we&apos;ll email a one-time code to the address on file.
             </p>

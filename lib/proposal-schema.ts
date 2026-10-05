@@ -69,6 +69,7 @@ const paymentPlan = z.strictObject({
   structure: z.array(paymentMilestone),
   includes: strList,
   bestFor: str,
+  packageIds: strList.optional(),
 });
 
 const timelineItem = z.strictObject({ phase: str, duration: str, description: str, phaseId: str.optional() });
@@ -387,6 +388,47 @@ function duplicateIdErrors(data: Record<string, unknown>): ProposalIssue[] {
   return errors;
 }
 
+/**
+ * A payment plan's `packageIds` must name packages of this proposal (the
+ * pricing UI and acceptance API match on them), and when there are plans,
+ * every package needs at least one — acceptance requires a plan, so a package
+ * without one couldn't be accepted.
+ */
+function planPackageErrors(data: Record<string, unknown>): ProposalIssue[] {
+  if (!LAYOUT_SECTIONS[layoutOf(data)].paymentPlans) return [];
+  const packages = Array.isArray(data.packages) ? data.packages : [];
+  const known = new Set(packages.map((p) => (p as { id?: unknown } | null)?.id).filter((id): id is string => typeof id === "string"));
+  const plans = Array.isArray(data.paymentPlans) ? data.paymentPlans : [];
+  const errors: ProposalIssue[] = [];
+  plans.forEach((plan, index) => {
+    const ids = (plan as { packageIds?: unknown } | null)?.packageIds;
+    if (!Array.isArray(ids)) return;
+    ids.forEach((id, j) => {
+      if (typeof id === "string" && !known.has(id)) {
+        errors.push({ path: `paymentPlans[${index}].packageIds[${j}]`, message: `"${id}" isn't a package in this proposal` });
+      }
+    });
+  });
+  if (plans.length) {
+    packages.forEach((pkg, index) => {
+      const id = (pkg as { id?: unknown } | null)?.id;
+      if (typeof id !== "string") return;
+      const covered = plans.some((plan) => {
+        const ids = (plan as { packageIds?: unknown } | null)?.packageIds;
+        return !Array.isArray(ids) || ids.length === 0 || ids.includes(id);
+      });
+      if (!covered) {
+        const name = (pkg as { name?: unknown }).name;
+        errors.push({
+          path: `packages[${index}]`,
+          message: `No payment plan applies to "${typeof name === "string" && name ? name : id}" — a client choosing it couldn't accept. Tick it under a plan's "Applies to", or leave a plan open to every package.`,
+        });
+      }
+    });
+  }
+  return errors;
+}
+
 export function validateProposal(data: unknown): ProposalValidation {
   const errors: ProposalIssue[] = [];
   const warnings: ProposalIssue[] = [];
@@ -414,6 +456,7 @@ export function validateProposal(data: unknown): ProposalValidation {
   }
 
   errors.push(...duplicateIdErrors(data as Record<string, unknown>));
+  errors.push(...planPackageErrors(data as Record<string, unknown>));
 
   const size = JSON.stringify(data).length;
   if (size > MAX_PROPOSAL_JSON_CHARS) {

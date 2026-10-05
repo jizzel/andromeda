@@ -41,7 +41,7 @@ const LABEL_COPY: Record<ProposalAccessGateLabel, AccessGateCopy> = {
     footerNoun: "asset checklist",
   },
   agreement: {
-    title: "Your Service Agreement",
+    title: "Your Agreement",
     subtitle: "Enter your proposal access code to review your agreement",
     button: "Continue",
     footerNoun: "agreement",

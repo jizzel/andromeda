@@ -1,5 +1,6 @@
 "use client";
 
+import { planForPackage, plansFor } from "@/lib/payment-plans";
 import { useState, useCallback } from "react";
 import type { ProposalData } from "@/types/proposal";
 import { ProposalHero } from "@/components/proposals/ProposalHero";
@@ -43,23 +44,27 @@ export function ProposalContent({ proposal, expiryDate, proposalId, accessCode, 
     const id = initialAcceptance?.packageId;
     return id && proposal.packages?.some((p) => p.id === id) ? id : null;
   });
-  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(() => {
-    const id = initialAcceptance?.paymentPlanId;
-    return id && proposal.paymentPlans?.some((p) => p.id === id) ? id : null;
-  });
+  // A recorded plan is restored only if it's still offered for the restored package
+  // (a revision may have tied it to another package) — never hidden but still selected.
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(() =>
+    planForPackage(proposal.paymentPlans ?? [], selectedPackageId, initialAcceptance?.paymentPlanId)
+  );
 
   // Lock selection once the proposal is accepted — including in this session,
   // which `initialAcceptance` (mount-time only) doesn't reflect. While changes
   // are requested the cards stay selectable, so a revision can be accepted
   // with a new choice.
-  const { recordedAcceptance } = useProposalDocument();
+  const { recordedAcceptance, printMode } = useProposalDocument();
   const locked = (recordedAcceptance ?? initialAcceptance)?.status === "accepted";
 
   const handlePackageSelect = useCallback((id: string) => {
     setSelectedPackageId(id);
+    // Plans can be tied to packages (`packageIds`): drop a plan that doesn't
+    // apply to the new package, and pick the plan when only one applies.
+    setSelectedPlanId((current) => planForPackage(proposal.paymentPlans ?? [], id, current));
     const pkg = proposal.packages?.find((p) => p.id === id);
     if (pkg) trackProposalPackageSelected({ proposal_id: proposalId, package_id: id, package_name: pkg.name });
-  }, [proposal.packages, proposalId, trackProposalPackageSelected]);
+  }, [proposal.packages, proposal.paymentPlans, proposalId, trackProposalPackageSelected]);
 
   const handlePlanSelect = useCallback((id: string) => {
     setSelectedPlanId(id);
@@ -107,7 +112,9 @@ export function ProposalContent({ proposal, expiryDate, proposalId, accessCode, 
 
       {proposal.paymentPlans && proposal.paymentPlans.length > 0 && (
         <ProposalPaymentPlans
-          plans={proposal.paymentPlans}
+          // Only the plans for the chosen package (all, before a choice). Print follows the recorded
+          // package only — never an unsaved click — and shows every plan without one (like the server PDF).
+          plans={plansFor(proposal.paymentPlans, printMode ? (recordedAcceptance?.packageId ?? null) : selectedPackageId)}
           clarification={proposal.paymentClarification}
           selectedId={selectedPlanId}
           onSelect={handlePlanSelect}

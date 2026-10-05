@@ -15,6 +15,7 @@ import { foldAgreementActivity, onboardingFailed } from "@/lib/agreement-activit
 import { computeEngagementGates } from "@/lib/engagement-gates";
 import { announceTrackerLive } from "@/lib/tracker-live";
 import { profile } from "@/constants/profile";
+import { clientTitleOf } from "@/lib/agreement-templates";
 import type { AgreementActivity, AgreementRecord } from "@/types/agreement";
 import type { ProjectTrackerConfig } from "@/types/proposal";
 
@@ -114,6 +115,7 @@ export async function sendExecutedCopies(
   const provider = record.providerSignature;
   if (record.status !== "executed" || !client || !provider) return [];
 
+  const documentTitle = clientTitleOf(record);
   let pdf: { filename: string; content: Buffer } | null = null;
   try {
     const content = await getExecutedAgreementPdf({
@@ -123,7 +125,7 @@ export async function sendExecutedCopies(
       providerSignedAt: provider.signedAt,
       clientSignedAt: client.signedAt,
     });
-    pdf = { filename: proposalPdfFilename(options.clientName, options.projectTitle, "service-agreement"), content };
+    pdf = { filename: proposalPdfFilename(options.clientName, options.projectTitle, documentTitle), content };
   } catch (error) {
     console.error(`Executed agreement PDF for ${record.proposalId} failed (sending without it):`, error);
   }
@@ -141,6 +143,7 @@ export async function sendExecutedCopies(
         clientName: options.clientName,
         proposalId: record.proposalId,
         projectTitle: options.projectTitle,
+        documentTitle,
         signedBy: client.organisation ? `${client.legalName}, for ${client.organisation}` : client.legalName,
         signedAt: client.signedAt,
         agreementHash: record.agreementHash,
