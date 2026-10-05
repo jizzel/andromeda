@@ -68,6 +68,12 @@ export interface ProposalPaymentPlan {
   structure: PaymentMilestone[];
   includes: string[];
   bestFor: string;
+  /**
+   * The packages this plan applies to (ids). Absent = every package. When a
+   * client picks a package, only its plans are offered, and an acceptance
+   * pairing a package with a plan that doesn't apply is refused.
+   */
+  packageIds?: string[];
 }
 
 export interface ProposalTimelineItem {

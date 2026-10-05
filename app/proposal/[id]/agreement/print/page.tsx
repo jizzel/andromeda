@@ -27,7 +27,7 @@ export async function generateMetadata({ params, searchParams }: PrintPageProps)
   const { token } = await searchParams;
   const executed = verifyPrintToken(id, token, "agreement") ? await load(id) : null;
   return {
-    title: executed ? `Service Agreement — ${executed.proposal.title} — ${executed.proposal.client.name}` : "Service Agreement",
+    title: executed ? `${executed.template.clientTitle} — ${executed.proposal.title} — ${executed.proposal.client.name}` : "Agreement",
     robots: { index: false, follow: false },
   };
 }

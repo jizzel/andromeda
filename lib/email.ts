@@ -340,6 +340,8 @@ export async function sendAgreementReady(args: {
   clientName: string;
   proposalId: string;
   projectTitle: string;
+  /** The agreement's client-facing title (`clientTitleOf`). */
+  documentTitle: string;
   offerValidUntil: string;
   idempotencyKey: string;
 }): Promise<void> {
@@ -349,9 +351,10 @@ export async function sendAgreementReady(args: {
       from,
       to: args.to,
       replyTo: profile.email,
-      subject: `${args.projectTitle} — your service agreement is ready to sign`,
+      subject: `${args.projectTitle} — your ${args.documentTitle.toLowerCase()} is ready to sign`,
       react: AgreementReadyEmail({
         clientName: args.clientName,
+        documentTitle: args.documentTitle,
         projectTitle: args.projectTitle,
         agreementUrl: agreementPageUrl(site, args.proposalId),
         validUntil: longDate(args.offerValidUntil),
@@ -383,6 +386,8 @@ export async function sendAgreementExecuted(args: {
   clientName: string;
   proposalId: string;
   projectTitle: string;
+  /** The agreement's client-facing title (`clientTitleOf`). */
+  documentTitle: string;
   signedBy: string;
   signedAt: string;
   agreementHash: string;
@@ -396,9 +401,10 @@ export async function sendAgreementExecuted(args: {
       from,
       to: args.to,
       ...(args.recipient === "client" && { replyTo: profile.email }),
-      subject: `${args.projectTitle} — service agreement signed`,
+      subject: `${args.projectTitle} — ${args.documentTitle.toLowerCase()} signed`,
       react: AgreementExecutedEmail({
         recipient: args.recipient,
+        documentTitle: args.documentTitle,
         clientName: args.clientName,
         projectTitle: args.projectTitle,
         signedBy: args.signedBy,

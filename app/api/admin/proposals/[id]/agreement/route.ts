@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { withRouteTelemetry } from "@/lib/sheets-telemetry";
 import { isAdminRequest, isSameOrigin, requestMeta } from "@/lib/admin-auth";
 import { appendEngagementEvent, readAgreement, readAgreementSnapshot, saveAgreementSnapshot, withProposalLock, writeAgreement } from "@/lib/google-sheets";
-import { latestTemplate, listTemplates, loadTemplate } from "@/lib/agreement-templates";
+import { DEFAULT_TEMPLATE_ID, latestTemplate, listTemplates, loadTemplate } from "@/lib/agreement-templates";
 import { agreementHash, draftProblems, newSpecialTermId, resolveProvider, selectionOf } from "@/lib/agreements";
 import { PROVIDER_ORGANISATIONS } from "@/constants/agreement";
 import { isProviderSigned, type AgreementRecord, type SpecialTerm } from "@/types/agreement";
@@ -46,9 +46,9 @@ async function handlePUT(request: NextRequest, { params }: Params) {
   const body = await readJsonBody(request);
   if (!body) return json({ success: false, error: "Invalid JSON" }, 400);
 
-  const template =
-    typeof body.templateVersion === "number" ? loadTemplate("general-service-agreement", body.templateVersion) : latestTemplate();
-  if (!template) return json({ success: false, code: "invalid", error: "Unknown template version" }, 400);
+  const templateId = typeof body.templateId === "string" && body.templateId ? body.templateId : DEFAULT_TEMPLATE_ID;
+  const template = typeof body.templateVersion === "number" ? loadTemplate(templateId, body.templateVersion) : latestTemplate(templateId);
+  if (!template) return json({ success: false, code: "invalid", error: "Unknown agreement template" }, 400);
   const organisation = typeof body.organisation === "string" ? body.organisation.trim() : "";
   if (organisation && !PROVIDER_ORGANISATIONS.includes(organisation)) return json({ success: false, code: "invalid", errors: [`Unknown organisation "${organisation}"`] }, 400);
   const specialTerms: SpecialTerm[] = Array.isArray(body.specialTerms)

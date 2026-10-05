@@ -156,7 +156,8 @@ export function getOrRenderPdf(key: string, render: () => Promise<Buffer>): Prom
   return pending;
 }
 
-export function proposalPdfFilename(clientName: string, title: string, kind: "proposal" | "service-agreement" = "proposal"): string {
+/** `kind` is slugged too: "proposal", or an agreement's client-facing title ("Service Agreement" → "service-agreement"). */
+export function proposalPdfFilename(clientName: string, title: string, kind = "proposal"): string {
   const slug = (value: string) =>
     value
       .normalize("NFKD")
@@ -166,7 +167,8 @@ export function proposalPdfFilename(clientName: string, title: string, kind: "pr
       .replace(/^-+|-+$/g, "")
       .slice(0, 60);
   const base = [slug(clientName), slug(title)].filter(Boolean).join("-");
-  return base ? `${base}-${kind}.pdf` : `${kind}.pdf`;
+  const suffix = slug(kind) || "document";
+  return base ? `${base}-${suffix}.pdf` : `${suffix}.pdf`;
 }
 
 /**
@@ -230,10 +232,12 @@ export async function agreementPdfResponse(args: {
   clientSignedAt: string;
   clientName: string;
   title: string;
+  /** The agreement's client-facing title (`clientTitleOf`), for the filename. */
+  documentTitle: string;
 }): Promise<NextResponse> {
   try {
     const pdf = await getExecutedAgreementPdf(args);
-    return pdfResponse(pdf, proposalPdfFilename(args.clientName, args.title, "service-agreement"));
+    return pdfResponse(pdf, proposalPdfFilename(args.clientName, args.title, args.documentTitle));
   } catch (error) {
     console.error("Agreement PDF generation failed:", error);
     return NextResponse.json({ success: false, error: "PDF generation failed" }, { status: 500 });

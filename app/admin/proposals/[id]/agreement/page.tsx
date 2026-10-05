@@ -2,8 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdminPage } from "@/lib/admin-auth";
 import { getProposalRowForEdit, readAgreement, readProposalEngagementEvents } from "@/lib/google-sheets";
-import { latestTemplate, listTemplates, loadTemplate } from "@/lib/agreement-templates";
-import { agreementProvider, PROVIDER_ORGANISATIONS } from "@/constants/agreement";
+import { DEFAULT_TEMPLATE_ID, latestTemplate, listTemplates, loadTemplate } from "@/lib/agreement-templates";
+import { agreementProvider, PACKAGE_TEMPLATES, PROVIDER_ORGANISATIONS } from "@/constants/agreement";
 import { defaultOfferValidUntil } from "@/lib/agreements";
 import { shortVersion } from "@/lib/proposal-version-label";
 import { proposalVersion } from "@/lib/proposal-version";
@@ -51,7 +51,10 @@ export default async function AdminAgreementPage({ params }: { params: Promise<{
     }
     executedError = !executed;
   }
-  const template = executed?.template ?? (record ? loadTemplate(record.templateId, record.templateVersion) : null) ?? latestTemplate();
+  // Terms that go with the accepted package (e.g. the platform licence), if any.
+  const suggestedTemplateId = (basis.ok && basis.acceptance.packageId && PACKAGE_TEMPLATES[basis.acceptance.packageId]) || DEFAULT_TEMPLATE_ID;
+  const template =
+    executed?.template ?? (record ? loadTemplate(record.templateId, record.templateVersion) : null) ?? latestTemplate(suggestedTemplateId) ?? latestTemplate();
   if (!template) throw new Error("No agreement template is registered");
   const templateChanged = !!record && record.status !== "executed" && record.templateHash !== template.hash;
   const data = row.record.data;
@@ -106,7 +109,7 @@ export default async function AdminAgreementPage({ params }: { params: Promise<{
             proposalId={id}
             record={record}
             templates={listTemplates()}
-            clauses={template.clauses}
+            suggestedTemplateId={suggestedTemplateId}
             templateChanged={templateChanged}
             providerName={agreementProvider.legalName}
             providerRole={agreementProvider.role}

@@ -1,5 +1,6 @@
 "use client";
 
+import { plansFor } from "@/lib/payment-plans";
 import { useState, useCallback } from "react";
 import type { ProposalData } from "@/types/proposal";
 import { ProposalHero } from "@/components/proposals/ProposalHero";
@@ -52,14 +53,20 @@ export function ProposalContent({ proposal, expiryDate, proposalId, accessCode, 
   // which `initialAcceptance` (mount-time only) doesn't reflect. While changes
   // are requested the cards stay selectable, so a revision can be accepted
   // with a new choice.
-  const { recordedAcceptance } = useProposalDocument();
+  const { recordedAcceptance, printMode } = useProposalDocument();
   const locked = (recordedAcceptance ?? initialAcceptance)?.status === "accepted";
 
   const handlePackageSelect = useCallback((id: string) => {
     setSelectedPackageId(id);
+    // Plans can be tied to packages (`packageIds`): drop a plan that doesn't
+    // apply to the new package, and pick the plan when only one applies.
+    const applicable = plansFor(proposal.paymentPlans ?? [], id);
+    setSelectedPlanId((current) =>
+      current && applicable.some((p) => p.id === current) ? current : applicable.length === 1 ? applicable[0].id : null
+    );
     const pkg = proposal.packages?.find((p) => p.id === id);
     if (pkg) trackProposalPackageSelected({ proposal_id: proposalId, package_id: id, package_name: pkg.name });
-  }, [proposal.packages, proposalId, trackProposalPackageSelected]);
+  }, [proposal.packages, proposal.paymentPlans, proposalId, trackProposalPackageSelected]);
 
   const handlePlanSelect = useCallback((id: string) => {
     setSelectedPlanId(id);
@@ -107,7 +114,9 @@ export function ProposalContent({ proposal, expiryDate, proposalId, accessCode, 
 
       {proposal.paymentPlans && proposal.paymentPlans.length > 0 && (
         <ProposalPaymentPlans
-          plans={proposal.paymentPlans}
+          // Only the plans for the chosen package (all, before a choice). Print follows the recorded
+          // package only — never an unsaved click — and shows every plan without one (like the server PDF).
+          plans={plansFor(proposal.paymentPlans, printMode ? (recordedAcceptance?.packageId ?? null) : selectedPackageId)}
           clarification={proposal.paymentClarification}
           selectedId={selectedPlanId}
           onSelect={handlePlanSelect}

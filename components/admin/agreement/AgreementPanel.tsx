@@ -4,9 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowUp, CheckCircle2, Download, Loader2, Mail, MessageSquare, PenLine, Plus, Save, Send, X } from "lucide-react";
 import { isProviderSigned, type AgreementActivity, type AgreementRecord, type SpecialTerm } from "@/types/agreement";
-import type { TemplateClause } from "@/lib/agreement-templates";
+import type { TemplateSummary } from "@/lib/agreement-templates";
 import { followUpIncomplete } from "@/lib/agreement-activity";
-import { MAX_SPECIAL_TERM_CHARS, MAX_SPECIAL_TERMS, PROVIDER_SIGNING_DECLARATION } from "@/constants/agreement";
+import { MAX_SPECIAL_TERM_CHARS, MAX_SPECIAL_TERMS, providerSigningDeclaration } from "@/constants/agreement";
 import { shortVersion } from "@/lib/proposal-version-label";
 import { AdminDialog, dialogButton } from "../AdminDialog";
 import { Field, inputClass } from "../forms/fields";
@@ -14,8 +14,9 @@ import { Field, inputClass } from "../forms/fields";
 interface AgreementPanelProps {
   proposalId: string;
   record: AgreementRecord | null;
-  templates: { id: string; version: number; title: string; status: "draft" | "final" }[];
-  clauses: TemplateClause[];
+  templates: TemplateSummary[];
+  /** The terms that go with the accepted package (`PACKAGE_TEMPLATES`), else the General Service Agreement. */
+  suggestedTemplateId: string;
   /** The pinned template file no longer matches its stored hash (the file was edited). */
   templateChanged: boolean;
   providerName: string;
@@ -31,11 +32,11 @@ interface AgreementPanelProps {
   clientSigningOff: string | null;
 }
 
-type Draft = { templateVersion: number; organisation: string; offerValidUntil: string; specialTerms: SpecialTerm[] };
+type Draft = { templateId: string; templateVersion: number; organisation: string; offerValidUntil: string; specialTerms: SpecialTerm[] };
 
 const draftOf = (record: AgreementRecord | null, fallback: Draft): Draft =>
   record
-    ? { templateVersion: record.templateVersion, organisation: record.provider.organisation ?? "", offerValidUntil: record.offerValidUntil, specialTerms: record.specialTerms }
+    ? { templateId: record.templateId, templateVersion: record.templateVersion, organisation: record.provider.organisation ?? "", offerValidUntil: record.offerValidUntil, specialTerms: record.specialTerms }
     : fallback;
 
 const borderClass = "border-white/10 light:border-black/10";
@@ -51,7 +52,7 @@ export function AgreementPanel({
   proposalId,
   record,
   templates,
-  clauses,
+  suggestedTemplateId,
   templateChanged,
   providerName,
   providerRole,
@@ -62,8 +63,10 @@ export function AgreementPanel({
   clientSigningOff,
 }: AgreementPanelProps) {
   const router = useRouter();
+  const latestOf = (id: string) => Math.max(0, ...templates.filter((t) => t.id === id).map((t) => t.version));
   const initial = draftOf(record, {
-    templateVersion: Math.max(...templates.map((t) => t.version)),
+    templateId: suggestedTemplateId,
+    templateVersion: latestOf(suggestedTemplateId),
     organisation: "",
     offerValidUntil: defaultOfferValidUntil,
     specialTerms: [],
@@ -74,8 +77,11 @@ export function AgreementPanel({
   const [confirmVoid, setConfirmVoid] = useState(false);
   const [signOpen, setSignOpen] = useState(false);
   const signed = !!record && isProviderSigned(record.status);
+  // What the saved agreement's terms call Joseph ("Service Provider", "Developer"): signing applies to the saved record.
+  const providerParty = templates.find((t) => t.id === record?.templateId && t.version === record?.templateVersion)?.parties.provider ?? "Service Provider";
   const executed = record?.status === "executed";
   const dirty = JSON.stringify(draft) !== JSON.stringify(initial);
+  const clauses = templates.find((t) => t.id === draft.templateId && t.version === draft.templateVersion)?.clauses ?? [];
   const clauseOptions = clauses;
   const topLevel = (number: string) => clauses.find((c) => c.number === number.split(".")[0])?.title;
 
@@ -133,17 +139,26 @@ export function AgreementPanel({
       <section className={`p-4 rounded-xl border ${borderClass} bg-[var(--andromeda-secondary)] space-y-4`}>
         <Field label="Terms">
           <select
-            value={draft.templateVersion}
-            onChange={(e) => setDraft({ ...draft, templateVersion: Number(e.target.value) })}
+            value={`${draft.templateId}@${draft.templateVersion}`}
+            onChange={(e) => {
+              const [templateId, version] = e.target.value.split("@");
+              setDraft({ ...draft, templateId, templateVersion: Number(version) });
+            }}
             className={`${inputClass} ${borderClass}`}
           >
             {templates.map((t) => (
-              <option key={t.version} value={t.version}>
+              <option key={`${t.id}@${t.version}`} value={`${t.id}@${t.version}`}>
                 {t.title} v{t.version}
                 {t.status === "draft" ? " — draft, pending legal review" : ""}
               </option>
             ))}
           </select>
+          {draft.templateId !== suggestedTemplateId && (
+            <p className="mt-1 text-xs text-amber-500">
+              The client accepted a package that goes with different terms (
+              {templates.find((t) => t.id === suggestedTemplateId)?.title ?? suggestedTemplateId}).
+            </p>
+          )}
         </Field>
 
         <Field label="Your organisation" hint="Shown after your role on the agreement. You're the party either way.">
@@ -249,7 +264,7 @@ export function AgreementPanel({
           title={dirty ? "Save your changes first — you sign what the preview shows" : signed ? "Already signed" : undefined}
           className={`${dialogButton.secondary} inline-flex items-center gap-2 disabled:opacity-40`}
         >
-          <PenLine className="w-4 h-4" /> Sign as Service Provider
+          <PenLine className="w-4 h-4" /> Sign as {providerParty === "Service Provider" ? "Service Provider" : `the ${providerParty}`}
         </button>
       </div>
 
@@ -274,7 +289,7 @@ export function AgreementPanel({
         }
       />
 
-      {signOpen && record && <SignDialog proposalId={proposalId} record={record} providerName={providerName} onClose={() => setSignOpen(false)} onSigned={() => router.refresh()} />}
+      {signOpen && record && <SignDialog proposalId={proposalId} record={record} providerName={providerName} providerParty={providerParty} onClose={() => setSignOpen(false)} onSigned={() => router.refresh()} />}
     </div>
   );
 }
@@ -321,12 +336,14 @@ function SignDialog({
   proposalId,
   record,
   providerName,
+  providerParty,
   onClose,
   onSigned,
 }: {
   proposalId: string;
   record: AgreementRecord;
   providerName: string;
+  providerParty: string;
   onClose: () => void;
   onSigned: () => void;
 }) {
@@ -362,7 +379,7 @@ function SignDialog({
     <AdminDialog
       open
       onClose={() => !signing && onClose()}
-      title="Sign as Service Provider"
+      title={providerParty === "Service Provider" ? "Sign as Service Provider" : `Sign as the ${providerParty}`}
       description={
         <>
           You&apos;re signing agreement <span className="font-mono text-[var(--andromeda-text-primary)]">{shortVersion(record.agreementHash)}</span> exactly as
@@ -395,7 +412,7 @@ function SignDialog({
         </label>
         <label className="flex items-start gap-2">
           <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-1" />
-          <span>{PROVIDER_SIGNING_DECLARATION}</span>
+          <span>{providerSigningDeclaration(providerParty)}</span>
         </label>
         {error && (
           <p role="alert" className="text-[var(--andromeda-error)]">

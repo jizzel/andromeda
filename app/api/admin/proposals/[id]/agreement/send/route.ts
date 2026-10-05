@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { withRouteTelemetry } from "@/lib/sheets-telemetry";
 import { isAdminRequest, isSameOrigin, requestMeta } from "@/lib/admin-auth";
 import { appendEngagementEvent, getProposalById, readAgreement, readProposalEngagementEvents, withProposalLock, writeAgreement } from "@/lib/google-sheets";
-import { loadTemplate } from "@/lib/agreement-templates";
+import { clientTitleOf, loadTemplate } from "@/lib/agreement-templates";
 import { offerClosed } from "@/lib/agreements";
 import { signingFailureResponse, verifySigningBasis } from "@/lib/agreement-basis";
 import { CLIENT_SIGNING_OFF_REASON, clientSigningAllowed } from "@/lib/agreement-gate";
@@ -120,6 +120,7 @@ async function handlePOST(request: NextRequest, { params }: Params) {
       clientName: outcome.clientName,
       proposalId: id,
       projectTitle: outcome.projectTitle,
+      documentTitle: clientTitleOf(outcome.record),
       offerValidUntil: outcome.record.offerValidUntil,
       // Stable for this send (its stored sentAt) and recipient: a recovered delivery reuses it.
       idempotencyKey: `agreement-send:${id}:${outcome.record.agreementHash}:${outcome.sentAt}:${outcome.to}`,

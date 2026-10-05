@@ -15,16 +15,26 @@ import { providerAffiliation } from "@/lib/agreements";
 
 const DIR = path.join(process.cwd(), "content/agreements");
 
+export const DEFAULT_TEMPLATE_ID = "general-service-agreement";
+
 /**
  * Every published template version. Add an entry (and a new file) for v2.
  * `declaration` names the paragraph the client confirms when signing (the
  * acceptance declaration, shown verbatim beside "Accept and Sign Agreement").
+ * `parties` are the names the terms give the two sides ("Service Provider" /
+ * "Client"; the licence says "Developer" / "Institute"), used for the
+ * signature blocks and the provider's signing declaration. Kept here, not in
+ * the file, so naming them never changes a template's hash.
  */
+const GSA_PARTIES = { provider: "Service Provider", client: "Client" } as const;
 const REGISTRY = [
-  { id: "general-service-agreement", version: 1, file: "general-service-agreement-v1.md", declaration: "29.3" },
+  { id: "general-service-agreement", version: 1, file: "general-service-agreement-v1.md", declaration: "29.3", parties: GSA_PARTIES },
   // v2 (2026-10-03): client-facing wording — "This Service Agreement", a neutral
   // §29.3 lead-in, and the provider's organisation (`[[provider.affiliation]]`).
-  { id: "general-service-agreement", version: 2, file: "general-service-agreement-v2.md", declaration: "29.3" },
+  { id: "general-service-agreement", version: 2, file: "general-service-agreement-v2.md", declaration: "29.3", parties: GSA_PARTIES },
+  // IIA Ghana's Annual Platform Licence (2026-10-05): the agreement for the
+  // `pkg-licence` option, signable (status final) while the GSA is in review.
+  { id: "iiag-platform-licence", version: 1, file: "iiag-platform-licence-v1.md", declaration: "12.3", parties: { provider: "Developer", client: "Institute" } },
 ] as const;
 
 export interface TemplateClause {
@@ -40,6 +50,10 @@ export interface AgreementTemplate {
   id: string;
   version: number;
   title: string;
+  /** What the terms call each side: signature-block labels and the provider's signing declaration. */
+  parties: { provider: string; client: string };
+  /** What the client sees the document called ("Service Agreement — {project}"); frontmatter `clientTitle`. */
+  clientTitle: string;
   /** `draft` until the legal review signs off the text. */
   status: "draft" | "final";
   /** sha256 of the file's exact bytes. */
@@ -74,12 +88,16 @@ function parseClauses(body: string): TemplateClause[] {
   return clauses;
 }
 
-export function listTemplates(): Pick<AgreementTemplate, "id" | "version" | "title" | "status">[] {
-  return REGISTRY.map(({ id, version }) => loadTemplate(id, version)).filter((t): t is AgreementTemplate => !!t).map(({ id, version, title, status }) => ({ id, version, title, status }));
+export type TemplateSummary = Pick<AgreementTemplate, "id" | "version" | "title" | "clientTitle" | "status" | "clauses" | "parties">;
+
+export function listTemplates(): TemplateSummary[] {
+  return REGISTRY.map(({ id, version }) => loadTemplate(id, version))
+    .filter((t): t is AgreementTemplate => !!t)
+    .map(({ id, version, title, clientTitle, status, clauses, parties }) => ({ id, version, title, clientTitle, status, clauses, parties }));
 }
 
 /** The latest version of a template id (what a new agreement starts from). */
-export function latestTemplate(id = "general-service-agreement"): AgreementTemplate | null {
+export function latestTemplate(id = DEFAULT_TEMPLATE_ID): AgreementTemplate | null {
   const versions = REGISTRY.filter((t) => t.id === id).map((t) => t.version);
   return versions.length ? loadTemplate(id, Math.max(...versions)) : null;
 }
@@ -106,6 +124,8 @@ export function parseTemplate(id: string, version: number, raw: string): Agreeme
     id,
     version,
     title: typeof data.title === "string" ? data.title : id,
+    parties: { ...(REGISTRY.find((t) => t.id === id && t.version === version)?.parties ?? GSA_PARTIES) },
+    clientTitle: typeof data.clientTitle === "string" && data.clientTitle.trim() ? data.clientTitle.trim() : "Service Agreement",
     status: data.status === "final" ? "final" : "draft",
     hash: createHash("sha256").update(raw).digest("hex"),
     body: body.trim(),
@@ -133,6 +153,11 @@ export function acceptanceDeclaration(template: AgreementTemplate): string | nul
     out.push(line);
   }
   return out.join("\n").trim();
+}
+
+/** What the client sees an agreement called, from its pinned template ("Service Agreement" if unknown). */
+export function clientTitleOf(ref: { templateId: string; templateVersion: number }): string {
+  return loadTemplate(ref.templateId, ref.templateVersion)?.clientTitle ?? "Service Agreement";
 }
 
 /** The body with the provider placeholders filled (`[[provider.name]]` etc.). */

@@ -4,14 +4,14 @@ import { isAdminRequest, isSameOrigin, requestMeta } from "@/lib/admin-auth";
 import { appendEngagementEvent, readAgreement, saveAgreementSnapshot, SheetLockExpiredError, withProposalLock, writeAgreement } from "@/lib/google-sheets";
 import { namesMatch, offerClosed } from "@/lib/agreements";
 import { agreementSnapshotJson, signingFailureResponse, verifySigningBasis } from "@/lib/agreement-basis";
-import { PROVIDER_SIGNING_DECLARATION } from "@/constants/agreement";
+import { providerSigningDeclaration } from "@/constants/agreement";
 import { isProviderSigned, type AgreementRecord } from "@/types/agreement";
 import { busy, json, readJsonBody } from "../../edit";
 
 type Params = { params: Promise<{ id: string }> };
 
 /**
- * "Sign as Service Provider". Re-derives the agreement from what's stored —
+ * "Sign as Service Provider" (or the terms' name for him, e.g. "Developer"). Re-derives the agreement from what's stored —
  * the template file on disk (its hash must still be the pinned one), the
  * accepted snapshot, the provider block, special terms and offer window — and
  * signs only if that equals both the stored hash and the hash Joseph was
@@ -43,7 +43,7 @@ async function handlePOST(request: NextRequest, { params }: Params) {
       ...record,
       clientName, // pins it on legacy records too
       status: "provider_signed",
-      providerSignature: { typedName: typedName.trim(), declaration: PROVIDER_SIGNING_DECLARATION, signedAt, agreementHash: recomputed, ...meta },
+      providerSignature: { typedName: typedName.trim(), declaration: providerSigningDeclaration(template.parties.provider), signedAt, agreementHash: recomputed, ...meta },
       updatedAt: signedAt,
     };
     // Evidence first: the immutable copy is stored before the signed record,

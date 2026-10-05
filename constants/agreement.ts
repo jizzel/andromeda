@@ -21,9 +21,26 @@ export const agreementProvider = {
 /** Organisations an agreement can name after Joseph's role. Add one here to offer it. */
 export const PROVIDER_ORGANISATIONS: readonly string[] = ["Avengh", "Korah Labs"];
 
-/** Declaration the provider confirms when signing; stored verbatim with the signature. */
+/** Declaration the provider confirms when signing (General Service Agreement wording); stored verbatim with the signature. */
 export const PROVIDER_SIGNING_DECLARATION =
   "I have read this Agreement, including its Schedules, and sign it on behalf of the Service Provider. I understand that any later change to it voids this signature.";
+
+/** The provider's signing declaration in the terms' own name for him (`template.parties.provider`, e.g. "Developer"). */
+export function providerSigningDeclaration(party: string): string {
+  return party === "Service Provider"
+    ? PROVIDER_SIGNING_DECLARATION
+    : `I have read this Agreement, including its Schedules, and sign it as the ${party}. I understand that any later change to it voids this signature.`;
+}
+
+/**
+ * Agreement terms that belong with a particular package: the admin panel
+ * starts a new agreement on that template, and warns when the accepted
+ * package and the chosen terms don't match. Packages not listed use the
+ * General Service Agreement.
+ */
+export const PACKAGE_TEMPLATES: Readonly<Record<string, string>> = {
+  "pkg-licence": "iiag-platform-licence",
+};
 
 /** Default window for the client to sign once the provider has signed. */
 export const OFFER_VALID_DAYS = 14;

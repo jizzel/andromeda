@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { getProposalById } from "@/lib/google-sheets";
 import { resolveClientAccess } from "@/lib/client-session";
+import { clientTitleOf } from "@/lib/agreement-templates";
 import { agreementPdfResponse } from "@/lib/pdf";
 import { clientJson, loadClientAgreement, signerFor } from "@/lib/agreement-client";
 
@@ -46,6 +47,7 @@ export async function POST(request: NextRequest) {
     providerSignedAt: record.providerSignature.signedAt,
     clientSignedAt: record.clientSignature.signedAt,
     clientName: record.clientName,
+    documentTitle: clientTitleOf(record),
     title,
   });
 }

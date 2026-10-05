@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowDown, ArrowUp, Plus, X } from "lucide-react";
-import type { PaymentMilestone, ProposalPaymentPlan } from "@/types/proposal";
+import type { PaymentMilestone, ProposalPackage, ProposalPaymentPlan } from "@/types/proposal";
 import { Field, IdField, ItemCard, MiniButton, NullableTextField, StringListField, TextArea, TextField, inputClass, move, nextId, type IssueIndex } from "./fields";
 import { ChoiceBadge, Section, listAt, recordedResponse, type SectionProps } from "./shared";
 
@@ -25,6 +25,7 @@ export function PaymentPlansForm({ data, issues, onChange, acceptance, requestDe
   const edit = (fn: (list: ProposalPaymentPlan[]) => void) => onChange((d) => fn(listAt<ProposalPaymentPlan>(d, "paymentPlans")));
   const set = (index: number, patch: Partial<ProposalPaymentPlan>) => edit((list) => Object.assign(list[index], patch));
 
+  const packages = Array.isArray(data.packages) ? (data.packages as ProposalPackage[]).filter((p) => p && typeof p.id === "string") : [];
   const orphaned = chosenId && !plans.some((p) => p.id === chosenId);
 
   return (
@@ -101,6 +102,20 @@ export function PaymentPlansForm({ data, issues, onChange, acceptance, requestDe
                 hint="Leave blank for none."
               />
             </div>
+            {packages.length > 1 && (
+              <AppliesToField
+                path={`${path}.packageIds`}
+                packages={packages}
+                value={Array.isArray(plan.packageIds) ? plan.packageIds : undefined}
+                error={issues.at(`${path}.packageIds`)}
+                onChange={(ids) =>
+                  edit((list) => {
+                    if (ids) list[index].packageIds = ids;
+                    else delete list[index].packageIds;
+                  })
+                }
+              />
+            )}
             <MilestonesField
               path={`${path}.structure`}
               structure={structure}
@@ -202,6 +217,52 @@ function MilestonesField({
         >
           <Plus className="w-3.5 h-3.5" /> Add milestone
         </button>
+      </div>
+    </Field>
+  );
+}
+
+/** Which packages a plan can be chosen with; none ticked (absent) = every package. */
+function AppliesToField({
+  path,
+  packages,
+  value,
+  error,
+  onChange,
+}: {
+  path: string;
+  packages: ProposalPackage[];
+  value: string[] | undefined;
+  error?: string;
+  onChange: (ids: string[] | undefined) => void;
+}) {
+  const known = new Set(packages.map((p) => p.id));
+  const unknown = (value ?? []).filter((id) => !known.has(id));
+  const toggle = (id: string, on: boolean) => {
+    const next = on ? [...(value ?? []), id] : (value ?? []).filter((v) => v !== id);
+    // Keep package order; ticking none means "every package" (the key is dropped).
+    const ordered = [...packages.map((p) => p.id).filter((pid) => next.includes(pid)), ...next.filter((v) => !known.has(v))];
+    onChange(ordered.length ? ordered : undefined);
+  };
+  return (
+    <Field
+      label="Applies to"
+      error={error}
+      hint={value?.length ? "Shown only when the client picks one of these packages." : "Every package — tick some to limit this plan to them."}
+    >
+      <div data-path={path} className="flex flex-wrap gap-x-4 gap-y-1.5">
+        {packages.map((pkg) => (
+          <label key={pkg.id} className="inline-flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={!!value?.includes(pkg.id)} onChange={(e) => toggle(pkg.id, e.target.checked)} />
+            {pkg.name || pkg.id}
+          </label>
+        ))}
+        {unknown.map((id) => (
+          <label key={id} className="inline-flex items-center gap-2 text-sm text-[var(--andromeda-error)]">
+            <input type="checkbox" data-path={`${path}[${(value ?? []).indexOf(id)}]`} checked onChange={() => toggle(id, false)} />
+            <code className="font-mono">{id}</code> (no such package)
+          </label>
+        ))}
       </div>
     </Field>
   );

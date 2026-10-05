@@ -15,6 +15,7 @@ import type { AcceptanceStatus, ProposalAcceptance, ProposalData } from "@/types
 import { sendProposalResponseNotice } from "@/lib/email";
 import { canonicalProposalJson, proposalVersion } from "@/lib/proposal-version";
 import { clientCredential, resolveClientAccess } from "@/lib/client-session";
+import { planAppliesTo } from "@/lib/payment-plans";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -191,7 +192,17 @@ async function recordResponse(lock: SheetLock, input: ResponseInput): Promise<Re
   const requestedPackageId = typeof packageId === "string" ? packageId.trim() : "";
   const requestedPlanId = typeof paymentPlanId === "string" ? paymentPlanId.trim() : "";
   const trimmedPackageId = packages.some((p) => p.id === requestedPackageId) ? requestedPackageId : undefined;
-  const trimmedPlanId = plans.some((p) => p.id === requestedPlanId) ? requestedPlanId : undefined;
+  const requestedPlan = plans.find((p) => p.id === requestedPlanId);
+  // A plan that doesn't apply to the chosen package (`packageIds`) isn't a valid pairing.
+  const pairs = !requestedPlan || planAppliesTo(requestedPlan, trimmedPackageId);
+  if (status === "accepted" && requestedPlan && !pairs) {
+    return fail(
+      { code: "invalid_selection", error: "That payment plan doesn't apply to the selected package — please choose one of its plans" },
+      400
+    );
+  }
+  // A change request just drops an obsolete or mismatched plan preference.
+  const trimmedPlanId = requestedPlan && pairs ? requestedPlanId : undefined;
   if (status === "accepted" && ((packages.length > 0 && !trimmedPackageId) || (plans.length > 0 && !trimmedPlanId))) {
     return fail(
       { code: "invalid_selection", error: "Please select one of the package and payment options in this proposal" },

@@ -18,7 +18,7 @@ import { HubAccessGate } from "@/components/proposals/hub/HubAccessGate";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Service Agreement",
+  title: "Agreement",
   robots: { index: false, follow: false },
 };
 
@@ -46,7 +46,7 @@ export default async function ClientAgreementPage({ params }: { params: Promise<
       </AgreementNotice>
     ) : (
       <AgreementNotice title="No agreement to sign yet" proposalId={id}>
-        <p>There&apos;s no service agreement waiting for your signature on this proposal. We&apos;ll email you when it&apos;s ready.</p>
+        <p>There&apos;s no agreement waiting for your signature on this proposal. We&apos;ll email you when it&apos;s ready.</p>
       </AgreementNotice>
     );
   }
@@ -73,7 +73,7 @@ export default async function ClientAgreementPage({ params }: { params: Promise<
   }
 
   const session = await authorisedSigner((await cookies()).get(AGREEMENT_SIGNER_COOKIE)?.value, id, record);
-  if (!session) return <AgreementSignInGate proposalId={id} />;
+  if (!session) return <AgreementSignInGate proposalId={id} documentTitle={template.clientTitle} />;
 
   if (offerClosed(record.offerValidUntil)) {
     return (
@@ -102,7 +102,7 @@ export default async function ClientAgreementPage({ params }: { params: Promise<
       <div className="max-w-6xl mx-auto">
         <header className="mb-6 max-w-3xl">
           <p className="text-xs font-semibold uppercase tracking-widest text-[var(--andromeda-accent-beige)] mb-1">{snapshot.snapshot.title}</p>
-          <h1 className="text-2xl sm:text-3xl font-bold text-[var(--andromeda-text-primary)]">Your service agreement</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[var(--andromeda-text-primary)]">Your {template.clientTitle.toLowerCase()}</h1>
           <p className="mt-2 text-sm text-[var(--andromeda-text-secondary)]">
             Please read the agreement, including both schedules. {record.provider.name} has already signed it; it takes effect when you sign.
           </p>
