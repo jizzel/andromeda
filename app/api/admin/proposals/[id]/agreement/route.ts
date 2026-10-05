@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { withRouteTelemetry } from "@/lib/sheets-telemetry";
 import { isAdminRequest, isSameOrigin, requestMeta } from "@/lib/admin-auth";
 import { appendEngagementEvent, readAgreement, readAgreementSnapshot, saveAgreementSnapshot, withProposalLock, writeAgreement } from "@/lib/google-sheets";
-import { DEFAULT_TEMPLATE_ID, latestTemplate, listTemplates, loadTemplate } from "@/lib/agreement-templates";
+import { DEFAULT_TEMPLATE_ID, latestTemplate, listTemplates, loadTemplate, templateUsableFor } from "@/lib/agreement-templates";
 import { agreementHash, draftProblems, newSpecialTermId, resolveProvider, selectionOf } from "@/lib/agreements";
 import { PROVIDER_ORGANISATIONS } from "@/constants/agreement";
 import { isProviderSigned, type AgreementRecord, type SpecialTerm } from "@/types/agreement";
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest, { params }: Params) {
     success: true,
     agreement,
     basis: basis.ok ? { proposalVersion: basis.acceptance.proposalVersion, acceptedAt: basis.acceptance.acceptedAt } : { code: basis.code, error: basis.error },
-    templates: listTemplates(),
+    templates: listTemplates(id),
     organisations: PROVIDER_ORGANISATIONS,
   });
 }
@@ -49,6 +49,8 @@ async function handlePUT(request: NextRequest, { params }: Params) {
   const templateId = typeof body.templateId === "string" && body.templateId ? body.templateId : DEFAULT_TEMPLATE_ID;
   const template = typeof body.templateVersion === "number" ? loadTemplate(templateId, body.templateVersion) : latestTemplate(templateId);
   if (!template) return json({ success: false, code: "invalid", error: "Unknown agreement template" }, 400);
+  // Client-specific terms (e.g. IIA Ghana's licence) can't be used for anyone else.
+  if (!templateUsableFor(template.id, template.version, id)) return json({ success: false, code: "invalid", error: "Those terms are specific to another client's proposal" }, 400);
   const organisation = typeof body.organisation === "string" ? body.organisation.trim() : "";
   if (organisation && !PROVIDER_ORGANISATIONS.includes(organisation)) return json({ success: false, code: "invalid", errors: [`Unknown organisation "${organisation}"`] }, 400);
   const specialTerms: SpecialTerm[] = Array.isArray(body.specialTerms)

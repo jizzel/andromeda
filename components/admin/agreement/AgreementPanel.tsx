@@ -15,7 +15,7 @@ interface AgreementPanelProps {
   proposalId: string;
   record: AgreementRecord | null;
   templates: TemplateSummary[];
-  /** The terms that go with the accepted package (`PACKAGE_TEMPLATES`), else the General Service Agreement. */
+  /** Terms scoped to this proposal and its accepted package (`suggestedTemplateId`), else the General Service Agreement. */
   suggestedTemplateId: string;
   /** The pinned template file no longer matches its stored hash (the file was edited). */
   templateChanged: boolean;

@@ -2,8 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdminPage } from "@/lib/admin-auth";
 import { getProposalRowForEdit, readAgreement, readProposalEngagementEvents } from "@/lib/google-sheets";
-import { DEFAULT_TEMPLATE_ID, latestTemplate, listTemplates, loadTemplate } from "@/lib/agreement-templates";
-import { agreementProvider, PACKAGE_TEMPLATES, PROVIDER_ORGANISATIONS } from "@/constants/agreement";
+import { latestTemplate, listTemplates, loadTemplate, suggestedTemplateId } from "@/lib/agreement-templates";
+import { agreementProvider, PROVIDER_ORGANISATIONS } from "@/constants/agreement";
 import { defaultOfferValidUntil } from "@/lib/agreements";
 import { shortVersion } from "@/lib/proposal-version-label";
 import { proposalVersion } from "@/lib/proposal-version";
@@ -51,10 +51,10 @@ export default async function AdminAgreementPage({ params }: { params: Promise<{
     }
     executedError = !executed;
   }
-  // Terms that go with the accepted package (e.g. the platform licence), if any.
-  const suggestedTemplateId = (basis.ok && basis.acceptance.packageId && PACKAGE_TEMPLATES[basis.acceptance.packageId]) || DEFAULT_TEMPLATE_ID;
+  // Terms scoped to this proposal and its accepted package (e.g. IIA Ghana's licence), else the default.
+  const suggested = suggestedTemplateId(id, basis.ok ? basis.acceptance.packageId : null);
   const template =
-    executed?.template ?? (record ? loadTemplate(record.templateId, record.templateVersion) : null) ?? latestTemplate(suggestedTemplateId) ?? latestTemplate();
+    executed?.template ?? (record ? loadTemplate(record.templateId, record.templateVersion) : null) ?? latestTemplate(suggested) ?? latestTemplate();
   if (!template) throw new Error("No agreement template is registered");
   const templateChanged = !!record && record.status !== "executed" && record.templateHash !== template.hash;
   const data = row.record.data;
@@ -108,8 +108,8 @@ export default async function AdminAgreementPage({ params }: { params: Promise<{
             key={record?.updatedAt ?? "new"}
             proposalId={id}
             record={record}
-            templates={listTemplates()}
-            suggestedTemplateId={suggestedTemplateId}
+            templates={listTemplates(id)}
+            suggestedTemplateId={suggested}
             templateChanged={templateChanged}
             providerName={agreementProvider.legalName}
             providerRole={agreementProvider.role}

@@ -32,16 +32,6 @@ export function providerSigningDeclaration(party: string): string {
     : `I have read this Agreement, including its Schedules, and sign it as the ${party}. I understand that any later change to it voids this signature.`;
 }
 
-/**
- * Agreement terms that belong with a particular package: the admin panel
- * starts a new agreement on that template, and warns when the accepted
- * package and the chosen terms don't match. Packages not listed use the
- * General Service Agreement.
- */
-export const PACKAGE_TEMPLATES: Readonly<Record<string, string>> = {
-  "pkg-licence": "iiag-platform-licence",
-};
-
 /** Default window for the client to sign once the provider has signed. */
 export const OFFER_VALID_DAYS = 14;
 export const MAX_SPECIAL_TERMS = 20;

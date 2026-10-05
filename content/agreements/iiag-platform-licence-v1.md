@@ -4,6 +4,9 @@ version: 1
 title: Software Licence and Service Agreement
 clientTitle: Software Licence and Service Agreement
 status: final
+parties:
+  provider: Developer
+  client: Institute
 ---
 
 **Event Registration & Delegate Management Platform — Annual Hosted-Use Licence**

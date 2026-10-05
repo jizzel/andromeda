@@ -1,6 +1,6 @@
 "use client";
 
-import { plansFor } from "@/lib/payment-plans";
+import { planForPackage, plansFor } from "@/lib/payment-plans";
 import { useState, useCallback } from "react";
 import type { ProposalData } from "@/types/proposal";
 import { ProposalHero } from "@/components/proposals/ProposalHero";
@@ -44,10 +44,11 @@ export function ProposalContent({ proposal, expiryDate, proposalId, accessCode, 
     const id = initialAcceptance?.packageId;
     return id && proposal.packages?.some((p) => p.id === id) ? id : null;
   });
-  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(() => {
-    const id = initialAcceptance?.paymentPlanId;
-    return id && proposal.paymentPlans?.some((p) => p.id === id) ? id : null;
-  });
+  // A recorded plan is restored only if it's still offered for the restored package
+  // (a revision may have tied it to another package) — never hidden but still selected.
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(() =>
+    planForPackage(proposal.paymentPlans ?? [], selectedPackageId, initialAcceptance?.paymentPlanId)
+  );
 
   // Lock selection once the proposal is accepted — including in this session,
   // which `initialAcceptance` (mount-time only) doesn't reflect. While changes
@@ -60,10 +61,7 @@ export function ProposalContent({ proposal, expiryDate, proposalId, accessCode, 
     setSelectedPackageId(id);
     // Plans can be tied to packages (`packageIds`): drop a plan that doesn't
     // apply to the new package, and pick the plan when only one applies.
-    const applicable = plansFor(proposal.paymentPlans ?? [], id);
-    setSelectedPlanId((current) =>
-      current && applicable.some((p) => p.id === current) ? current : applicable.length === 1 ? applicable[0].id : null
-    );
+    setSelectedPlanId((current) => planForPackage(proposal.paymentPlans ?? [], id, current));
     const pkg = proposal.packages?.find((p) => p.id === id);
     if (pkg) trackProposalPackageSelected({ proposal_id: proposalId, package_id: id, package_name: pkg.name });
   }, [proposal.packages, proposal.paymentPlans, proposalId, trackProposalPackageSelected]);

@@ -21,21 +21,37 @@ export const DEFAULT_TEMPLATE_ID = "general-service-agreement";
  * Every published template version. Add an entry (and a new file) for v2.
  * `declaration` names the paragraph the client confirms when signing (the
  * acceptance declaration, shown verbatim beside "Accept and Sign Agreement").
- * `parties` are the names the terms give the two sides ("Service Provider" /
- * "Client"; the licence says "Developer" / "Institute"), used for the
- * signature blocks and the provider's signing declaration. Kept here, not in
- * the file, so naming them never changes a template's hash.
+ *
+ * `scope` makes a template client-specific: it can only be used for those
+ * proposals (the admin route refuses it elsewhere and the panel doesn't list
+ * it), and it's suggested there when the client accepted one of `packages`.
+ * Package ids are proposal-local, so a package id alone never selects terms.
  */
-const GSA_PARTIES = { provider: "Service Provider", client: "Client" } as const;
-const REGISTRY = [
-  { id: "general-service-agreement", version: 1, file: "general-service-agreement-v1.md", declaration: "29.3", parties: GSA_PARTIES },
+interface RegistryEntry {
+  id: string;
+  version: number;
+  file: string;
+  declaration: string;
+  scope?: { proposals: readonly string[]; packages: readonly string[] };
+}
+const REGISTRY: readonly RegistryEntry[] = [
+  { id: "general-service-agreement", version: 1, file: "general-service-agreement-v1.md", declaration: "29.3" },
   // v2 (2026-10-03): client-facing wording — "This Service Agreement", a neutral
   // §29.3 lead-in, and the provider's organisation (`[[provider.affiliation]]`).
-  { id: "general-service-agreement", version: 2, file: "general-service-agreement-v2.md", declaration: "29.3", parties: GSA_PARTIES },
+  { id: "general-service-agreement", version: 2, file: "general-service-agreement-v2.md", declaration: "29.3" },
   // IIA Ghana's Annual Platform Licence (2026-10-05): the agreement for the
   // `pkg-licence` option, signable (status final) while the GSA is in review.
-  { id: "iiag-platform-licence", version: 1, file: "iiag-platform-licence-v1.md", declaration: "12.3", parties: { provider: "Developer", client: "Institute" } },
-] as const;
+  {
+    id: "iiag-platform-licence",
+    version: 1,
+    file: "iiag-platform-licence-v1.md",
+    declaration: "12.3",
+    scope: { proposals: ["iiaghana"], packages: ["pkg-licence"] },
+  },
+];
+
+/** Parties named by templates that don't name their own (frontmatter `parties`). */
+const DEFAULT_PARTIES = { provider: "Service Provider", client: "Client" } as const;
 
 export interface TemplateClause {
   /** "6" for a clause, "6.2" for a paragraph within it. */
@@ -50,7 +66,11 @@ export interface AgreementTemplate {
   id: string;
   version: number;
   title: string;
-  /** What the terms call each side: signature-block labels and the provider's signing declaration. */
+  /**
+   * What the terms call each side (frontmatter `parties`, part of the hashed
+   * text, so a signed copy keeps its own): signature-block labels and the
+   * provider's signing declaration.
+   */
   parties: { provider: string; client: string };
   /** What the client sees the document called ("Service Agreement — {project}"); frontmatter `clientTitle`. */
   clientTitle: string;
@@ -90,10 +110,26 @@ function parseClauses(body: string): TemplateClause[] {
 
 export type TemplateSummary = Pick<AgreementTemplate, "id" | "version" | "title" | "clientTitle" | "status" | "clauses" | "parties">;
 
-export function listTemplates(): TemplateSummary[] {
-  return REGISTRY.map(({ id, version }) => loadTemplate(id, version))
+const usableFor = (entry: RegistryEntry, proposalId: string) => !entry.scope || entry.scope.proposals.includes(proposalId);
+
+/** Templates an agreement for `proposalId` may use (client-specific ones only for their proposals). */
+export function listTemplates(proposalId: string): TemplateSummary[] {
+  return REGISTRY.filter((entry) => usableFor(entry, proposalId))
+    .map(({ id, version }) => loadTemplate(id, version))
     .filter((t): t is AgreementTemplate => !!t)
     .map(({ id, version, title, clientTitle, status, clauses, parties }) => ({ id, version, title, clientTitle, status, clauses, parties }));
+}
+
+/** Whether `proposalId` may use this template version (registered, and in scope). */
+export function templateUsableFor(id: string, version: number, proposalId: string): boolean {
+  const entry = REGISTRY.find((t) => t.id === id && t.version === version);
+  return !!entry && usableFor(entry, proposalId);
+}
+
+/** The terms a new agreement starts from: a template scoped to this proposal and its accepted package, else the default. */
+export function suggestedTemplateId(proposalId: string, packageId: string | null | undefined): string {
+  const scoped = packageId ? REGISTRY.find((t) => t.scope?.proposals.includes(proposalId) && t.scope.packages.includes(packageId)) : undefined;
+  return scoped?.id ?? DEFAULT_TEMPLATE_ID;
 }
 
 /** The latest version of a template id (what a new agreement starts from). */
@@ -124,7 +160,7 @@ export function parseTemplate(id: string, version: number, raw: string): Agreeme
     id,
     version,
     title: typeof data.title === "string" ? data.title : id,
-    parties: { ...(REGISTRY.find((t) => t.id === id && t.version === version)?.parties ?? GSA_PARTIES) },
+    parties: partiesOf(data.parties),
     clientTitle: typeof data.clientTitle === "string" && data.clientTitle.trim() ? data.clientTitle.trim() : "Service Agreement",
     status: data.status === "final" ? "final" : "draft",
     hash: createHash("sha256").update(raw).digest("hex"),
@@ -133,6 +169,12 @@ export function parseTemplate(id: string, version: number, raw: string): Agreeme
     draftingNotes: notes.join("\n\n"),
     raw,
   };
+}
+
+function partiesOf(value: unknown): AgreementTemplate["parties"] {
+  const v = (value ?? {}) as { provider?: unknown; client?: unknown };
+  const name = (x: unknown, fallback: string) => (typeof x === "string" && x.trim() ? x.trim() : fallback);
+  return { provider: name(v.provider, DEFAULT_PARTIES.provider), client: name(v.client, DEFAULT_PARTIES.client) };
 }
 
 /**
