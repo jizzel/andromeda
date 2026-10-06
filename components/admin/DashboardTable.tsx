@@ -142,17 +142,17 @@ export function DashboardTable({ rows, siteUrl }: { rows: DashboardRow[]; siteUr
                         {row.response === UNAVAILABLE ? (
                           <Unavailable />
                         ) : (
-                          <span className="whitespace-nowrap">{row.response?.at ? formatDate(row.response.at) : "—"}</span>
+                          <span className="whitespace-nowrap">{row.response?.at ? formatDate(row.response.at) : "-"}</span>
                         )}
                         {row.changeRequest && (
                           <RequestSnippet row={row} open={open} onToggle={() => toggle(row.id)} controlsId={`change-request-${row.id}`} className="mt-1 max-w-[260px] text-xs" />
                         )}
                       </td>
                       <td className="px-4 py-4">
-                        <Progress value={row.assets} empty="—" />
+                        <Progress value={row.assets} empty="-" />
                       </td>
                       <td className="px-4 py-4">
-                        <Progress value={row.tracker} empty="—" />
+                        <Progress value={row.tracker} empty="-" />
                       </td>
                       <td className="px-4 py-4">
                         <div className="min-w-[180px]">
@@ -314,7 +314,7 @@ function LabelledProgress({ label, value }: { label: string; value: DashboardRow
   return (
     <div>
       <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--andromeda-text-secondary)] mb-1">{label}</p>
-      <Progress value={value} empty="—" />
+      <Progress value={value} empty="-" />
     </div>
   );
 }
@@ -390,15 +390,15 @@ function publicationTone(publication: Publication): string {
 
 /** Where the revision stands: not yet revised → revised but unannounced → published (and emailed). */
 function revisionStatus(request: NonNullable<DashboardRow["changeRequest"]>): string {
-  if (!request.revised) return "Not revised yet — edit the proposal, then publish the revision.";
+  if (!request.revised) return "Not revised yet. Edit the proposal, then publish the revision.";
   const publication = request.publication;
-  if (publication === UNAVAILABLE) return "Revised since this request — couldn't read whether it was published.";
-  if (!publication) return "Revised but not published — the client hasn't been told. Publish it from the editor.";
+  if (publication === UNAVAILABLE) return "Revised since this request, but couldn't read whether it was published.";
+  if (!publication) return "Revised but not published: the client hasn't been told. Publish it from the editor.";
   const when = formatDate(publication.at);
-  if (publication.email === "sent") return `Revision published ${when} and emailed${publication.emailTo ? ` to ${publication.emailTo}` : ""} — waiting for the client.`;
-  if (publication.email === "failed") return `Revision published ${when}, but the email failed — resend it from the editor.`;
-  if (publication.email === "pending") return `Revision published ${when} — the client email is in progress.`;
-  return `Revision published ${when} (client not emailed) — waiting for the client.`;
+  if (publication.email === "sent") return `Revision published ${when} and emailed${publication.emailTo ? ` to ${publication.emailTo}` : ""}, waiting for the client.`;
+  if (publication.email === "failed") return `Revision published ${when}, but the email failed. Resend it from the editor.`;
+  if (publication.email === "pending") return `Revision published ${when}; the client email is in progress.`;
+  return `Revision published ${when} (client not emailed), waiting for the client.`;
 }
 
 /** Where an accepted proposal's agreement stands. */
@@ -408,7 +408,9 @@ function AgreementBadge({ value }: { value: DashboardRow["agreement"] }) {
       ? ["Agreement: unavailable", "text-[var(--andromeda-text-secondary)] bg-white/5"]
       : !value
         ? ["No agreement yet", "text-amber-500 bg-amber-500/10"]
-        : value.status === "executed"
+        : value.termsChanged
+          ? ["Agreement: terms changed, re-save it", "text-[var(--andromeda-error)] bg-[var(--andromeda-error)]/10"]
+          : value.status === "executed"
           ? ["Agreement executed", "text-[var(--andromeda-success)] bg-[var(--andromeda-success)]/10"]
           : value.status === "sent"
             ? value.changesRequested

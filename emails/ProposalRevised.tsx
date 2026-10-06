@@ -48,7 +48,7 @@ export function ProposalRevisedEmail({ clientName, projectTitle, note, validUnti
           <Hr style={divider} />
           <Text style={metaText}>This offer is valid until {validUntil}.</Text>
           <Text style={metaText}>Use the same access code as before to open it.</Text>
-          <Text style={signoff}>— {senderName}</Text>
+          <Text style={signoff}>{senderName}</Text>
         </Container>
       </Body>
     </Html>

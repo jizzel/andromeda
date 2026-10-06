@@ -381,7 +381,7 @@ function duplicateIdErrors(data: Record<string, unknown>): ProposalIssue[] {
     list.forEach((item, index) => {
       const id = (item as { id?: unknown } | null)?.id;
       if (typeof id !== "string") return;
-      if (seen.has(id)) errors.push({ path: `${key}[${index}].id`, message: `${label} ids must be unique — "${id}" is already used` });
+      if (seen.has(id)) errors.push({ path: `${key}[${index}].id`, message: `${label} ids must be unique: "${id}" is already used` });
       seen.add(id);
     });
   }
@@ -421,7 +421,7 @@ function planPackageErrors(data: Record<string, unknown>): ProposalIssue[] {
         const name = (pkg as { name?: unknown }).name;
         errors.push({
           path: `packages[${index}]`,
-          message: `No payment plan applies to "${typeof name === "string" && name ? name : id}" — a client choosing it couldn't accept. Tick it under a plan's "Applies to", or leave a plan open to every package.`,
+          message: `No payment plan applies to "${typeof name === "string" && name ? name : id}". A client choosing it couldn't accept. Tick it under a plan's "Applies to", or leave a plan open to every package.`,
         });
       }
     });
@@ -446,7 +446,7 @@ export function validateProposal(data: unknown): ProposalValidation {
           const keyPath = path ? `${path}.${key}` : key;
           warnings.push({
             path: keyPath,
-            message: !path && LEGACY_KEYS.has(key) ? "Legacy field — ignored by the page" : "Unknown field — not used by the page (typo?)",
+            message: !path && LEGACY_KEYS.has(key) ? "Legacy field, ignored by the page" : "Unknown field, not used by the page (typo?)",
           });
         }
       } else {
@@ -462,7 +462,7 @@ export function validateProposal(data: unknown): ProposalValidation {
   if (size > MAX_PROPOSAL_JSON_CHARS) {
     errors.push({
       path: "",
-      message: `Proposal is ${size.toLocaleString()} characters — over the ${MAX_PROPOSAL_JSON_CHARS.toLocaleString()}-character sheet cell limit`,
+      message: `Proposal is ${size.toLocaleString()} characters, over the ${MAX_PROPOSAL_JSON_CHARS.toLocaleString()}-character sheet cell limit`,
     });
   }
   return { errors, warnings };

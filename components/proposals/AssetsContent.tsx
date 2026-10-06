@@ -248,7 +248,7 @@ export function AssetsContent({ proposalId, accessCode, assets, clientName }: As
                   {loading ? "Loading progress…" : `${checkedCount} of ${totalItems} items provided`}
                 </span>
                 <span className="text-sm font-semibold text-[var(--andromeda-accent-beige)]">
-                  {loading ? "—" : `${progressPercent}%`}
+                  {loading ? "-" : `${progressPercent}%`}
                 </span>
               </div>
               <div className="h-1.5 w-full rounded-full bg-white/10 light:bg-black/10 overflow-hidden">
@@ -263,7 +263,7 @@ export function AssetsContent({ proposalId, accessCode, assets, clientName }: As
                 <p className="text-xs text-[var(--andromeda-text-secondary)] mt-2">
                   Required: {requiredCheckedCount} of {requiredItems.length} complete
                   {requiredCheckedCount === requiredItems.length && (
-                    <span className="ml-2 text-[var(--andromeda-accent-beige)]">— ready to start work</span>
+                    <span className="ml-2 text-[var(--andromeda-accent-beige)]">Ready to start work</span>
                   )}
                 </p>
               )}

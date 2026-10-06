@@ -141,8 +141,8 @@ export function ProposalCTA({
                 What&apos;s next
               </h2>
               <p className="text-lg text-[var(--andromeda-text-secondary)] mb-10 max-w-xl mx-auto">
-                Thank you for accepting this proposal. Everything for the engagement — your agreement, the assets we need and the
-                project&apos;s progress — opens here as each step is ready.
+                Thank you for accepting this proposal. Everything for the engagement (your agreement, the assets we need and the
+                project&apos;s progress) opens here as each step is ready.
               </p>
             </>
           ) : (

@@ -3,7 +3,7 @@ import { isSameOrigin, requestMeta, throttle } from "@/lib/admin-auth";
 import { AGREEMENT_SIGNIN_LEDGER, getProposalById, recordSignInChallenge } from "@/lib/google-sheets";
 import { resolveClientAccess } from "@/lib/client-session";
 import { accessCodeTag, AGREEMENT_OTP_COOKIE, AGREEMENT_OTP_TTL_SECONDS, createSignerChallenge, maskEmail, signerCookieOptions, signingConfigured } from "@/lib/agreement-signer";
-import { clientJson, loadClientAgreement, NOT_AVAILABLE } from "@/lib/agreement-client";
+import { clientJson, AGREEMENT_UPDATING, loadClientAgreement, NOT_AVAILABLE } from "@/lib/agreement-client";
 import { sendAgreementSignInCode } from "@/lib/email";
 
 /**
@@ -29,11 +29,14 @@ export async function POST(request: NextRequest) {
   const access = await resolveClientAccess(request, proposalId, { accessCode });
   if (!access.ok) return clientJson({ success: false, error: accessCode ? access.error : "Enter your access code.", code: access.code }, access.status);
   if (!signingConfigured()) {
-    console.error("AGREEMENT_SIGNING_SECRET is not set — client agreement sign-in is disabled");
+    console.error("AGREEMENT_SIGNING_SECRET is not set; client agreement sign-in is disabled");
     return clientJson({ success: false, error: "Signing isn't available right now. Please contact us." }, 503);
   }
   const agreement = await loadClientAgreement(proposalId);
-  if (!agreement.ok) return clientJson(agreement.code === "unavailable" ? { success: false, error: "Couldn't load the agreement. Try again." } : NOT_AVAILABLE, agreement.code === "unavailable" ? 503 : 404);
+  if (!agreement.ok) {
+    if (agreement.code === "updating") return clientJson(AGREEMENT_UPDATING, 409);
+    return clientJson(agreement.code === "unavailable" ? { success: false, error: "Couldn't load the agreement. Try again." } : NOT_AVAILABLE, agreement.code === "unavailable" ? 503 : 404);
+  }
   if (agreement.record.status !== "sent") return clientJson({ success: false, code: "executed", error: "This agreement has already been signed." }, 409);
   const to = access.proposal.client?.email?.trim();
   if (!to) return clientJson({ success: false, error: "There's no email address on file for this proposal. Please contact us." }, 409);

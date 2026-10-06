@@ -32,7 +32,7 @@ export function MilestoneUpdateEmail({
   senderName,
 }: MilestoneUpdateEmailProps) {
   const firstName = clientName.trim().split(" ")[0] || clientName;
-  const preview = `${milestoneLabel} is complete — here's your update on ${projectTitle}.`;
+  const preview = `${milestoneLabel} is complete. Here's your update on ${projectTitle}.`;
 
   return (
     <Html>
@@ -68,7 +68,7 @@ export function MilestoneUpdateEmail({
             Phase: {phaseTitle}
           </Text>
           <Text style={signoff}>
-            — {senderName}
+            {senderName}
           </Text>
         </Container>
       </Body>

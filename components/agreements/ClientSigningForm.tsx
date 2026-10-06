@@ -118,7 +118,7 @@ export function ClientSigningForm({ proposalId, agreementHash, clientName, decla
       setState("form");
       // The request may have reached the server: say so, and let a retry settle it
       // (a retry by the same verified signer is safe and returns the signed state).
-      setError("We couldn't confirm whether your signature went through. Please try again — if it did, you'll see it as signed.");
+      setError("We couldn't confirm whether your signature went through. Please try again. If it did, you'll see it as signed.");
     }
   };
 
@@ -165,7 +165,7 @@ export function ClientSigningForm({ proposalId, agreementHash, clientName, decla
         <div className="flex items-start gap-3">
           <CheckCircle2 className="w-6 h-6 text-emerald-500 flex-shrink-0" />
           <div>
-            <h2 className="text-lg font-semibold text-[var(--andromeda-text-primary)]">Agreement signed — thank you</h2>
+            <h2 className="text-lg font-semibold text-[var(--andromeda-text-primary)]">Agreement signed. Thank you</h2>
             <p className="mt-1 text-sm text-[var(--andromeda-text-secondary)]">
               The agreement is now signed by both parties. We&apos;re emailing the executed copy to {signerEmail}, and onboarding opens on your
               proposal page.
@@ -279,7 +279,7 @@ export function ClientSigningForm({ proposalId, agreementHash, clientName, decla
         {changes === "sent" ? (
           <p role="status" className="text-sm text-[var(--andromeda-text-secondary)] flex items-start gap-2">
             <CheckCircle2 className="w-4 h-4 mt-0.5 text-emerald-500 flex-shrink-0" />
-            Thanks — your request has been sent. We&apos;ll be in touch, and you&apos;ll get an email when a revised agreement is ready.
+            Thanks, your request has been sent. We&apos;ll be in touch, and you&apos;ll get an email when a revised agreement is ready.
           </p>
         ) : (
           <>

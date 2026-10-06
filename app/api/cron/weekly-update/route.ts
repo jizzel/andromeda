@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
     progressOpen = (p) =>
       computeEngagementGates(p.data, agreements.get(p.id)?.status === "executed", overrides.get(p.id) ?? null).progress.available;
   } catch (error) {
-    console.error("Weekly update cron: engagement state unavailable — skipping all trackers this run", error);
+    console.error("Weekly update cron: engagement state unavailable; skipping all trackers this run", error);
     progressOpen = () => false;
   }
 

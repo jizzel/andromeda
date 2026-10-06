@@ -22,7 +22,7 @@ export function PackagesForm({ data, issues, onChange, acceptance, requestDelete
       warning={
         orphaned ? (
           <>
-            The client&apos;s recorded choice <code className="font-mono">{chosenId}</code> no longer matches a package — they&apos;ll have to choose again.
+            The client&apos;s recorded choice <code className="font-mono">{chosenId}</code> no longer matches a package, so they&apos;ll have to choose again.
           </>
         ) : undefined
       }
@@ -90,7 +90,7 @@ export function PackagesForm({ data, issues, onChange, acceptance, requestDelete
               value={pkg.id ?? ""}
               onChange={(v) => set(index, { id: v })}
               error={issues.at(`${path}.id`)}
-              warning={isChoice ? "The client's recorded response points at this id — changing it detaches their choice." : undefined}
+              warning={isChoice ? "The client's recorded response points at this id. Changing it detaches their choice." : undefined}
             />
           </ItemCard>
         );

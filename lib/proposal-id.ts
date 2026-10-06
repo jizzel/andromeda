@@ -12,7 +12,7 @@ export const PROPOSAL_ID_HINT = "3–50 lowercase letters, numbers and hyphens (
 export function proposalIdProblem(id: string, existingIds: Iterable<string> = []): string | null {
   if (!id) return "Enter an id";
   if (/[A-Z]/.test(id)) return "Use lowercase letters";
-  if (/\s/.test(id)) return "No spaces — use hyphens";
+  if (/\s/.test(id)) return "No spaces; use hyphens";
   if (!PROPOSAL_ID_RE.test(id)) return `Use ${PROPOSAL_ID_HINT}`;
   for (const existing of existingIds) if (existing === id) return "A proposal with this id already exists";
   return null;

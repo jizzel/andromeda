@@ -341,10 +341,10 @@ This Service Agreement ("Agreement") governs the provision of services by the Se
 Open points for legal review (not rendered; listed in GUIDELINES/PLAN_AGREEMENTS.md too):
 - 8.5–8.6 deemed acceptance (silence / live use) alongside the 17.1 liability cap.
 - 15: name the Data Protection Act, 2012 (Act 843); state the Client as data controller and the Service Provider as processor acting on the Client's instructions.
-- 22.3: arbitration only "where the Parties agree" — not binding. Name the Alternative Dispute Resolution Act, 2010 (Act 798) if binding arbitration is intended.
+- 22.3: arbitration only "where the Parties agree", so not binding. Name the Alternative Dispute Resolution Act, 2010 (Act 798) if binding arbitration is intended.
 - 29: name the Electronic Transactions Act, 2008 (Act 772) as the basis for electronic signatures.
 - 6.2 late-payment charges and 19.1 notice period depend on the Proposal; current proposals don't state them.
 - 19.4 refund wording.
-- 1.1 provider identity (legal name, role, address) — Joseph contracts personally; an agreement may name the organisation he works with on the engagement after his role (e.g. "Software Engineer, Avengh") as a description, not a party. Confirm this is what should be stated.
+- 1.1 provider identity (legal name, role, address): Joseph contracts personally; an agreement may name the organisation he works with on the engagement after his role (e.g. "Software Engineer, Avengh") as a description, not a party. Confirm this is what should be stated.
 - 2.5 order of precedence.
 ```

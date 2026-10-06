@@ -48,7 +48,7 @@ export function EngagementSwitches({ proposalId, data, initial, disabled, onLega
   if (!initial) {
     return (
       <p role="alert" className="text-xs text-[var(--andromeda-error)]">
-        Couldn&apos;t read the Assets / Progress switches. Reload to try again — until then both tabs stay locked for the client.
+        Couldn&apos;t read the Assets / Progress switches. Reload to try again. Until then both tabs stay locked for the client.
       </p>
     );
   }
@@ -75,7 +75,7 @@ export function EngagementSwitches({ proposalId, data, initial, disabled, onLega
       setRow(body.overrides as EngagementOverrides);
       if (hadLegacy) onLegacyFlagsSuperseded();
     } catch {
-      setError("Connection failed — the switch wasn't saved.");
+      setError("Connection failed. The switch wasn't saved.");
     } finally {
       setSaving(null);
     }

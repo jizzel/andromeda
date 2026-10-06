@@ -11,6 +11,7 @@ import {
   type ProposalRecord,
 } from "@/lib/google-sheets";
 import { foldAgreementActivity } from "@/lib/agreement-activity";
+import { loadTemplate } from "@/lib/agreement-templates";
 import { computeEngagementGates, LOCKED_GATES, type EngagementGates } from "@/lib/engagement-gates";
 import { proposalVersion } from "@/lib/proposal-version";
 import { resolveTrackerPhases } from "@/constants/tracker-templates";
@@ -150,6 +151,10 @@ export function deriveRow(
               status: agreementSource.status,
               signedAt: agreementSource.providerSignature?.signedAt,
               changesRequested: agreementSource.status === "sent" && agreementChangeRequests > 0,
+              // The terms file no longer matches what the agreement pinned: it can't be signed (or shown to the client).
+              termsChanged:
+                agreementSource.status !== "executed" &&
+                loadTemplate(agreementSource.templateId, agreementSource.templateVersion)?.hash !== agreementSource.templateHash,
             }
           : null,
   };

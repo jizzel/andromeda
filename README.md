@@ -123,7 +123,8 @@ CHROME_EXECUTABLE_PATH=              # Local dev only: path to an installed Chro
 CLIENT_SESSION_SECRET=               # REQUIRED: client hub sessions (access code entered once, 12-hour cookie). Vercel builds fail without it.
 ADMIN_SESSION_SECRET=                # HMAC key for admin session + sign-in-code cookies; rotate to sign out everyone
 AGREEMENT_SIGNING_SECRET=            # HMAC key for client agreement-signing cookies (emailed one-time code); missing → client signing fails closed
-AGREEMENT_CLIENT_SIGNING_ALLOW_DRAFT= # Testing only: "1" allows client signing on a draft template — honoured only on Vercel preview/development or local `next dev`
+AGREEMENT_CLIENT_SIGNING_ALLOW_DRAFT= # Testing only: "1" allows client signing on a draft template; honoured only on Vercel preview/development or local `next dev`
+AGREEMENT_ALLOW_LOCAL_WRITES= # Testing only: "1" lets a non-Vercel server (local `next dev` against the live sheet) prepare, sign and send agreements; off by default
 SHEETS_TIMING_LOG=                   # Optional: "1" logs every Sheets API call with its duration
 ```
 

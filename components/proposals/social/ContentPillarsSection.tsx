@@ -33,7 +33,7 @@ export function ContentPillarsSection({ pillars }: ContentPillarsSectionProps) {
           </h2>
           <p className="text-lg text-[var(--andromeda-text-secondary)] mb-12 max-w-3xl">
             Content is developed around four pillars. Each one carries a clear editorial purpose
-            — together they balance authority, education, trust, and brand voice.
+            : together they balance authority, education, trust, and brand voice.
           </p>
         </ScrollReveal>
 

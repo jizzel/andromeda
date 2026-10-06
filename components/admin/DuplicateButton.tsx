@@ -54,7 +54,7 @@ export function DuplicateButton({ proposalId, existingIds }: DuplicateButtonProp
       }
       setServerError(body.error || "Couldn't duplicate the proposal.");
     } catch {
-      setServerError("Connection failed — try again.");
+      setServerError("Connection failed. Try again.");
     } finally {
       setSubmitting(false);
     }
@@ -108,7 +108,7 @@ export function DuplicateButton({ proposalId, existingIds }: DuplicateButtonProp
             role={showProblem || serverError ? "alert" : undefined}
             className={`mt-1.5 text-xs ${showProblem || serverError ? "text-[var(--andromeda-error)]" : "text-[var(--andromeda-text-secondary)]"}`}
           >
-            {serverError ?? (showProblem ? problem : `Client link: /proposal/${newId || "…"} — ${PROPOSAL_ID_HINT}.`)}
+            {serverError ?? (showProblem ? problem : `Client link: /proposal/${newId || "…"} (${PROPOSAL_ID_HINT}).`)}
           </p>
 
           <ul className="mt-4 space-y-1 text-sm text-[var(--andromeda-text-secondary)] list-disc pl-5">

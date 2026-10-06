@@ -41,7 +41,7 @@ export async function loadAcceptedAcceptance(
     return { ok: false, code: "unavailable", error: "Couldn't read the client's response. Try again." };
   }
   if (acceptance?.status !== "accepted") {
-    return { ok: false, code: "not_accepted", error: "The client hasn't accepted this proposal yet — an agreement follows acceptance." };
+    return { ok: false, code: "not_accepted", error: "The client hasn't accepted this proposal yet. An agreement follows acceptance." };
   }
   if (!acceptance.proposalVersion) {
     return { ok: false, code: "not_versioned", error: "This acceptance predates proposal versions, so there's no exact version to incorporate." };
@@ -77,7 +77,7 @@ export async function loadVerifiedSnapshot(
   }
   if (proposalVersion(snapshot) !== version) {
     console.error(`Agreement for ${proposalId}: stored snapshot doesn't hash to ${version}`);
-    return { ok: false, code: "snapshot_mismatch", error: "The accepted terms stored for this version were altered — they no longer match the version the client accepted." };
+    return { ok: false, code: "snapshot_mismatch", error: "The accepted terms stored for this version were altered and no longer match the version the client accepted." };
   }
   return { ok: true, snapshot, snapshotJson: json };
 }
@@ -153,7 +153,7 @@ export function signingFailureResponse(failure: SigningFailure, who: "provider" 
     case "template_changed":
       return {
         status: 409,
-        body: { success: false, code: "template_changed", error: admin ? "The terms file changed since this agreement was prepared. Re-save the agreement to pin the current text, review it, then sign." : "These terms have been updated since they were sent to you. Joseph will send the current version." },
+        body: { success: false, code: "template_changed", error: admin ? "The terms file changed since this agreement was prepared. Re-save the agreement to pin the current text, review it, then sign." : "Your agreement is being updated. Joseph will send you the current version shortly." },
       };
     case "stale_selection":
       return {

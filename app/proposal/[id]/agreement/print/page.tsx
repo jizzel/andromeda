@@ -27,7 +27,7 @@ export async function generateMetadata({ params, searchParams }: PrintPageProps)
   const { token } = await searchParams;
   const executed = verifyPrintToken(id, token, "agreement") ? await load(id) : null;
   return {
-    title: executed ? `${executed.template.clientTitle} — ${executed.proposal.title} — ${executed.proposal.client.name}` : "Agreement",
+    title: executed ? `${executed.template.clientTitle}: ${executed.proposal.title} (${executed.proposal.client.name})` : "Agreement",
     robots: { index: false, follow: false },
   };
 }
@@ -50,7 +50,7 @@ export default async function AgreementPrintPage({ params, searchParams }: Print
           <p className="text-xs font-semibold uppercase tracking-widest text-[var(--andromeda-accent-beige)]">Appendix to Schedule 2</p>
           <h2 className="mt-1 text-xl font-bold text-[var(--andromeda-text-primary)]">The accepted proposal</h2>
           <p className="mt-1 text-sm text-[var(--andromeda-text-secondary)]">
-            As accepted — version <span className="font-mono">{record.proposalVersion}</span>.
+            As accepted, version <span className="font-mono">{record.proposalVersion}</span>.
           </p>
         </div>
         <ProposalPrintView

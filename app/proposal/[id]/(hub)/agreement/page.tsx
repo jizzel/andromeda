@@ -40,6 +40,13 @@ export default async function ClientAgreementPage({ params }: { params: Promise<
   if (!(await hubAccess(id))) return <HubAccessGate proposalId={id} />;
   const agreement = await loadClientAgreement(id);
   if (!agreement.ok) {
+    if (agreement.code === "updating") {
+      return (
+        <AgreementNotice title="Your agreement is being updated" proposalId={id}>
+          <p>Joseph is updating this agreement and will email you the current version shortly. There&apos;s nothing you need to do until then.</p>
+        </AgreementNotice>
+      );
+    }
     return agreement.code === "unavailable" ? (
       <AgreementNotice title="Agreement unavailable" proposalId={id}>
         <p>We couldn&apos;t load the agreement just now. Please try again in a moment.</p>
@@ -56,7 +63,7 @@ export default async function ClientAgreementPage({ params }: { params: Promise<
     if (!executed) {
       return (
         <AgreementNotice title="Agreement signed" proposalId={id}>
-          <p>Your agreement is signed by both parties. We couldn&apos;t display it just now — please contact {profile.email} for a copy.</p>
+          <p>Your agreement is signed by both parties. We couldn&apos;t display it just now. Please contact {profile.email} for a copy.</p>
         </AgreementNotice>
       );
     }

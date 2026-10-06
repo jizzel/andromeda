@@ -76,7 +76,7 @@ export function ProposalResponseNoticeEmail({
             ) : kind === "counter" ? (
               <>
                 <strong>{clientName}</strong> has requested changes. Revise the proposal on the
-                sheet — they&apos;ll then be able to review and accept the new version.
+                sheet. They&apos;ll then be able to review and accept the new version.
               </>
             ) : (
               <>

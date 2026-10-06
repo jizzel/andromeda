@@ -23,7 +23,7 @@ export function AdminSignInCodeEmail({ recipientName, code, expiresInMinutes, ip
             Hi {firstName}, use this code to sign in to the admin dashboard. It expires in {expiresInMinutes}{" "}
             minutes and works once.
           </Text>
-          <Text style={paragraph}>If you didn&apos;t request it, ignore this email — no one can sign in without the code.</Text>
+          <Text style={paragraph}>If you didn&apos;t request it, ignore this email. No one can sign in without the code.</Text>
           <Hr style={divider} />
           <Text style={metaText}>Requested from: {ip}</Text>
         </Container>
@@ -52,7 +52,7 @@ export function AdminSignInNoticeEmail({ recipientName, signedInAt, ip, userAgen
           <Heading style={heading}>New admin sign-in</Heading>
           <Text style={paragraph}>
             Hi {firstName}, someone signed in to the Andromeda admin dashboard. If this wasn&apos;t you, rotate
-            ADMIN_SESSION_SECRET in Vercel — that signs everyone out immediately.
+            ADMIN_SESSION_SECRET in Vercel, which signs everyone out immediately.
           </Text>
           <Hr style={divider} />
           <Text style={metaText}>Signed in at: {signedInAt}</Text>

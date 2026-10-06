@@ -33,7 +33,7 @@ export default async function AdminProposalVersionPage({ params }: { params: Pro
     return (
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
         <div role="alert" className="p-4 rounded-xl border border-[var(--andromeda-error)]/30 bg-[var(--andromeda-error)]/5 text-sm">
-          The stored terms for version <span className="font-mono">{shortVersion(version)}</span> no longer match that version — the snapshot was
+          The stored terms for version <span className="font-mono">{shortVersion(version)}</span> no longer match that version: the snapshot was
           altered or corrupted, so it isn&apos;t shown. Agreements can&apos;t be prepared or signed against it.
         </div>
       </main>
@@ -56,7 +56,7 @@ export default async function AdminProposalVersionPage({ params }: { params: Pro
           />
           <p className="font-semibold">
             {isAccepted ? "Accepted version" : "Stored version"} <span className="font-mono">{shortVersion(version)}</span>
-            {isAccepted && " — exactly as the client accepted it"}
+            {isAccepted && ", exactly as the client accepted it"}
           </p>
           <p className="text-[var(--andromeda-text-secondary)]">
             {isLive ? "Same as the live proposal." : "The live proposal has changed since; this is the stored version."}

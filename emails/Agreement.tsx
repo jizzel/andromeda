@@ -44,8 +44,8 @@ export function AgreementReadyEmail({ clientName, documentTitle, projectTitle, a
     <Frame preview={`Your ${documentTitle.toLowerCase()} for ${projectTitle} is ready to sign.`} eyebrow={projectTitle} title="Your agreement is ready to sign" subtitle="The final step before work begins.">
       <Text style={paragraph}>Hi {firstNameOf(clientName)},</Text>
       <Text style={paragraph}>
-        Thank you for accepting the proposal for <strong>{projectTitle}</strong>. Your {documentTitle.toLowerCase()} for this engagement — which
-        includes the proposal exactly as you accepted it — is ready for you to review and sign. I&apos;ve already signed it.
+        Thank you for accepting the proposal for <strong>{projectTitle}</strong>. Your {documentTitle.toLowerCase()} for this engagement, which
+        includes the proposal exactly as you accepted it, is ready for you to review and sign. I&apos;ve already signed it.
       </Text>
       <Section style={ctaWrapper}>
         <Link style={cta} href={agreementUrl}>
@@ -58,7 +58,7 @@ export function AgreementReadyEmail({ clientName, documentTitle, projectTitle, a
       </Text>
       <Hr style={divider} />
       <Text style={metaText}>This offer to sign is open until {validUntil}.</Text>
-      <Text style={signoff}>— {senderName}</Text>
+      <Text style={signoff}>{senderName}</Text>
     </Frame>
   );
 }
@@ -79,7 +79,7 @@ export function AgreementSignInCodeEmail({ clientName, projectTitle, code, expir
       <Text style={paragraph}>Enter this code on the agreement page to continue to signing:</Text>
       <Text style={codeText}>{code}</Text>
       <Hr style={divider} />
-      <Text style={metaText}>If you didn&apos;t request this code, you can ignore this email — nothing has been signed.</Text>
+      <Text style={metaText}>If you didn&apos;t request this code, you can ignore this email. Nothing has been signed.</Text>
     </Frame>
   );
 }
@@ -110,13 +110,13 @@ export function AgreementExecutedEmail({ recipient, documentTitle, clientName, p
       preview={`The ${documentTitle.toLowerCase()} for ${projectTitle} is signed by both parties.`}
       eyebrow={projectTitle}
       title="Agreement signed"
-      subtitle="Signed by both parties — the agreement is in effect."
+      subtitle="Signed by both parties. The agreement is in effect."
     >
       <Text style={paragraph}>{toClient ? `Hi ${firstNameOf(clientName)},` : "Hi,"}</Text>
       <Text style={paragraph}>
         {toClient ? (
           <>
-            Thank you — the {documentTitle.toLowerCase()} for <strong>{projectTitle}</strong> is now signed by both parties.
+            Thank you. The {documentTitle.toLowerCase()} for <strong>{projectTitle}</strong> is now signed by both parties.
           </>
         ) : (
           <>
@@ -147,7 +147,7 @@ export function AgreementExecutedEmail({ recipient, documentTitle, clientName, p
         </Text>
       )}
       <Hr style={divider} />
-      <Text style={signoff}>— {senderName}</Text>
+      <Text style={signoff}>{senderName}</Text>
     </Frame>
   );
 }
@@ -171,8 +171,8 @@ export function AgreementChangesRequestedEmail({ clientName, projectTitle, note,
         <Text style={noteText}>{note}</Text>
       </Section>
       <Text style={paragraph}>
-        The agreement is unchanged and still open for signing. To revise it, edit it in admin — that voids your signature and
-        withdraws the link — then sign and send it again.
+        The agreement is unchanged and still open for signing. To revise it, edit it in admin (that voids your signature and
+        withdraws the link), then sign and send it again.
       </Text>
       <Section style={ctaWrapper}>
         <Link style={cta} href={adminUrl}>

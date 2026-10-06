@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { isSameOrigin, requestMeta, throttle } from "@/lib/admin-auth";
 import { appendEngagementEvent, getProposalById } from "@/lib/google-sheets";
-import { clientJson, loadClientAgreement, NOT_AVAILABLE, signerFor } from "@/lib/agreement-client";
+import { clientJson, AGREEMENT_UPDATING, loadClientAgreement, NOT_AVAILABLE, signerFor } from "@/lib/agreement-client";
 import { sendAgreementChangesRequested } from "@/lib/email";
 import { MAX_AGREEMENT_CHANGE_NOTE } from "@/constants/agreement";
 
@@ -25,7 +25,10 @@ export async function POST(request: NextRequest) {
   if (note.length > MAX_AGREEMENT_CHANGE_NOTE) return clientJson({ success: false, error: `Keep the note under ${MAX_AGREEMENT_CHANGE_NOTE} characters.` }, 400);
 
   const agreement = await loadClientAgreement(proposalId);
-  if (!agreement.ok) return clientJson(agreement.code === "unavailable" ? { success: false, error: "Couldn't load the agreement. Try again." } : NOT_AVAILABLE, agreement.code === "unavailable" ? 503 : 404);
+  if (!agreement.ok) {
+    if (agreement.code === "updating") return clientJson(AGREEMENT_UPDATING, 409);
+    return clientJson(agreement.code === "unavailable" ? { success: false, error: "Couldn't load the agreement. Try again." } : NOT_AVAILABLE, agreement.code === "unavailable" ? 503 : 404);
+  }
   const { record } = agreement;
   if (record.status !== "sent") return clientJson({ success: false, code: "executed", error: "This agreement has already been signed." }, 409);
   const session = await signerFor(request, proposalId, record);
