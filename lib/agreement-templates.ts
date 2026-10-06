@@ -48,6 +48,16 @@ const REGISTRY: readonly RegistryEntry[] = [
     declaration: "12.3",
     scope: { proposals: ["iiaghana"], packages: ["pkg-licence"] },
   },
+  // v2 (2026-10-06): support is one month from the Deployment Date, covering
+  // the conference days (v1: the three days plus one month); no em dashes.
+  // v1 stays byte-identical to what was deployed.
+  {
+    id: "iiag-platform-licence",
+    version: 2,
+    file: "iiag-platform-licence-v2.md",
+    declaration: "12.3",
+    scope: { proposals: ["iiaghana"], packages: ["pkg-licence"] },
+  },
 ];
 
 /** Parties named by templates that don't name their own (frontmatter `parties`). */

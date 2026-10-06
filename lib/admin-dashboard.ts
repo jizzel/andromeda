@@ -19,6 +19,20 @@ import type { ProposalAcceptance, PublishedRevision, TrackerMilestoneState } fro
 import type { AgreementRecord } from "@/types/agreement";
 import { UNAVAILABLE, type ChangeRequest, type DashboardRow, type LifecycleState, type Source } from "./admin-dashboard-types";
 
+/**
+ * Whether the agreement's terms file no longer hashes to what it pinned. An
+ * unreadable file (e.g. not shipped with this function) leaves the flag off
+ * rather than failing the dashboard.
+ */
+function termsFileChanged(record: Pick<AgreementRecord, "templateId" | "templateVersion" | "templateHash">): boolean {
+  try {
+    return loadTemplate(record.templateId, record.templateVersion)?.hash !== record.templateHash;
+  } catch (error) {
+    console.error(`Dashboard: couldn't read terms ${record.templateId}@${record.templateVersion}:`, error);
+    return false;
+  }
+}
+
 export { UNAVAILABLE };
 export type { ChangeRequest, DashboardRow, LifecycleState };
 
@@ -152,9 +166,7 @@ export function deriveRow(
               signedAt: agreementSource.providerSignature?.signedAt,
               changesRequested: agreementSource.status === "sent" && agreementChangeRequests > 0,
               // The terms file no longer matches what the agreement pinned: it can't be signed (or shown to the client).
-              termsChanged:
-                agreementSource.status !== "executed" &&
-                loadTemplate(agreementSource.templateId, agreementSource.templateVersion)?.hash !== agreementSource.templateHash,
+              termsChanged: agreementSource.status !== "executed" && termsFileChanged(agreementSource),
             }
           : null,
   };

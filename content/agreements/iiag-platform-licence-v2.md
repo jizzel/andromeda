@@ -1,6 +1,6 @@
 ---
 id: iiag-platform-licence
-version: 1
+version: 2
 title: Software Licence and Service Agreement
 clientTitle: Software Licence and Service Agreement
 status: final
@@ -9,7 +9,7 @@ parties:
   client: Institute
 ---
 
-**Event Registration & Delegate Management Platform — Annual Hosted-Use Licence**
+**Event Registration & Delegate Management Platform - Annual Hosted-Use Licence**
 
 **Licensor:** [[provider.name]], [[provider.role]][[provider.affiliation]], of [[provider.address]] ([[provider.email]]) ("the Developer")
 
@@ -29,11 +29,11 @@ This table is a convenience only; the clauses below govern.
 
 | | |
 |---|---|
-| **Annual Platform Licence Fee** | **GH₵8,500 per year** — the licence to use the platform, deployment, initial configuration, hosting, and the support below. No separate hosting fee during the term. |
+| **Annual Platform Licence Fee** | **GH₵8,500 per year** ; the licence to use the platform, deployment, initial configuration, hosting, and the support below. No separate hosting fee during the term. |
 | **Term** | 12 months from the Effective Date. Renewal is by mutual agreement and **not automatic**. Renewal fees may be reviewed before each new term. |
 | **Payment** | GH₵4,250 on signature, before deployment · GH₵4,250 on the first day of the Initial Event |
 | **Events** | Any number of IIA Ghana's own events during the term, using the administrator dashboard. **Setting up each event is separate work** (see below). |
-| **Support included** | Remote support across the **3 conference days of the Initial Event**, plus **1 month from deployment** for ordinary use and defect correction |
+| **Support included** | Remote support for **1 month from deployment** ; including the conference days of the Initial Event ; for ordinary use and defect correction |
 | **Charged separately** | Support after the included period · setup and configuration of later events · marketing-page and content updates · new features, redesigns, integrations |
 | **If not renewed** | Access ends when the term expires. At least 30 days' notice beforehand, the export function stays available, and a final CSV export is provided on request. |
 | **Developer retains** | All intellectual property, source code, platform architecture and the hosted deployment, plus the unrestricted right to modify, reuse, commercialise and license the platform to other clients |
@@ -54,7 +54,7 @@ This table is a convenience only; the clauses below govern.
 
 **2.3** "The Institute's own events" means events organised by, or under the authority of, the Institute of Internal Auditors Ghana. It does **not** include events organised for or on behalf of any other organisation, whether or not a fee is charged.
 
-Within the term the Institute may operate **any number of its own events** using the functionality available through the administrator dashboard — delegate registration, payment and credit tracking, passes, check-in, meal service and reporting.
+Within the term the Institute may operate **any number of its own events** using the functionality available through the administrator dashboard ; delegate registration, payment and credit tracking, passes, check-in, meal service and reporting.
 
 **This is important:** event setup, configuration, content preparation and any other work requiring the Developer's involvement is **charged separately** (clause 4.6). The Platform is not self-service for event setup: event dates, venue, programme, speakers and meal sittings are configured by the Developer. "Any number of events" means the licence does not cap them, not that each one's setup is included.
 
@@ -82,25 +82,21 @@ The Institute shall not, and shall not permit any third party to:
 
 **4.3** **Handover.** One training/handover session for the Institute's administrators.
 
-**4.4** **Support.** Remote support by telephone, WhatsApp or email covering:
+**4.4** **Support.** Remote support by telephone, WhatsApp or email for **one (1) month from the Deployment Date**, a period that includes the three days of the Initial Event, for questions arising in ordinary use and for correction of defects in the delivered functionality.
 
-(a) **the three days of the Initial Event**; and
-
-(b) **one (1) month from the Deployment Date**, for questions arising in ordinary use and for correction of defects in the delivered functionality.
-
-After that month, support of any kind — including defect correction, advice and assistance with the Institute's later events — is **chargeable** under a separate arrangement. The Annual Licence Fee covers running the system and the support set out above; beyond that it does not include the Developer's time.
+After that month, support of any kind ; including defect correction, advice and assistance with the Institute's later events ; is **chargeable** under a separate arrangement. The Annual Licence Fee covers running the system and the support set out above; beyond that it does not include the Developer's time.
 
 **4.5** **Hosting.** The Developer hosts and operates the Deployment **for the whole of the term**, at no charge beyond the Annual Licence Fee. This covers application hosting, the database and transactional email. There is no separate hosting invoice.
 
 **4.6** **Event setup, content updates and new work.** The following are **not** included in the Annual Platform Licence Fee and are quoted and charged separately, either per request or under a retainer:
 
-(a) **setting up a subsequent event** — event name and dates, venue, programme, speakers, meal sittings, and any other configuration the Platform does not expose through the administrator dashboard;
+(a) **setting up a subsequent event** ; event name and dates, venue, programme, speakers, meal sittings, and any other configuration the Platform does not expose through the administrator dashboard;
 
-(b) changes to the public marketing pages — imagery, copy, layout; and
+(b) changes to the public marketing pages ; imagery, copy, layout; and
 
 (c) any new feature, integration, redesign or other change of scope.
 
-For clarity: the licence lets the Institute use the delivered functionality for its own events throughout the term — it manages delegates, payments, check-in and catering through the administrator dashboard without the Developer's involvement. It does **not** include the Developer's time in preparing, redesigning or updating the public-facing pages for each event.
+For clarity: the licence lets the Institute use the delivered functionality for its own events throughout the term ; it manages delegates, payments, check-in and catering through the administrator dashboard without the Developer's involvement. It does **not** include the Developer's time in preparing, redesigning or updating the public-facing pages for each event.
 
 **4.7** **Not included.** On-site attendance; new features or scope beyond what is deployed; integration with third-party systems; training beyond clause 4.3; marketing-page content updates (clause 4.6); support after the first month (clause 4.4); and dedicated event-day support for events after the Initial Event. These may be provided under a separate agreement.
 
@@ -114,9 +110,9 @@ For clarity: the licence lets the Institute use the delivered functionality for 
 
 **5.4** **Retention and deletion.** The privacy notice published on the Deployment promises delegates that their registration details are deleted within one (1) month of the event ending. **The Institute, as the party controlling the data and operating the system across its own events, is responsible for honouring that promise.** The administrator dashboard provides the means:
 
-(a) **Delete a registration** — removes one delegate permanently, for an individual erasure request;
+(a) **Delete a registration** ; removes one delegate permanently, for an individual erasure request;
 
-(b) **Reset event data** — removes all delegate, catering and audit records, for use after an event has concluded.
+(b) **Reset event data** ; removes all delegate, catering and audit records, for use after an event has concluded.
 
 Both are restricted to system-administrator accounts and are irreversible. The Institute should export anything it wishes to keep first. On the Institute's written request, or on termination, the Developer will perform the reset and confirm deletion in writing.
 
@@ -128,7 +124,7 @@ Both are restricted to system-administrator accounts and are irreversible. The I
 
 **6.2** **The Developer may continue to use, modify, license and commercialise the Platform**, including for other clients and events. Nothing in this agreement restricts that right. For the avoidance of doubt, this licence is non-exclusive, and the Developer may license comparable systems to any other party.
 
-**6.3** Clause 6.2 does not extend to Institute Data or to the Institute's name, logo or other branding, which the Developer may use only to operate the Deployment and — with the Institute's prior consent — to reference the engagement as a portfolio credit.
+**6.3** Clause 6.2 does not extend to Institute Data or to the Institute's name, logo or other branding, which the Developer may use only to operate the Deployment and ; with the Institute's prior consent ; to reference the engagement as a portfolio credit.
 
 ## 7. Fee and payment
 
@@ -140,7 +136,7 @@ Both are restricted to system-administrator accounts and are irreversible. The I
 
 The fee for any renewal term is payable in full, in advance, on the renewal date.
 
-**7.2** **What the fee covers.** The licence to use the Platform, the initial deployment and configuration, handover (clause 4.3), hosting for the whole term (clause 4.5), and the support in clause 4.4. It does **not** cover support beyond that period, setup of subsequent events, content updates, or new work — see clauses 4.4 and 4.6.
+**7.2** **What the fee covers.** The licence to use the Platform, the initial deployment and configuration, handover (clause 4.3), hosting for the whole term (clause 4.5), and the support in clause 4.4. It does **not** cover support beyond that period, setup of subsequent events, content updates, or new work ; see clauses 4.4 and 4.6.
 
 **7.3** **Renewal pricing.** The fee stated above is for the **first term only**. Renewal fees may be reviewed before each new term; the Developer will give not less than **sixty (60) days' written notice** of any proposed change before the renewal date. The Institute is free not to renew (clause 9).
 
@@ -176,7 +172,7 @@ For the avoidance of doubt, this does not qualify the licence: for the whole ter
 
 (c) the Developer will provide a **final complete export of all Institute Data** in CSV format on request before access is disabled.
 
-The Deployment is then taken offline and Institute Data deleted. **Not renewing is not a penalty** — the Institute leaves with its data, in a usable format, having had the whole notice period to retrieve it.
+The Deployment is then taken offline and Institute Data deleted. **Not renewing is not a penalty** ; the Institute leaves with its data, in a usable format, having had the whole notice period to retrieve it.
 
 **9.5** Clause 5 (data), clause 6 (intellectual property) and clause 8 (liability) survive expiry or termination.
 
@@ -214,4 +210,4 @@ The Deployment is then taken offline and Institute Data deleted. **Not renewing 
 
 **12.4** The electronic record generated by the Portal, including the identity information supplied by the signatory, the applicable document versions, date and time of signing, verification records and associated audit information, forms part of the record of this agreement.
 
-**12.5** This agreement becomes effective — the Effective Date — when the Institute signs a version of it that the Developer has already signed.
+**12.5** This agreement becomes effective ; the Effective Date ; when the Institute signs a version of it that the Developer has already signed.

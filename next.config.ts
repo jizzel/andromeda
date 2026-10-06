@@ -29,6 +29,8 @@ const nextConfig: NextConfig = {
     // Agreement terms are read from the repo at request time (lib/agreement-templates.ts).
     '/api/admin/proposals/**': ['./content/agreements/**'],
     '/admin/proposals/**': ['./content/agreements/**'],
+    // The dashboard flags agreements whose terms file changed (lib/admin-dashboard.ts).
+    '/admin': ['./content/agreements/**'],
     '/api/proposal/**': ['./content/agreements/**'],
     '/proposal/**': ['./content/agreements/**'],
   },
