@@ -58,6 +58,17 @@ const REGISTRY: readonly RegistryEntry[] = [
     declaration: "12.3",
     scope: { proposals: ["iiaghana"], packages: ["pkg-licence"] },
   },
+  // v3 (2026-10-06): licensing-only proposal with two options, the Annual
+  // Licence (pkg-licence) and the One-Month Licence (pkg-licence-month); the
+  // term, fee, notice and retention follow the option in Schedule 2, and the
+  // upgrade credit runs to the end of the one-month Retention Period.
+  {
+    id: "iiag-platform-licence",
+    version: 3,
+    file: "iiag-platform-licence-v3.md",
+    declaration: "12.3",
+    scope: { proposals: ["iiaghana"], packages: ["pkg-licence", "pkg-licence-month"] },
+  },
 ];
 
 /** Parties named by templates that don't name their own (frontmatter `parties`). */
