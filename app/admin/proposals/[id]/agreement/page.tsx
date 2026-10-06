@@ -108,7 +108,7 @@ export default async function AdminAgreementPage({ params }: { params: Promise<{
             key={record?.updatedAt ?? "new"}
             proposalId={id}
             record={record}
-            templates={listTemplates(id)}
+            templates={listTemplates({ proposalId: id, ...(basis.ok && { accepted: { packageId: basis.acceptance.packageId } }) })}
             suggestedTemplateId={suggested}
             templateChanged={templateChanged}
             providerName={agreementProvider.legalName}

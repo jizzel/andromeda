@@ -131,20 +131,36 @@ function parseClauses(body: string): TemplateClause[] {
 
 export type TemplateSummary = Pick<AgreementTemplate, "id" | "version" | "title" | "clientTitle" | "status" | "clauses" | "parties">;
 
-const usableFor = (entry: RegistryEntry, proposalId: string) => !entry.scope || entry.scope.proposals.includes(proposalId);
+/**
+ * What a template version is checked against: the proposal, and (once known)
+ * the package the client accepted. Omit `accepted` before there's an
+ * acceptance; with it, a version that lists packages must include the
+ * accepted one (a monthly acceptance can't take annual-only terms).
+ */
+export interface TemplateUse {
+  proposalId: string;
+  accepted?: { packageId?: string | null };
+}
 
-/** Templates an agreement for `proposalId` may use (client-specific ones only for their proposals). */
-export function listTemplates(proposalId: string): TemplateSummary[] {
-  return REGISTRY.filter((entry) => usableFor(entry, proposalId))
+function usableFor(entry: RegistryEntry, { proposalId, accepted }: TemplateUse): boolean {
+  if (!entry.scope) return true;
+  if (!entry.scope.proposals.includes(proposalId)) return false;
+  if (!accepted || !entry.scope.packages.length) return true;
+  return !!accepted.packageId && entry.scope.packages.includes(accepted.packageId);
+}
+
+/** Template versions an agreement may use: client-specific ones only for their proposal and the packages they cover. */
+export function listTemplates(use: TemplateUse): TemplateSummary[] {
+  return REGISTRY.filter((entry) => usableFor(entry, use))
     .map(({ id, version }) => loadTemplate(id, version))
     .filter((t): t is AgreementTemplate => !!t)
     .map(({ id, version, title, clientTitle, status, clauses, parties }) => ({ id, version, title, clientTitle, status, clauses, parties }));
 }
 
-/** Whether `proposalId` may use this template version (registered, and in scope). */
-export function templateUsableFor(id: string, version: number, proposalId: string): boolean {
+/** Whether this template version may be used here (registered, and in scope for the proposal and accepted package). */
+export function templateUsableFor(id: string, version: number, use: TemplateUse): boolean {
   const entry = REGISTRY.find((t) => t.id === id && t.version === version);
-  return !!entry && usableFor(entry, proposalId);
+  return !!entry && usableFor(entry, use);
 }
 
 /** The terms a new agreement starts from: a template scoped to this proposal and its accepted package, else the default. */

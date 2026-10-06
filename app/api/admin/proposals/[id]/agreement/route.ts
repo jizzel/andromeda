@@ -27,7 +27,7 @@ export async function GET(request: NextRequest, { params }: Params) {
     success: true,
     agreement,
     basis: basis.ok ? { proposalVersion: basis.acceptance.proposalVersion, acceptedAt: basis.acceptance.acceptedAt } : { code: basis.code, error: basis.error },
-    templates: listTemplates(id),
+    templates: listTemplates({ proposalId: id, ...(basis.ok && { accepted: { packageId: basis.acceptance.packageId } }) }),
     organisations: PROVIDER_ORGANISATIONS,
   });
 }
@@ -52,7 +52,7 @@ async function handlePUT(request: NextRequest, { params }: Params) {
   const template = typeof body.templateVersion === "number" ? loadTemplate(templateId, body.templateVersion) : latestTemplate(templateId);
   if (!template) return json({ success: false, code: "invalid", error: "Unknown agreement template" }, 400);
   // Client-specific terms (e.g. IIA Ghana's licence) can't be used for anyone else.
-  if (!templateUsableFor(template.id, template.version, id)) return json({ success: false, code: "invalid", error: "Those terms are specific to another client's proposal" }, 400);
+  if (!templateUsableFor(template.id, template.version, { proposalId: id })) return json({ success: false, code: "invalid", error: "Those terms are specific to another client's proposal" }, 400);
   const organisation = typeof body.organisation === "string" ? body.organisation.trim() : "";
   if (organisation && !PROVIDER_ORGANISATIONS.includes(organisation)) return json({ success: false, code: "invalid", errors: [`Unknown organisation "${organisation}"`] }, 400);
   const specialTerms: SpecialTerm[] = Array.isArray(body.specialTerms)
@@ -74,6 +74,11 @@ async function handlePUT(request: NextRequest, { params }: Params) {
   const locked = await withProposalLock(id, async (lock) => {
     const basis = await loadAgreementBasis(id);
     if (!basis.ok) return { kind: "basis", basis } as const;
+    // The terms must cover the package the client accepted (e.g. annual-only licence terms can't go with a one-month acceptance).
+    if (!templateUsableFor(template.id, template.version, { proposalId: id, accepted: { packageId: basis.acceptance.packageId } })) {
+      const pkg = "packages" in basis.snapshot && Array.isArray(basis.snapshot.packages) ? basis.snapshot.packages.find((p) => p.id === basis.acceptance.packageId) : undefined;
+      return { kind: "package_scope", packageName: pkg?.name ?? basis.acceptance.packageId ?? "none" } as const;
+    }
     const current = await readAgreement(id);
     if ((current?.updatedAt ?? null) !== expectedUpdatedAt) return { kind: "conflict", current } as const;
 
@@ -144,6 +149,8 @@ async function handlePUT(request: NextRequest, { params }: Params) {
   switch (outcome.kind) {
     case "basis":
       return json({ success: false, code: outcome.basis.code, error: outcome.basis.error }, outcome.basis.code === "unavailable" ? 503 : 409);
+    case "package_scope":
+      return json({ success: false, code: "invalid", error: `Those terms don't cover the accepted package (${outcome.packageName}). Choose terms for that package.` }, 400);
     case "conflict":
       return json({ success: false, code: "conflict", error: "The agreement changed since you opened it.", current: outcome.current }, 409);
     case "executed":
