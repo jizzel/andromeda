@@ -118,7 +118,7 @@ function BriefReferences({ brief }: BriefContentProps) {
           Mood, not copy
         </h2>
         <p className="text-sm text-[var(--andromeda-text-secondary)] mb-8 max-w-2xl">
-          Each image has a one-line takeaway — note what to borrow (lighting, framing, feeling).
+          Each image has a one-line takeaway: note what to borrow (lighting, framing, feeling).
           Don&apos;t recreate the shot; interpret the mood.
         </p>
       </ScrollReveal>
@@ -225,7 +225,7 @@ function BriefPriorities({ brief }: BriefContentProps) {
           Where to spend the day
         </h2>
         <p className="text-sm text-[var(--andromeda-text-secondary)] mb-8 max-w-2xl">
-          Tier 1 must be captured well. Tier 2 is bonus — fill in only if Tier 1 is solid.
+          Tier 1 must be captured well. Tier 2 is a bonus. Fill it in only if Tier 1 is solid.
         </p>
       </ScrollReveal>
 
@@ -262,7 +262,7 @@ function BriefPriorities({ brief }: BriefContentProps) {
           {brief.shotPriorities.tier2.map((item, idx) => (
             <li key={idx} className="list-disc">
               {item.label}
-              {item.description && <span className="text-[var(--andromeda-text-secondary)]/70"> — {item.description}</span>}
+              {item.description && <span className="text-[var(--andromeda-text-secondary)]/70">: {item.description}</span>}
             </li>
           ))}
         </ul>

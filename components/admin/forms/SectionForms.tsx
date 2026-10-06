@@ -59,7 +59,7 @@ export function SectionForms({ data, errors, acceptance, onChange, onShowInJson 
             <>
               This removes the {pendingDelete.label} from the draft. It isn&apos;t saved until you press Save.
               {pendingDelete.clientChoice && (
-                <span className="block mt-2 text-amber-500">It&apos;s {pendingDelete.clientChoice} — deleting it means they&apos;ll have to choose again.</span>
+                <span className="block mt-2 text-amber-500">It&apos;s {pendingDelete.clientChoice}; deleting it means they&apos;ll have to choose again.</span>
               )}
             </>
           )
@@ -93,7 +93,7 @@ function SectionProblem({ title, problem, onShowInJson }: { title: string; probl
       <div role="alert" className="flex items-start gap-2 p-3 rounded-lg border border-[var(--andromeda-error)]/30 bg-[var(--andromeda-error)]/5 text-sm">
         <XCircle className="w-4 h-4 mt-0.5 shrink-0 text-[var(--andromeda-error)]" />
         <p>
-          The form can&apos;t edit this section: <code className="font-mono text-xs">{problem.path}</code> — {problem.message}.{" "}
+          The form can&apos;t edit this section: <code className="font-mono text-xs">{problem.path}</code>: {problem.message}.{" "}
           <button type="button" onClick={() => onShowInJson(problem.path)} className="underline hover:text-[var(--andromeda-accent-beige)]">
             Fix it in the JSON view
           </button>
@@ -128,7 +128,7 @@ export class FormErrorBoundary extends Component<{ resetKey: string; onShowJson:
     if (!this.state.failed) return this.props.children;
     return (
       <div role="alert" className="p-4 rounded-xl border border-[var(--andromeda-error)]/30 bg-[var(--andromeda-error)]/5 text-sm">
-        The form can&apos;t display this draft. Your changes are safe —{" "}
+        The form can&apos;t display this draft. Your changes are safe.{" "}
         <button type="button" onClick={this.props.onShowJson} className="underline hover:text-[var(--andromeda-accent-beige)]">
           edit it in the JSON view
         </button>

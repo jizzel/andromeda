@@ -13,7 +13,7 @@ import type { AgreementRecord } from "@/types/agreement";
 
 export type ClientAgreement =
   | { ok: true; record: AgreementRecord; template: AgreementTemplate }
-  | { ok: false; code: "not_available" | "unavailable" };
+  | { ok: false; code: "not_available" | "unavailable" | "updating" };
 
 /** The proposal's agreement if the client may see it: sent (open for signing) or executed. */
 export async function loadClientAgreement(proposalId: string): Promise<ClientAgreement> {
@@ -25,19 +25,28 @@ export async function loadClientAgreement(proposalId: string): Promise<ClientAgr
     return { ok: false, code: "unavailable" };
   }
   const offered = offeredToClient(record);
-  return offered ? { ok: true, ...offered } : { ok: false, code: "not_available" };
+  if (!offered) return { ok: false, code: "not_available" };
+  // Never show the client terms other than the ones Joseph signed.
+  if (offered.termsChanged) return { ok: false, code: "updating" };
+  return { ok: true, record: offered.record, template: offered.template };
 }
 
 /**
  * The record and its template if the client may see it: sent (and client
  * signing enabled for its terms) or executed. An executed agreement stays
- * viewable whatever the gate says.
+ * viewable whatever the gate says (it renders from its signed copy).
+ *
+ * `termsChanged`: a sent agreement whose terms file no longer hashes to the
+ * version it pinned (and Joseph signed), e.g. the file was edited after
+ * preparing, or it was prepared on a server with different terms. The client
+ * is told it's being updated instead of being shown text nobody signed;
+ * signing would refuse it anyway (`verifySigningBasis`).
  */
-function offeredToClient(record: AgreementRecord | null): { record: AgreementRecord; template: AgreementTemplate } | null {
+function offeredToClient(record: AgreementRecord | null): { record: AgreementRecord; template: AgreementTemplate; termsChanged: boolean } | null {
   if (!record || (record.status !== "sent" && record.status !== "executed")) return null;
   const template = loadTemplate(record.templateId, record.templateVersion);
   if (!template || (record.status === "sent" && !clientSigningAllowed(template))) return null;
-  return { record, template };
+  return { record, template, termsChanged: record.status === "sent" && template.hash !== record.templateHash };
 }
 
 /** `clientAgreementStatus` for a record already read (e.g. by `loadEngagement`). */
@@ -80,5 +89,12 @@ export const signerFor = (request: NextRequest, proposalId: string, record: Agre
   authorisedSigner(request.cookies.get(AGREEMENT_SIGNER_COOKIE)?.value, proposalId, record);
 
 export const clientJson = (body: Record<string, unknown>, status = 200) => NextResponse.json(body, { status });
+
+/** A sent agreement whose pinned terms no longer match the server's (`termsChanged`). */
+export const AGREEMENT_UPDATING = {
+  success: false,
+  code: "updating",
+  error: "Your agreement is being updated. Joseph will send you the current version shortly.",
+};
 
 export const NOT_AVAILABLE = { success: false, code: "not_available", error: "There's no agreement waiting for your signature on this proposal." };

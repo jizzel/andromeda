@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
   const access = await verifyEngagementAccess(proposalId, accessCode);
   if (!access.success) return json({ success: false, error: access.error ?? "Invalid access code" }, 401);
   if (!clientSessionsConfigured()) {
-    console.error("CLIENT_SESSION_SECRET is not set — client hub sessions are disabled");
+    console.error("CLIENT_SESSION_SECRET is not set; client hub sessions are disabled");
     return json({ success: false, error: "Access is temporarily unavailable. Please contact us." }, 503);
   }
   const response = json({ success: true, session: true });

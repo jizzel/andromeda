@@ -31,13 +31,13 @@ export function PaymentPlansForm({ data, issues, onChange, acceptance, requestDe
   return (
     <Section
       title="Payment plans"
-      description="How the client can pay — milestones with a percentage, an amount, or both."
+      description="How the client can pay: milestones with a percentage, an amount, or both."
       path="paymentPlans"
       error={issues.at("paymentPlans")}
       warning={
         orphaned ? (
           <>
-            The client&apos;s recorded choice <code className="font-mono">{chosenId}</code> no longer matches a payment plan — they&apos;ll have to choose again.
+            The client&apos;s recorded choice <code className="font-mono">{chosenId}</code> no longer matches a payment plan, so they&apos;ll have to choose again.
           </>
         ) : undefined
       }
@@ -136,7 +136,7 @@ export function PaymentPlansForm({ data, issues, onChange, acceptance, requestDe
               value={plan.id ?? ""}
               onChange={(v) => set(index, { id: v })}
               error={issues.at(`${path}.id`)}
-              warning={isChoice ? "The client's recorded response points at this id — changing it detaches their choice." : undefined}
+              warning={isChoice ? "The client's recorded response points at this id. Changing it detaches their choice." : undefined}
             />
           </ItemCard>
         );
@@ -248,7 +248,7 @@ function AppliesToField({
     <Field
       label="Applies to"
       error={error}
-      hint={value?.length ? "Shown only when the client picks one of these packages." : "Every package — tick some to limit this plan to them."}
+      hint={value?.length ? "Shown only when the client picks one of these packages." : "Every package. Tick some to limit this plan to them."}
     >
       <div data-path={path} className="flex flex-wrap gap-x-4 gap-y-1.5">
         {packages.map((pkg) => (

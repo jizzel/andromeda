@@ -42,7 +42,7 @@ export default async function AcceptedProposalPage({ params }: { params: Promise
           <ArrowLeft className="w-4 h-4" /> Back to the agreement
         </Link>
         <p className="mt-3 p-3 rounded-lg border border-[var(--andromeda-accent-beige)]/30 bg-[var(--andromeda-accent-beige)]/5 text-sm text-[var(--andromeda-text-secondary)]">
-          The proposal as you accepted it — version <span className="font-mono">{shortVersion(record.proposalVersion)}</span>. This is what the
+          The proposal as you accepted it, version <span className="font-mono">{shortVersion(record.proposalVersion)}</span>. This is what the
           agreement incorporates as Schedule 2.
         </p>
       </div>

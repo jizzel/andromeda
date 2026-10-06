@@ -153,7 +153,7 @@ export function PublishRevisionDialog({
                 {note.trim() ? " with your note" : ""}
               </>
             ) : (
-              "No client email — add one in Settings to email the client"
+              "No client email. Add one in Settings to email the client"
             )}
           </span>
         </label>
@@ -180,7 +180,7 @@ export function PublishRevisionDialog({
             </label>
             <p className={`mt-1 ml-6 text-xs ${expired ? "text-[var(--andromeda-error)]" : remaining <= EXPIRY_WARNING_DAYS ? "text-amber-500" : "text-[var(--andromeda-text-secondary)]"}`}>
               {expired
-                ? `The offer expired on ${formatDay(expiryDate)} — the client can't accept until it's extended.`
+                ? `The offer expired on ${formatDay(expiryDate)}, so the client can't accept until it's extended.`
                 : `The offer currently runs until ${formatDay(expiryDate)}.`}
             </p>
           </div>

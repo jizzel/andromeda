@@ -29,7 +29,7 @@ export async function generateMetadata({ params, searchParams }: PrintPageProps)
   const record = verifyPrintToken(id, token) ? await loadProposal(id) : null;
   return {
     // Becomes the PDF's document title.
-    title: record ? `${record.data.title} — ${record.data.client.name}` : "Proposal",
+    title: record ? `${record.data.title} (${record.data.client.name})` : "Proposal",
     robots: { index: false, follow: false },
   };
 }

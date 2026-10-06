@@ -71,7 +71,7 @@ export async function AgreementDocument({ record, template, proposal, acceptance
           </p>
         )}
         <h1 className="mt-1 text-2xl font-bold text-[var(--andromeda-text-primary)]">
-          {template.clientTitle} — {proposal.title}
+          {template.clientTitle}: {proposal.title}
         </h1>
         <p className="mt-1">
           Between {record.provider.name}
@@ -82,7 +82,7 @@ export async function AgreementDocument({ record, template, proposal, acceptance
       <MDXRemote source={body} components={markdown} options={{ mdxOptions: { format: "md", remarkPlugins: [remarkGfm] } }} />
 
       <section className="mt-10">
-        <h2 className="mb-3 text-base font-semibold text-[var(--andromeda-text-primary)]">Schedule 1 — Special Terms</h2>
+        <h2 className="mb-3 text-base font-semibold text-[var(--andromeda-text-primary)]">Schedule 1: Special Terms</h2>
         {record.specialTerms.length ? (
           <ol className="space-y-3">
             {record.specialTerms.map((term, i) => (
@@ -101,7 +101,7 @@ export async function AgreementDocument({ record, template, proposal, acceptance
       </section>
 
       <section className="mt-10">
-        <h2 className="mb-3 text-base font-semibold text-[var(--andromeda-text-primary)]">Schedule 2 — The Accepted Proposal</h2>
+        <h2 className="mb-3 text-base font-semibold text-[var(--andromeda-text-primary)]">Schedule 2: The Accepted Proposal</h2>
         <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1">
           <dt>Proposal</dt>
           <dd className="text-[var(--andromeda-text-primary)]">{proposal.title}</dd>
@@ -112,14 +112,14 @@ export async function AgreementDocument({ record, template, proposal, acceptance
           <dt>Accepted on</dt>
           <dd className="text-[var(--andromeda-text-primary)]">
             {/* The pinned date (signed); older records fall back to the live acceptance, flagged. */}
-            {acceptedAt ? formatDateTime(acceptedAt) : "—"}
-            {!record.acceptedAt && <span className="ml-2 text-xs text-amber-500">(not pinned — re-save to pin)</span>}
+            {acceptedAt ? formatDateTime(acceptedAt) : "-"}
+            {!record.acceptedAt && <span className="ml-2 text-xs text-amber-500">(not pinned; re-save to pin)</span>}
           </dd>
           {pkg && (
             <>
               <dt>Package</dt>
               <dd className="text-[var(--andromeda-text-primary)]">
-                {pkg.name} — {pkg.totalPrice}
+                {pkg.name}: {pkg.totalPrice}
               </dd>
             </>
           )}
@@ -127,7 +127,7 @@ export async function AgreementDocument({ record, template, proposal, acceptance
             <>
               <dt>Payment plan</dt>
               <dd className="text-[var(--andromeda-text-primary)]">
-                {plan.name} — {plan.totalInvestment}
+                {plan.name}: {plan.totalInvestment}
                 <ul className="mt-1 ml-5 list-disc">
                   {plan.structure.map((m, i) => (
                     <li key={i}>
@@ -154,7 +154,7 @@ export async function AgreementDocument({ record, template, proposal, acceptance
 
       <section className="mt-10 grid gap-4 sm:grid-cols-2">
         <div className="p-4 rounded-lg border border-white/10 light:border-black/10">
-          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--andromeda-text-secondary)]">{template.parties.provider} — signed and offered</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--andromeda-text-secondary)]">{template.parties.provider}: signed and offered</p>
           <p className="mt-2 text-[var(--andromeda-text-primary)]">{record.provider.name}</p>
           <p>
             {record.provider.role}
@@ -174,7 +174,7 @@ export async function AgreementDocument({ record, template, proposal, acceptance
           <p className="mt-2">Offer open until {formatDay(record.offerValidUntil)}.</p>
         </div>
         <div className="p-4 rounded-lg border border-white/10 light:border-black/10">
-          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--andromeda-text-secondary)]">{template.parties.client} — accept and sign</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--andromeda-text-secondary)]">{template.parties.client}: accept and sign</p>
           <p className="mt-2 text-[var(--andromeda-text-primary)]">{proposal.client.name}</p>
           {client ? (
             <>

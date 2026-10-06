@@ -24,3 +24,21 @@ function draftOverrideEnvironment(): boolean {
 
 export const CLIENT_SIGNING_OFF_REASON =
   "Client signing is off until the agreement terms have had legal review (the template is still a draft).";
+
+/**
+ * Preparing, signing and sending agreements from a server that isn't a
+ * Vercel deployment (e.g. a local `next dev` against the live sheet) is off
+ * unless AGREEMENT_ALLOW_LOCAL_WRITES=1. An agreement pins the exact terms
+ * file of the server that prepared it, so one prepared locally against
+ * uncommitted terms can't be signed on the live site (2026-10-06, iiaghana).
+ */
+export function agreementWritesAllowedHere(): boolean {
+  return !!process.env.VERCEL_ENV || process.env.AGREEMENT_ALLOW_LOCAL_WRITES === "1";
+}
+
+export const LOCAL_AGREEMENT_WRITES_OFF = {
+  success: false,
+  code: "local_writes_off",
+  error:
+    "Agreements are prepared, signed and sent from the live site, not a local server: the agreement pins this server's terms file, which may differ from the deployed one. Set AGREEMENT_ALLOW_LOCAL_WRITES=1 to override for testing.",
+};

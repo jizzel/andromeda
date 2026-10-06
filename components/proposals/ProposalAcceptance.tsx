@@ -141,7 +141,7 @@ export function ProposalAcceptance({
       if (data.code === "stale_version") {
         trackProposalStaleVersion({ proposal_id: proposalId, proposal_version: versionLabel });
         setStale(true);
-        setError(data.error || "This proposal was updated — please review the latest version.");
+        setError(data.error || "This proposal was updated. Please review the latest version.");
       } else if (data.success) {
         trackProposalResponseSubmitted({
           proposal_id: proposalId,
@@ -465,7 +465,7 @@ export function ProposalAcceptance({
                     Request changes
                   </p>
                   <p className="text-xs text-[var(--andromeda-text-secondary)] mt-1">
-                    Ask for adjustments — you&apos;ll receive a revised proposal to accept
+                    Ask for adjustments; you&apos;ll receive a revised proposal to accept
                   </p>
                 </div>
               </div>

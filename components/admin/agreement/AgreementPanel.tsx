@@ -109,7 +109,7 @@ export function AgreementPanel({
         setErrors(body.errors ?? [body.error || "Couldn't save the agreement."]);
       }
     } catch {
-      setErrors(["Connection failed — nothing was saved. Try again."]);
+      setErrors(["Connection failed. Nothing was saved. Try again."]);
     } finally {
       setSaving(false);
     }
@@ -149,7 +149,7 @@ export function AgreementPanel({
             {templates.map((t) => (
               <option key={`${t.id}@${t.version}`} value={`${t.id}@${t.version}`}>
                 {t.title} v{t.version}
-                {t.status === "draft" ? " — draft, pending legal review" : ""}
+                {t.status === "draft" ? " (draft, pending legal review)" : ""}
               </option>
             ))}
           </select>
@@ -167,7 +167,7 @@ export function AgreementPanel({
             onChange={(e) => setDraft({ ...draft, organisation: e.target.value })}
             className={`${inputClass} ${borderClass}`}
           >
-            <option value="">None — {providerName}, {providerRole}</option>
+            <option value="">None: {providerName}, {providerRole}</option>
             {organisations.map((name) => (
               <option key={name} value={name}>
                 {providerName}, {providerRole}, {name}
@@ -261,7 +261,7 @@ export function AgreementPanel({
           type="button"
           onClick={() => setSignOpen(true)}
           disabled={!record || signed || dirty || templateChanged || saving}
-          title={dirty ? "Save your changes first — you sign what the preview shows" : signed ? "Already signed" : undefined}
+          title={dirty ? "Save your changes first: you sign what the preview shows" : signed ? "Already signed" : undefined}
           className={`${dialogButton.secondary} inline-flex items-center gap-2 disabled:opacity-40`}
         >
           <PenLine className="w-4 h-4" /> Sign as {providerParty === "Service Provider" ? "Service Provider" : `the ${providerParty}`}
@@ -306,7 +306,7 @@ function StatusCard({ record, templateChanged }: { record: AgreementRecord | nul
         <p className="flex items-start gap-2">
           <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0 text-[var(--andromeda-success)]" />
           <span>
-            <strong>Executed.</strong> Signed by both parties — the client on {new Date(client.signedAt).toLocaleString()} · agreement{" "}
+            <strong>Executed.</strong> Signed by both parties, the client on {new Date(client.signedAt).toLocaleString()} · agreement{" "}
             <span className="font-mono">{shortVersion(record.agreementHash)}</span>.
           </span>
         </p>
@@ -315,7 +315,7 @@ function StatusCard({ record, templateChanged }: { record: AgreementRecord | nul
           <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0 text-[var(--andromeda-success)]" />
           <span>
             Signed by you on {new Date(signature.signedAt).toLocaleString()} · agreement <span className="font-mono">{shortVersion(signature.agreementHash)}</span>.
-            {record.status === "sent" ? " Sent to the client — awaiting their signature." : " Send it to the client below."}
+            {record.status === "sent" ? " Sent to the client, awaiting their signature." : " Send it to the client below."}
           </span>
         </p>
       ) : (
@@ -369,7 +369,7 @@ function SignDialog({
         setError(body.error || "Couldn't sign the agreement.");
       }
     } catch {
-      setError("Connection failed — nothing was signed. Try again.");
+      setError("Connection failed. Nothing was signed. Try again.");
     } finally {
       setSigning(false);
     }
@@ -497,7 +497,7 @@ function ClientCard({
       setMessage(
         body.success
           ? { tone: "ok", text: resend ? "Executed copy sent to both parties." : "Follow-up complete." }
-          : { tone: "error", text: body.error || "Some steps failed — see below." }
+          : { tone: "error", text: body.error || "Some steps failed; see below." }
       );
       router.refresh();
     } catch {
@@ -526,7 +526,7 @@ function ClientCard({
           </dl>
           {incomplete && (
             <div role="status" className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/10">
-              <p className="text-amber-500">Follow-up incomplete — onboarding or an executed copy isn&apos;t recorded yet.</p>
+              <p className="text-amber-500">Follow-up incomplete: onboarding or an executed copy isn&apos;t recorded yet.</p>
               <button type="button" onClick={() => void followUp(false)} disabled={busy !== null} className={`${dialogButton.primary} mt-2 inline-flex items-center gap-2`}>
                 {busy === "copy" ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} Complete follow-up
               </button>
@@ -565,8 +565,8 @@ function ClientCard({
               <Mail className="w-4 h-4 mt-0.5 shrink-0 text-[var(--andromeda-text-secondary)]" />
               <span>
                 Link sent to {lastSend.to} on {formatWhen(lastSend.sentAt)}
-                {lastSend.email === "failed" && <span className="text-[var(--andromeda-error)]"> — the email failed</span>}
-                {lastSend.email === "pending" && <span className="text-[var(--andromeda-text-secondary)]"> — email outcome not recorded</span>}.
+                {lastSend.email === "failed" && <span className="text-[var(--andromeda-error)]">, but the email failed</span>}
+                {lastSend.email === "pending" && <span className="text-[var(--andromeda-text-secondary)]"> (email outcome not recorded)</span>}.
               </span>
             </p>
           ) : (
@@ -616,11 +616,11 @@ function ClientCard({
 
 const ONBOARDING_ASSETS: Record<NonNullable<AgreementActivity["onboarding"]>["assets"], string> = {
   derived: "open (the agreement is signed)",
-  off: "kept locked — switched off in the proposal editor",
+  off: "kept locked (switched off in the proposal editor)",
   unlocked: "unlocked",
   already: "were already unlocked",
-  no_assets: "— no checklist on this proposal",
-  failed: "state couldn't be read — check the Assets switch in the proposal editor",
+  no_assets: "not applicable (no checklist on this proposal)",
+  failed: "state couldn't be read; check the Assets switch in the proposal editor",
 };
 
 const ONBOARDING_TRACKER: Record<NonNullable<AgreementActivity["onboarding"]>["tracker"], string> = {

@@ -1370,7 +1370,7 @@ function rowToOverrides(r: string[]): EngagementOverrides {
   const assets = parseOverride(r[1]);
   const tracker = parseOverride(r[2]);
   const invalid = [...(assets ? [] : ["assets" as const]), ...(tracker ? [] : ["tracker" as const])];
-  if (invalid.length) console.warn(`EngagementState row for ${r[0]?.trim()}: unrecognised value(s) for ${invalid.join(", ")} — locked`);
+  if (invalid.length) console.warn(`EngagementState row for ${r[0]?.trim()}: unrecognised value(s) for ${invalid.join(", ")} (locked)`);
   // Unrecognised → off (locked), flagged so admin can explain it.
   return { assets: assets ?? "off", tracker: tracker ?? "off", ...(invalid.length && { invalid }) };
 }
@@ -1449,7 +1449,7 @@ export async function saveProposalSnapshot(
   let result: SnapshotResult = "stored";
   if (parts.length > SNAPSHOT_MAX_CHUNKS) {
     console.error(
-      `Proposal snapshot for ${proposalId}@${proposalVersion} is ${canonicalJson.length} chars — beyond ${SNAPSHOT_MAX_CHUNKS} cells; storing hash only`
+      `Proposal snapshot for ${proposalId}@${proposalVersion} is ${canonicalJson.length} chars, beyond ${SNAPSHOT_MAX_CHUNKS} cells; storing hash only`
     );
     parts = ["[too large]"];
     result = "too_large";
@@ -1557,7 +1557,7 @@ export async function saveAgreementSnapshot(
     if (candidates.some((r) => snapshotRowIsSignature(r, signedAt))) return "duplicate";
   }
   const parts = chunk(json, SNAPSHOT_CHUNK_CHARS);
-  if (parts.length > SNAPSHOT_MAX_CHUNKS) throw new Error(`Agreement snapshot for ${proposalId} is ${json.length} chars — too large to store`);
+  if (parts.length > SNAPSHOT_MAX_CHUNKS) throw new Error(`Agreement snapshot for ${proposalId} is ${json.length} chars, too large to store`);
   lock.assertHeld();
   await sheets.spreadsheets.values.append(
     {

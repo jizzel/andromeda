@@ -11,12 +11,27 @@ import {
   type ProposalRecord,
 } from "@/lib/google-sheets";
 import { foldAgreementActivity } from "@/lib/agreement-activity";
+import { loadTemplate } from "@/lib/agreement-templates";
 import { computeEngagementGates, LOCKED_GATES, type EngagementGates } from "@/lib/engagement-gates";
 import { proposalVersion } from "@/lib/proposal-version";
 import { resolveTrackerPhases } from "@/constants/tracker-templates";
 import type { ProposalAcceptance, PublishedRevision, TrackerMilestoneState } from "@/types/proposal";
 import type { AgreementRecord } from "@/types/agreement";
 import { UNAVAILABLE, type ChangeRequest, type DashboardRow, type LifecycleState, type Source } from "./admin-dashboard-types";
+
+/**
+ * Whether the agreement's terms file no longer hashes to what it pinned. An
+ * unreadable file (e.g. not shipped with this function) leaves the flag off
+ * rather than failing the dashboard.
+ */
+function termsFileChanged(record: Pick<AgreementRecord, "templateId" | "templateVersion" | "templateHash">): boolean {
+  try {
+    return loadTemplate(record.templateId, record.templateVersion)?.hash !== record.templateHash;
+  } catch (error) {
+    console.error(`Dashboard: couldn't read terms ${record.templateId}@${record.templateVersion}:`, error);
+    return false;
+  }
+}
 
 export { UNAVAILABLE };
 export type { ChangeRequest, DashboardRow, LifecycleState };
@@ -150,6 +165,8 @@ export function deriveRow(
               status: agreementSource.status,
               signedAt: agreementSource.providerSignature?.signedAt,
               changesRequested: agreementSource.status === "sent" && agreementChangeRequests > 0,
+              // The terms file no longer matches what the agreement pinned: it can't be signed (or shown to the client).
+              termsChanged: agreementSource.status !== "executed" && termsFileChanged(agreementSource),
             }
           : null,
   };

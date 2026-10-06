@@ -72,7 +72,7 @@ async function handlePOST(request: NextRequest, { params }: Params) {
   }
   // Same rule as the access check: the offer closes at the start of its expiry date (UTC).
   if (new Date() > new Date(input.expiryDate)) {
-    return json({ success: false, code: "expired_offer", error: "The offer has expired — extend it so the client can accept the revision." }, 400);
+    return json({ success: false, code: "expired_offer", error: "The offer has expired. Extend it so the client can accept the revision." }, 400);
   }
 
   const meta = requestMeta(request);
@@ -149,7 +149,7 @@ async function handlePOST(request: NextRequest, { params }: Params) {
     case "acceptance_unavailable":
       return json({ success: false, code: "acceptance_unavailable", error: "Couldn't verify whether this proposal is accepted, so nothing was published. Try again." }, 503);
     case "accepted":
-      return json({ success: false, code: "accepted", error: "The client has accepted this proposal — changes now go through the agreement, not a revision." }, 409);
+      return json({ success: false, code: "accepted", error: "The client has accepted this proposal, so changes now go through the agreement, not a revision." }, 409);
     case "unchanged":
       return json({ success: false, code: "unchanged", error: "These are still the terms the client asked to change. Edit the proposal before publishing a revision." }, 409);
     case "not_found":

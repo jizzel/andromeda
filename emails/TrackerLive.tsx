@@ -37,7 +37,7 @@ export function TrackerLiveEmail({ clientName, projectTitle, completed, trackerU
       </Section>
       <Hr style={s.divider} />
       <Text style={s.metaText}>Use your proposal access code to sign in.</Text>
-      <Text style={s.signoff}>— {senderName}</Text>
+      <Text style={s.signoff}>{senderName}</Text>
     </Frame>
   );
 }

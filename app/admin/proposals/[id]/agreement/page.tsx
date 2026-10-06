@@ -73,7 +73,7 @@ export default async function AdminAgreementPage({ params }: { params: Promise<{
       <header className="mt-3 mb-6">
         <p className="text-xs font-semibold uppercase tracking-widest text-[var(--andromeda-accent-beige)] mb-1">Agreement</p>
         <h1 className="text-2xl sm:text-3xl font-bold">
-          {data.client?.name ?? id} — {data.title}
+          {data.client?.name ?? id}: {data.title}
         </h1>
         {basis.ok && (
           <p className="mt-1 text-sm text-[var(--andromeda-text-secondary)]">
@@ -84,7 +84,7 @@ export default async function AdminAgreementPage({ params }: { params: Promise<{
         {liveMovedOn && (
           <p role="status" className="mt-3 p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 text-sm">
             The live proposal has been edited since the client accepted it. This agreement incorporates the <strong>accepted</strong> version, not
-            the current page —{" "}
+            the current page.{" "}
             <Link href={versionHref} className="underline">
               review the accepted version
             </Link>

@@ -44,7 +44,7 @@ export async function loadEngagement(proposalId: string, data: GateInputs): Prom
   const agreementNow = agreementRead.status === "fulfilled" ? agreementRead.value : null;
   const stale = recallEngagement(proposalId, ENGAGEMENT_STALE_MS);
   if (stale) {
-    console.warn(`Engagement state for ${proposalId} partly unavailable — gates from this instance's reading ${Math.round((Date.now() - stale.at) / 1000)}s ago:`, error);
+    console.warn(`Engagement state for ${proposalId} partly unavailable; gates from this instance's reading ${Math.round((Date.now() - stale.at) / 1000)}s ago:`, error);
     // Prefer what was just read; fall back to the remembered value only for the part that failed.
     const agreement = agreementRead.status === "fulfilled" ? agreementNow : stale.agreement;
     const overrides = overridesRead.status === "fulfilled" ? overridesRead.value : stale.overrides;

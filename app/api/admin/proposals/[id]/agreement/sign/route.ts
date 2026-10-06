@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { agreementWritesAllowedHere, LOCAL_AGREEMENT_WRITES_OFF } from "@/lib/agreement-gate";
 import { withRouteTelemetry } from "@/lib/sheets-telemetry";
 import { isAdminRequest, isSameOrigin, requestMeta } from "@/lib/admin-auth";
 import { appendEngagementEvent, readAgreement, saveAgreementSnapshot, SheetLockExpiredError, withProposalLock, writeAgreement } from "@/lib/google-sheets";
@@ -20,6 +21,7 @@ type Params = { params: Promise<{ id: string }> };
 async function handlePOST(request: NextRequest, { params }: Params) {
   if (!isAdminRequest(request)) return json({ success: false, error: "Unauthorized" }, 401);
   if (!isSameOrigin(request)) return json({ success: false, error: "Forbidden" }, 403);
+  if (!agreementWritesAllowedHere()) return json(LOCAL_AGREEMENT_WRITES_OFF, 403);
   const { id } = await params;
   const body = await readJsonBody(request);
   if (!body) return json({ success: false, error: "Invalid JSON" }, 400);
@@ -79,7 +81,7 @@ async function handlePOST(request: NextRequest, { params }: Params) {
     case "name":
       return json({ success: false, code: "name", error: "Type your full name exactly as it appears on the agreement." }, 400);
     case "offer_expired":
-      return json({ success: false, code: "offer_expired", error: "The offer window has passed — set a new 'valid until' date first." }, 400);
+      return json({ success: false, code: "offer_expired", error: "The offer window has passed. Set a new 'valid until' date first." }, 400);
     case "failed": {
       const { status, body } = signingFailureResponse(outcome.failure, "provider");
       return json(body, status);

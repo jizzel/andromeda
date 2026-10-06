@@ -86,7 +86,7 @@ async function handlePOST(request: NextRequest) {
     );
     if (locked.status === "busy") {
       return NextResponse.json(
-        { success: false, error: "This proposal is being updated — please try again in a moment" },
+        { success: false, error: "This proposal is being updated. Please try again in a moment" },
         { status: 503 }
       );
     }
@@ -168,7 +168,7 @@ async function recordResponse(lock: SheetLock, input: ResponseInput): Promise<Re
     existing = await readProposalAcceptance(proposalId);
   } catch (error) {
     console.error(`Acceptance for ${proposalId}: existing response unavailable:`, error);
-    return fail({ error: "We couldn't record your response just now — please try again in a moment" }, 503);
+    return fail({ error: "We couldn't record your response just now. Please try again in a moment" }, 503);
   }
   if (existing?.status === "accepted") return fail({ error: "This proposal has already been accepted" }, 409);
 
@@ -180,7 +180,7 @@ async function recordResponse(lock: SheetLock, input: ResponseInput): Promise<Re
   const canonical = canonicalProposalJson(proposal);
   const currentVersion = proposalVersion(proposal);
   if (typeof renderedVersion !== "string" || renderedVersion !== currentVersion) {
-    return fail({ code: "stale_version", error: "This proposal was updated — please review the latest version" }, 409);
+    return fail({ code: "stale_version", error: "This proposal was updated. Please review the latest version" }, 409);
   }
 
   // Selections must be options in the current version — an id carried over
@@ -197,7 +197,7 @@ async function recordResponse(lock: SheetLock, input: ResponseInput): Promise<Re
   const pairs = !requestedPlan || planAppliesTo(requestedPlan, trimmedPackageId);
   if (status === "accepted" && requestedPlan && !pairs) {
     return fail(
-      { code: "invalid_selection", error: "That payment plan doesn't apply to the selected package — please choose one of its plans" },
+      { code: "invalid_selection", error: "That payment plan doesn't apply to the selected package. Please choose one of its plans" },
       400
     );
   }

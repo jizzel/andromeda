@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { agreementWritesAllowedHere, LOCAL_AGREEMENT_WRITES_OFF } from "@/lib/agreement-gate";
 import { withRouteTelemetry } from "@/lib/sheets-telemetry";
 import { isAdminRequest, isSameOrigin, requestMeta } from "@/lib/admin-auth";
 import { appendEngagementEvent, readAgreement, readAgreementSnapshot, saveAgreementSnapshot, withProposalLock, writeAgreement } from "@/lib/google-sheets";
@@ -42,6 +43,7 @@ export async function GET(request: NextRequest, { params }: Params) {
 async function handlePUT(request: NextRequest, { params }: Params) {
   if (!isAdminRequest(request)) return json({ success: false, error: "Unauthorized" }, 401);
   if (!isSameOrigin(request)) return json({ success: false, error: "Forbidden" }, 403);
+  if (!agreementWritesAllowedHere()) return json(LOCAL_AGREEMENT_WRITES_OFF, 403);
   const { id } = await params;
   const body = await readJsonBody(request);
   if (!body) return json({ success: false, error: "Invalid JSON" }, 400);
@@ -145,7 +147,7 @@ async function handlePUT(request: NextRequest, { params }: Params) {
     case "conflict":
       return json({ success: false, code: "conflict", error: "The agreement changed since you opened it.", current: outcome.current }, 409);
     case "executed":
-      return json({ success: false, code: "executed", error: "The client has signed this agreement — it's a formed contract and can't be changed here.", current: outcome.current }, 409);
+      return json({ success: false, code: "executed", error: "The client has signed this agreement. It's a formed contract and can't be changed here.", current: outcome.current }, 409);
     case "signed":
       return json(
         {
@@ -153,8 +155,8 @@ async function handlePUT(request: NextRequest, { params }: Params) {
           code: "signed",
           error:
             outcome.current.status === "sent"
-              ? "You've signed and sent this agreement. Saving changes voids your signature and withdraws the client's signing link — confirm to continue."
-              : "You've signed this agreement. Saving changes voids your signature — confirm to continue.",
+              ? "You've signed and sent this agreement. Saving changes voids your signature and withdraws the client's signing link. Confirm to continue."
+              : "You've signed this agreement. Saving changes voids your signature. Confirm to continue.",
           current: outcome.current,
         },
         409

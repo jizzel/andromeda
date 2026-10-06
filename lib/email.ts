@@ -38,7 +38,7 @@ export async function sendMilestoneEmail(args: SendMilestoneEmailArgs): Promise<
   const result = await resend.emails.send({
     from,
     to: args.to,
-    subject: `${args.projectTitle} — ${args.milestoneLabel}`,
+    subject: `${args.projectTitle}: ${args.milestoneLabel}`,
     react: MilestoneUpdateEmail({
       clientName: args.clientName,
       projectTitle: args.projectTitle,
@@ -92,7 +92,7 @@ export async function sendWeeklyUpdate(args: SendWeeklyUpdateArgs): Promise<void
   const result = await resend.emails.send({
     from,
     to: args.to,
-    subject: `${args.projectTitle} — weekly update (week ending ${args.weekEndingDate})`,
+    subject: `${args.projectTitle}: weekly update (week ending ${args.weekEndingDate})`,
     react: WeeklyUpdateEmail({
       clientName: args.clientName,
       projectTitle: args.projectTitle,
@@ -136,7 +136,7 @@ export async function sendClientApprovalNotice(args: SendClientApprovalNoticeArg
   const result = await resend.emails.send({
     from,
     to: profile.email,
-    subject: `[Approval] ${args.projectTitle} — ${args.milestoneLabel}`,
+    subject: `[Approval] ${args.projectTitle}: ${args.milestoneLabel}`,
     react: ClientApprovalNoticeEmail({
       recipientName: profile.firstName,
       clientName: args.clientName,
@@ -182,7 +182,7 @@ export async function sendProposalResponseNotice(args: SendProposalResponseNotic
   const result = await resend.emails.send({
     from,
     to: profile.email,
-    subject: `${tag} ${args.projectTitle} — ${args.clientName}`,
+    subject: `${tag} ${args.projectTitle} (${args.clientName})`,
     react: ProposalResponseNoticeEmail({
       recipientName: profile.firstName,
       kind: args.kind,
@@ -281,7 +281,7 @@ export async function sendProposalRevised(args: SendProposalRevisedArgs): Promis
       from,
       to: args.to,
       replyTo: profile.email,
-      subject: `${args.projectTitle} — revised proposal ready`,
+      subject: `${args.projectTitle}: revised proposal ready`,
       react: ProposalRevisedEmail({
         clientName: args.clientName,
         projectTitle: args.projectTitle,
@@ -351,7 +351,7 @@ export async function sendAgreementReady(args: {
       from,
       to: args.to,
       replyTo: profile.email,
-      subject: `${args.projectTitle} — your ${args.documentTitle.toLowerCase()} is ready to sign`,
+      subject: `${args.projectTitle}: your ${args.documentTitle.toLowerCase()} is ready to sign`,
       react: AgreementReadyEmail({
         clientName: args.clientName,
         documentTitle: args.documentTitle,
@@ -401,7 +401,7 @@ export async function sendAgreementExecuted(args: {
       from,
       to: args.to,
       ...(args.recipient === "client" && { replyTo: profile.email }),
-      subject: `${args.projectTitle} — ${args.documentTitle.toLowerCase()} signed`,
+      subject: `${args.projectTitle}: ${args.documentTitle.toLowerCase()} signed`,
       react: AgreementExecutedEmail({
         recipient: args.recipient,
         documentTitle: args.documentTitle,
@@ -435,7 +435,7 @@ export async function sendAgreementChangesRequested(args: {
   const result = await resend.emails.send({
     from,
     to: profile.email,
-    subject: `${args.projectTitle} — ${args.clientName} asked for changes to the agreement`,
+    subject: `${args.projectTitle}: ${args.clientName} asked for changes to the agreement`,
     react: AgreementChangesRequestedEmail({
       clientName: args.clientName,
       projectTitle: args.projectTitle,
@@ -463,7 +463,7 @@ export async function sendTrackerLive(args: {
       from,
       to: args.to,
       replyTo: profile.email,
-      subject: `${args.projectTitle} — your project tracker is live`,
+      subject: `${args.projectTitle}: your project tracker is live`,
       react: TrackerLiveEmail({
         clientName: args.clientName,
         projectTitle: args.projectTitle,

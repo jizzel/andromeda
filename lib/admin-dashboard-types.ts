@@ -47,7 +47,7 @@ export interface DashboardRow {
   /** ISO timestamp used for ordering (latest response, tracker update, or issue date). */
   lastActivity: string;
   /** The agreement's state once accepted: null when none is prepared, `UNAVAILABLE` when unreadable. */
-  agreement: { status: AgreementStatus; signedAt?: string; changesRequested?: boolean } | null | typeof UNAVAILABLE;
+  agreement: { status: AgreementStatus; signedAt?: string; changesRequested?: boolean; termsChanged?: boolean } | null | typeof UNAVAILABLE;
 }
 
 export interface ChangeRequest {

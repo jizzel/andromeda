@@ -422,7 +422,7 @@ export function ProposalEditor({ proposalId, initial, acceptance, changeRequestS
           setSaveState({ kind: "error", message: body.error || "Couldn't save.", issues: body.errors });
         }
       } catch {
-        setSaveState({ kind: "error", message: "Connection failed — your changes are still here. Try again." });
+        setSaveState({ kind: "error", message: "Connection failed. Your changes are still here. Try again." });
       }
     },
     [blocked, proposalId, rowHash, settings, parsed, text, clearStoredDraft]
@@ -431,7 +431,7 @@ export function ProposalEditor({ proposalId, initial, acceptance, changeRequestS
   // --- Publish revision: save + record + (optionally) email the client.
   const isAccepted = acceptance?.status === "accepted";
   const publishBlockedReason = isAccepted
-    ? "Accepted — changes now go through the agreement"
+    ? "Accepted: changes now go through the agreement"
     : blocked
       ? "Fix the errors before publishing"
       : !settings.isActive
@@ -493,7 +493,7 @@ export function ProposalEditor({ proposalId, initial, acceptance, changeRequestS
         setPublishError(body.error || "Couldn't publish.");
       }
     } catch {
-      setPublishError("Connection failed — nothing was published. Try again.");
+      setPublishError("Connection failed. Nothing was published. Try again.");
     } finally {
       setPublishing(false);
     }
@@ -550,7 +550,7 @@ export function ProposalEditor({ proposalId, initial, acceptance, changeRequestS
           <span className="hidden sm:inline">Proposals</span>
         </Link>
         <div className="min-w-0 flex-1">
-          <p className="text-sm sm:text-base font-semibold truncate">{clientName ? `${clientName} — ${title}` : title}</p>
+          <p className="text-sm sm:text-base font-semibold truncate">{clientName ? `${clientName}: ${title}` : title}</p>
           <p className="text-xs text-[var(--andromeda-text-secondary)] font-mono truncate">
             {proposalId}
             <span className="hidden sm:inline"> · version {shortVersion(version)}</span>
@@ -603,7 +603,7 @@ export function ProposalEditor({ proposalId, initial, acceptance, changeRequestS
         open={leaveOpen}
         onClose={() => setLeaveTo(null)}
         title="Leave with unsaved changes?"
-        description="Your draft is kept for this browser tab — come back to this proposal to restore it, or save first."
+        description="Your draft is kept for this browser tab. Come back to this proposal to restore it, or save first."
         actions={
           <>
             <button type="button" onClick={() => setLeaveTo(null)} className={dialogButton.secondary}>
@@ -685,7 +685,7 @@ export function ProposalEditor({ proposalId, initial, acceptance, changeRequestS
           <Banner tone="warn">
             Accepted{acceptance.acceptedAt ? ` on ${new Date(acceptance.acceptedAt).toLocaleDateString()}` : ""}
             {acceptance.proposalVersion ? ` (version ${shortVersion(acceptance.proposalVersion)})` : ""}. Changing its terms
-            changes what the client agreed to — saving such a change asks for confirmation.
+            changes what the client agreed to; saving such a change asks for confirmation.
           </Banner>
         )}
         {acceptance?.status === "counter" && !publishNotice && (
@@ -703,7 +703,7 @@ export function ProposalEditor({ proposalId, initial, acceptance, changeRequestS
                 : `Published ${new Date(publishNotice.revision.publishedAt).toLocaleTimeString()}`}
               {publishNotice.revision.email.status === "sent" && ` · emailed ${publishNotice.revision.email.to}`}
               {publishNotice.revision.email.status === "skipped" && " · client not emailed"}
-              {publishNotice.revision.email.status === "pending" && " · an email for this revision is already being sent — check back in a minute"}
+              {publishNotice.revision.email.status === "pending" && " · an email for this revision is already being sent, check back in a minute"}
               {publishNotice.revision.email.status === "failed" && ` · the email failed: ${publishNotice.revision.email.error ?? "unknown error"}`}
               {publishNotice.noteDropped && " · these terms were published earlier, so your new note wasn't sent"}
               {publishNotice.revision.email.status === "failed" && (
@@ -1046,7 +1046,7 @@ function IssuesList({
   if (!errors.length && !warnings.length) {
     return (
       <p className="flex items-center gap-2 text-sm text-[var(--andromeda-success)]">
-        <Check className="w-4 h-4" /> Valid — no problems found.
+        <Check className="w-4 h-4" /> Valid: no problems found.
       </p>
     );
   }
@@ -1091,12 +1091,12 @@ function ConflictPanel({
     <div className="mx-6 mt-4 p-4 rounded-xl border border-amber-500/40 bg-amber-500/5">
       <p className="font-semibold mb-1">The sheet changed since you opened this proposal</p>
       <p className="text-sm text-[var(--andromeda-text-secondary)] mb-3">
-        Someone (or you, on the sheet) saved a different version. Compare below — <span className="text-[var(--andromeda-error)]">−</span> is
+        Someone (or you, on the sheet) saved a different version. Compare below: <span className="text-[var(--andromeda-error)]">−</span> is
         the sheet, <span className="text-[var(--andromeda-success)]">+</span> is yours. {sheetSettings}
       </p>
       {current ? (
         <div className="mb-3">
-          <DiffView before={pretty(current.data)} after={mine} empty="Content is identical — only settings differ." />
+          <DiffView before={pretty(current.data)} after={mine} empty="Content is identical; only settings differ." />
         </div>
       ) : (
         <p className="text-sm mb-3">The row could no longer be read.</p>

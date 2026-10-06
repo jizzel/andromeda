@@ -92,20 +92,20 @@ export function computeEngagementGates(data: GateInputs, agreementExecuted: bool
 export function gateExplanation(g: Gate): string {
   switch (g.reason) {
     case "agreement_executed":
-      return "Open — the agreement is signed";
+      return "Open: the agreement is signed";
     case "override_on":
-      return "Open — switched on manually";
+      return "Open: switched on manually";
     case "legacy_flag":
-      return "Open — switched on (older setting)";
+      return "Open: switched on (older setting)";
     case "override_off":
-      return "Locked — switched off manually";
+      return "Locked: switched off manually";
     case "awaiting_agreement":
       return "Locked until the agreement is signed";
     case "invalid_override":
-      return "Locked — unrecognised value in the EngagementState tab (choose a setting to fix it)";
+      return "Locked: unrecognised value in the EngagementState tab (choose a setting to fix it)";
     case "not_configured":
       return "Not set up in this proposal";
     case "unavailable":
-      return "Locked — couldn't read its state";
+      return "Locked: couldn't read its state";
   }
 }

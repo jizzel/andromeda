@@ -8,7 +8,7 @@ export function HubBrand() {
     <Link
       href="/"
       className="inline-flex items-center gap-1.5 text-sm font-semibold tracking-wide text-[var(--andromeda-text-primary)] hover:text-[var(--andromeda-accent-beige)] transition-colors"
-      aria-label={`${profile.surname} — portfolio home`}
+      aria-label={`${profile.surname}, portfolio home`}
     >
       <Home className="w-4 h-4" aria-hidden />
       {profile.surname}

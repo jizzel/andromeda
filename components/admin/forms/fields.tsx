@@ -321,7 +321,7 @@ export function IdField({ path, value, onChange, error, warning }: { path: strin
   if (!editing && !error) {
     return (
       <p className="text-xs text-[var(--andromeda-text-secondary)]">
-        Id <code className="font-mono text-[var(--andromeda-text-primary)]">{value || "—"}</code>{" "}
+        Id <code className="font-mono text-[var(--andromeda-text-primary)]">{value || "-"}</code>{" "}
         <button type="button" onClick={() => setEditing(true)} className="underline hover:text-[var(--andromeda-accent-beige)]">
           Edit id
         </button>

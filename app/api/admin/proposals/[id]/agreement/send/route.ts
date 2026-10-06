@@ -5,7 +5,7 @@ import { appendEngagementEvent, getProposalById, readAgreement, readProposalEnga
 import { clientTitleOf, loadTemplate } from "@/lib/agreement-templates";
 import { offerClosed } from "@/lib/agreements";
 import { signingFailureResponse, verifySigningBasis } from "@/lib/agreement-basis";
-import { CLIENT_SIGNING_OFF_REASON, clientSigningAllowed } from "@/lib/agreement-gate";
+import { agreementWritesAllowedHere, CLIENT_SIGNING_OFF_REASON, clientSigningAllowed, LOCAL_AGREEMENT_WRITES_OFF } from "@/lib/agreement-gate";
 import { DuplicateEmailError, sendAgreementReady } from "@/lib/email";
 import type { AgreementRecord } from "@/types/agreement";
 import { busy, json, readJsonBody } from "../../edit";
@@ -32,6 +32,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 async function handlePOST(request: NextRequest, { params }: Params) {
   if (!isAdminRequest(request)) return json({ success: false, error: "Unauthorized" }, 401);
   if (!isSameOrigin(request)) return json({ success: false, error: "Forbidden" }, 403);
+  if (!agreementWritesAllowedHere()) return json(LOCAL_AGREEMENT_WRITES_OFF, 403);
   const { id } = await params;
   const body = await readJsonBody(request);
   if (!body) return json({ success: false, error: "Invalid JSON" }, 400);
@@ -97,7 +98,7 @@ async function handlePOST(request: NextRequest, { params }: Params) {
     case "gated":
       return json({ success: false, code: "client_signing_off", error: CLIENT_SIGNING_OFF_REASON }, 409);
     case "offer_expired":
-      return json({ success: false, code: "offer_expired", error: "The offer window has passed — edit the agreement to set a new date, then sign and send it." }, 400);
+      return json({ success: false, code: "offer_expired", error: "The offer window has passed. Edit the agreement to set a new date, then sign and send it." }, 400);
     case "stale_signature":
       return json({ success: false, code: "stale", error: "Your signature doesn't cover this version of the agreement. Re-sign it before sending." }, 409);
     case "inactive":

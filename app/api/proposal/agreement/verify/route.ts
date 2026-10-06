@@ -11,7 +11,7 @@ import {
   signerCodeMatches,
   signerCookieOptions,
 } from "@/lib/agreement-signer";
-import { accessStillGranted, clientJson, loadClientAgreement, NOT_AVAILABLE } from "@/lib/agreement-client";
+import { accessStillGranted, AGREEMENT_UPDATING, clientJson, loadClientAgreement, NOT_AVAILABLE } from "@/lib/agreement-client";
 
 const fail = (error: string, status = 401, extra: Record<string, unknown> = {}) => clientJson({ success: false, error, ...extra }, status);
 
@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
 
     // The agreement must still be the one the code was issued for.
     const agreement = await loadClientAgreement(challenge.proposalId);
+    if (!agreement.ok && agreement.code === "updating") return clientJson(AGREEMENT_UPDATING, 409);
     if (!agreement.ok || agreement.record.status !== "sent") return clientJson(NOT_AVAILABLE, 404);
     if (agreement.record.agreementHash !== challenge.agreementHash) return fail("The agreement changed since this code was sent. Request a new code.", 409);
     if (!(await accessStillGranted(challenge.proposalId, challenge.codeTag))) return fail("Your access to this proposal has changed. Enter your current access code to continue.", 401);

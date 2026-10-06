@@ -46,7 +46,7 @@ export function WeeklyUpdateEmail({
   senderName,
 }: WeeklyUpdateEmailProps) {
   const firstName = clientName.trim().split(" ")[0] || clientName;
-  const preview = `Weekly update on ${projectTitle} — ${completed.length} completed, ${inProgress.length} in progress.`;
+  const preview = `Weekly update on ${projectTitle}: ${completed.length} completed, ${inProgress.length} in progress.`;
 
   return (
     <Html>
@@ -104,7 +104,7 @@ export function WeeklyUpdateEmail({
           </Section>
 
           <Hr style={divider} />
-          <Text style={signoff}>— {senderName}</Text>
+          <Text style={signoff}>{senderName}</Text>
         </Container>
       </Body>
     </Html>

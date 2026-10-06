@@ -54,7 +54,7 @@ export interface ParsedEdit {
 export function parseEdit(body: Record<string, unknown>): { ok: true; edit: ParsedEdit } | { ok: false; response: NextResponse } {
   const { expectedRowHash, accessCode, expiryDate, isActive, data } = body;
   const settingsErrors: ProposalIssue[] = [];
-  if (typeof expectedRowHash !== "string" || !expectedRowHash) settingsErrors.push({ path: "rowHash", message: "Missing row hash — reload the editor" });
+  if (typeof expectedRowHash !== "string" || !expectedRowHash) settingsErrors.push({ path: "rowHash", message: "Missing row hash. Reload the editor" });
   if (typeof accessCode !== "string" || accessCode.trim().length < 4) settingsErrors.push({ path: "accessCode", message: "Access code must be at least 4 characters" });
   if (!isDate(expiryDate)) settingsErrors.push({ path: "expiryDate", message: "Expiry must be a date (YYYY-MM-DD)" });
   if (typeof isActive !== "boolean") settingsErrors.push({ path: "isActive", message: "isActive must be true or false" });
