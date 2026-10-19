@@ -33,7 +33,7 @@ interface ProjectCaseStudyViewedEvent {
 }
 
 interface CTAClickedEvent {
-  type: "calendly" | "email" | "github" | "linkedin" | "call" | "whatsapp" | "vcard" | "download";
+  type: "calendly" | "email" | "github" | "linkedin" | "call" | "whatsapp" | "vcard" | "download" | "connect" | "capabilities";
   location: string;
 }
 
@@ -180,6 +180,10 @@ export const useAnalytics = () => {
   const trackProposalResponseReopened = (data: ProposalVersionEvent) => emit("proposal_response_reopened", data);
   const trackProposalTrackerPhaseViewed = (data: ProposalTrackerPhaseViewedEvent) => emit("proposal_tracker_phase_viewed", data);
   const trackBriefAccessed = (data: BriefAccessedEvent) => emit("brief_accessed", data);
+  // The shareable /capabilities page ("What I Build").
+  const trackCapabilitiesViewed = (data: { referrer_host: string }) => emit("capabilities_viewed", data);
+  // A "Built" proof link on /capabilities (the case study then counts its own view).
+  const trackCapabilityProofClicked = (data: { capability_id: string; project_slug: string }) => emit("capability_proof_clicked", data);
   /** "Review and sign agreement" / "View signed agreement" clicked on the proposal page. */
   /** A client hub tab was shown (incl. the first one after signing in). */
   const trackClientHubTabViewed = (data: { proposal_id: string; tab: "proposal" | "agreement" | "assets" | "progress" }) => emit("client_hub_tab_viewed", data);
@@ -218,6 +222,8 @@ export const useAnalytics = () => {
     trackProposalResponseReopened,
     trackProposalTrackerPhaseViewed,
     trackBriefAccessed,
+    trackCapabilitiesViewed,
+    trackCapabilityProofClicked,
     trackProposalAgreementOpened,
     trackClientHubTabViewed,
     trackAgreementViewed,

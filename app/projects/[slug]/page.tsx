@@ -6,7 +6,6 @@ import { projectsDetail } from "@/constants/projects-detail";
 import { ProjectDetailContent } from "@/components/projects/ProjectDetailContent";
 import { ScrollReveal } from "@/components/animations/ScrollReveal";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
-import { profile } from "@/constants/profile";
 import type { Metadata } from "next";
 
 interface ProjectPageProps {
@@ -30,7 +29,7 @@ export async function generateMetadata({ params }: ProjectPageProps): Promise<Me
   }
 
   return {
-    title: `${project.name} | ${profile.surname}`,
+    title: project.name,
     description: project.contextLine,
     openGraph: {
       title: `${project.name} - ${project.contextLine}`,
@@ -84,7 +83,8 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
                 "Production": "bg-green-500/20 text-green-400",
                 "Deployed": "bg-green-500/20 text-green-400",
                 "Development": "bg-blue-500/20 text-blue-400",
-                "Research": "bg-purple-500/20 text-purple-400"
+                "Research": "bg-purple-500/20 text-purple-400",
+                "Open Source": "bg-emerald-500/20 text-emerald-400"
               }[project.status] || "bg-gray-500/20 text-gray-400"}`}
             >
               {project.status}

@@ -2,6 +2,7 @@ import { MetadataRoute } from "next";
 import { profile } from "@/constants/profile";
 import { getAllPosts } from "@/lib/content";
 import { projectsDetail } from "@/constants/projects-detail";
+import { CAPABILITIES_LAST_MODIFIED } from "@/constants/capability-catalogue";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const posts = await getAllPosts();
@@ -31,6 +32,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: `${profile.siteUrl}/perspective`,
       lastModified: new Date(),
       changeFrequency: "weekly",
+      priority: 0.9,
+    },
+    {
+      url: `${profile.siteUrl}/capabilities`,
+      lastModified: new Date(CAPABILITIES_LAST_MODIFIED),
+      changeFrequency: "monthly",
       priority: 0.9,
     },
     ...postEntries,

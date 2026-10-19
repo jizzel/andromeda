@@ -3,14 +3,15 @@ export interface Project {
   name: string;
   contextLine: string; // Collapsed state
   outcomeLine: string; // Collapsed state
-  status: "Production" | "Research" | "Deployed" | "Development";
+  status: "Production" | "Research" | "Deployed" | "Development" | "Open Source";
   context: string;
   problem: string;
   approach: string;
   outcome: string;
   techStack: string[];
   isExpansionLayer: boolean;
-  location: string;
+  /** Where the work was done; omitted for remote / open-source projects. */
+  location?: string;
   logos?: string[];
 }
 
@@ -34,6 +35,24 @@ export const projects: Project[] = [
     isExpansionLayer: false,
     location: "Tema, Ghana",
     logos: ["/projects/rcmonsys_logo"],
+  },
+  {
+    id: "proxima",
+    name: "Proxima",
+    contextLine: "Open-source AI coding agent for the terminal, model-agnostic and permission-controlled",
+    outcomeLine:
+      "Multi-step development tasks from natural language, with every action gated by the developer",
+    status: "Open Source",
+    context:
+      "AI-assisted development is moving from code completion toward autonomous agents that work directly inside software projects, which takes far more than connecting a language model to a terminal.",
+    problem:
+      "Language models cannot inspect or change a local environment on their own, and unrestricted file and shell access is risky. Large codebases, limited context windows, differing providers and multi-step tasks add reliability challenges.",
+    approach:
+      "Designed and built a modular AI coding agent in Dart around a structured reasoning and tool-execution loop, with a unified interface for multiple LLM providers, a registry of development tools, a risk-aware permission gateway, token-aware context management and persistent sessions.",
+    outcome:
+      "An open-source agent that carries out multi-step development tasks in the terminal (codebase analysis, file changes, tests and Git operations) across cloud and local models, with configurable permissions and an extensible foundation for agentic tooling.",
+    techStack: ["Dart", "Anthropic Claude", "OpenAI", "Ollama", "Git", "GitHub Actions"],
+    isExpansionLayer: false,
   },
   {
     id: "crypto-trading",
