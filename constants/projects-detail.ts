@@ -1,4 +1,11 @@
-import type { Project } from "./projects";
+import { projects, type Project } from "./projects";
+
+/** A home-page project's card fields, for case studies that don't restate them. Throws at load if the id is missing. */
+function projectById(id: string): Project {
+  const project = projects.find((p) => p.id === id);
+  if (!project) throw new Error(`projects-detail: no project "${id}" in constants/projects.ts`);
+  return project;
+}
 
 export interface Challenge {
   title: string;
@@ -160,6 +167,120 @@ export const projectsDetail: ProjectDetail[] = [
     lastModified: "2024-06-15",
     location: "Tema, Ghana",
     logos: ["/projects/rcmonsys_logo"],
+  },
+  {
+    // The card fields (name, lines, context/problem/approach/outcome, stack) live in constants/projects.ts.
+    ...projectById("proxima"),
+    slug: "proxima",
+    fullDescription:
+      "Proxima is an open-source, terminal-native AI coding agent written in Dart that lets developers understand, navigate, modify and maintain software projects in natural language. Built around an autonomous agent loop, it gives language models controlled access to development tools: inspecting codebases, locating symbols and dependencies, editing files, running shell commands and tests, and working with Git, all within explicit permission boundaries. It is model-agnostic, supporting Anthropic and OpenAI models alongside locally hosted models through Ollama and compatible endpoints, and its layered architecture keeps AI reasoning separate from tool execution, security enforcement, context management and terminal interaction.",
+    challenges: [
+      {
+        title: "Orchestrating Autonomous Tool Execution",
+        description:
+          "Turning a model's proposed steps into reliable actions means interpreting tool requests, validating arguments, executing operations and feeding results back, without repetitive loops, malformed calls or steps that make no progress.",
+      },
+      {
+        title: "Securing Filesystem and Shell Access",
+        description:
+          "A useful agent must edit files and run commands, but destructive operations need explicit user authorization, and that security has to be enforced by the runtime rather than by instructions to the model.",
+      },
+      {
+        title: "Managing Limited Context Windows",
+        description:
+          "Repositories hold far more than a model can process at once. Keeping relevant code, history, tool results and token budgets under control during long sessions affects cost, limits and reasoning quality.",
+      },
+      {
+        title: "Supporting Different Model Providers",
+        description:
+          "Cloud and local models differ in APIs, context limits, tool calling, streaming and error handling, and the agent's core logic could not be duplicated per provider.",
+      },
+      {
+        title: "Reliability Across Multi-Step Tasks",
+        description:
+          "Reading files, finding references, editing code, running tests and fixing errors depend on each other. A failure at any step can leave the agent in an inconsistent state.",
+      },
+    ],
+    solutions: [
+      {
+        title: "Autonomous Agent Execution Engine",
+        description:
+          "A structured reasoning and execution loop in which the model inspects its environment, selects tools, executes them and evaluates the results until the task is done or a limit is reached. Tool requests are validated against schemas, with safeguards against repeated and unproductive calls.",
+        impact: "Multi-step engineering workflows from natural language, with execution governed by the application rather than the model.",
+      },
+      {
+        title: "Model-Agnostic LLM Integration",
+        description:
+          "A unified provider abstraction for Anthropic Claude, OpenAI and local Ollama models, plus configurable OpenAI-compatible endpoints, with models switchable inside a session.",
+        impact: "Less dependence on any one AI vendor, and the option to run without a cloud AI dependency at all.",
+      },
+      {
+        title: "Risk-Based Permission Gateway",
+        description:
+          "Every tool request passes a central gateway that classifies it as Safe (runs automatically), Confirm (needs approval), High Risk (explicit confirmation) or Blocked (always rejected), with configurable modes, command restrictions, audit logging, credential masking and previews of proposed actions.",
+        impact: "Enforceable boundaries between AI-generated instructions and the developer's machine.",
+      },
+      {
+        title: "Codebase Navigation and Development Tools",
+        description:
+          "A tool registry for reading and editing files, traversing directories, pattern search, symbol discovery, reference and import analysis, shell execution, testing and Git, each with an input schema and a risk classification.",
+        impact: "From conversational assistance to practical repository analysis, modification and workflow automation.",
+      },
+      {
+        title: "Token-Aware Context Management",
+        description:
+          "Context budgeting, codebase indexing, file chunking, relevance-based selection and conversation compaction keep the important information in view during long sessions.",
+        impact: "Coherent multi-step work within finite model context windows.",
+      },
+      {
+        title: "Persistent Sessions, Audit Trails and Undo",
+        description:
+          "Resumable sessions that track files accessed and changed, execution history and token usage, an append-only permission audit log, automatic backups and an undo command.",
+        impact: "Continuity, traceability and recoverability during AI-assisted development.",
+      },
+      {
+        title: "Specialist Subagent Delegation",
+        description:
+          "The main agent can hand bounded subtasks to specialist agents for code analysis, refactoring and testing, with limits that prevent runaway task expansion.",
+        impact: "Structured task decomposition while keeping execution control central.",
+      },
+      {
+        title: "Extensible Plugin Architecture",
+        description:
+          "Plugins add tools without changing the core, through JSON descriptors and a structured input/output protocol, with discovery, installation, removal, integrity checks and project or global scope.",
+        impact: "An extensible tool ecosystem for new capabilities and integrations.",
+      },
+      {
+        title: "Cross-Platform CLI and Automated Releases",
+        description:
+          "An interactive terminal interface with streaming responses, keyboard navigation, command completion and model selection, plus GitHub Actions workflows that publish standalone executables for macOS, Linux and Windows.",
+        impact: "A portable tool that runs without installing the Dart SDK, interactively or as a one-shot task runner.",
+      },
+    ],
+    metrics: [
+      {
+        label: "Model Providers",
+        value: "3+",
+        description: "Anthropic, OpenAI and local Ollama, plus OpenAI-compatible endpoints",
+      },
+      {
+        label: "Permission Levels",
+        value: "4",
+        description: "Safe, Confirm, High Risk and Blocked, enforced by the runtime",
+      },
+      {
+        label: "Platforms",
+        value: "3",
+        description: "Standalone binaries for macOS, Linux and Windows",
+      },
+      {
+        label: "License",
+        value: "MIT",
+        description: "Open source on GitHub",
+      },
+    ],
+    repositoryUrl: "https://github.com/jizzel/proxima",
+    lastModified: "2026-10-19",
   },
   {
     id: "crypto-trading",
