@@ -84,7 +84,9 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
                 "Deployed": "bg-green-500/20 text-green-400",
                 "Development": "bg-blue-500/20 text-blue-400",
                 "Research": "bg-purple-500/20 text-purple-400",
-                "Open Source": "bg-emerald-500/20 text-emerald-400"
+                "Open Source": "bg-emerald-500/20 text-emerald-400",
+                "Experiment": "bg-amber-500/20 text-amber-400",
+                "Pilot": "bg-sky-500/20 text-sky-400"
               }[project.status] || "bg-gray-500/20 text-gray-400"}`}
             >
               {project.status}

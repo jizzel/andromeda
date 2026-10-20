@@ -6,9 +6,10 @@
  */
 
 import type { CapabilityIconName } from "@/components/capabilities/icons";
+import { profile } from "@/constants/profile";
 
 /** When this catalogue last changed (the sitemap's lastModified). Bump it when editing the content below. */
-export const CAPABILITIES_LAST_MODIFIED = "2026-10-19";
+export const CAPABILITIES_LAST_MODIFIED = "2026-10-20";
 
 export interface CapabilityProof {
   /** What was built, in a few words. */
@@ -88,7 +89,7 @@ export const CAPABILITY_GROUPS: CatalogueGroup[] = [
         examples: ["AI assistants", "Intelligent document processing", "Knowledge-base search", "Retrieval-augmented generation (RAG)", "AI workflow automation"],
         icon: "Sparkles",
         proof: [
-          { label: "Legal Intelligence Platform: semantic search and research over legal documents", slug: "legal-intelligence-platform" },
+          { label: "E-Judgment: source-grounded legal research assistant over 8,200 Ghanaian court judgments", slug: "legal-intelligence-platform" },
           { label: "Proxima: open-source AI coding agent with permission-controlled tool execution", slug: "proxima" },
         ],
       },
@@ -151,3 +152,22 @@ export const ENGAGEMENT_MODES: { title: string; description: string }[] = [
   { title: "Modernising legacy software", description: "Moving an ageing application onto a maintainable footing." },
   { title: "New capabilities", description: "Adding AI, integrations or automation to software you already run." },
 ];
+
+/** Whether an item is backed by delivered work (it has "Built" proof). One rule for the page and the PDF. */
+export const isDelivered = (item: CatalogueItem): boolean => !!item.proof?.length;
+
+/** Technologies used in delivered work (case studies and this site). Keep it to what the projects show. */
+export const TECH_EXPERTISE: { area: string; items: string[] }[] = [
+  { area: "Frontend", items: ["React", "Next.js", "TypeScript", "Tailwind CSS"] },
+  { area: "Backend", items: ["Node.js", "NestJS", "Python (FastAPI)", "Java", "Dart"] },
+  { area: "Data", items: ["PostgreSQL", "MongoDB", "Redis", "Vector databases (pgvector)"] },
+  { area: "AI", items: ["Anthropic Claude", "OpenAI", "Ollama", "RAG"] },
+  { area: "Cloud & DevOps", items: ["Digital Ocean", "Docker", "GitHub Actions", "Grafana", "Prometheus", "CI/CD", "GCP", "Railway", "Vercel", "Caddy", "Envoy"] },
+];
+
+/** The one-page PDF's title (the web page stays "What I Build"). */
+export const STATEMENT_TITLE = "Software Engineering & Solutions Capabilities Statement";
+
+/** A ready-to-forward introduction for people referring Joseph (copied from the page). */
+export const REFERRAL_INTRO =
+  `${profile.name} is a software engineer who designs, builds and maintains custom software: business web applications and portals, process automation, booking and registration platforms, AI-powered tools, data and reporting systems, and the APIs and cloud infrastructure behind them. He can deliver a complete system end to end, build a specific module, or join an existing team. His capabilities and past work: ${profile.siteUrl}/capabilities`;

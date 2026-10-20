@@ -184,6 +184,7 @@ export const useAnalytics = () => {
   const trackCapabilitiesViewed = (data: { referrer_host: string }) => emit("capabilities_viewed", data);
   // A "Built" proof link on /capabilities (the case study then counts its own view).
   const trackCapabilityProofClicked = (data: { capability_id: string; project_slug: string }) => emit("capability_proof_clicked", data);
+  const trackCapabilitiesIntroCopied = () => emit("capabilities_intro_copied", {});
   /** "Review and sign agreement" / "View signed agreement" clicked on the proposal page. */
   /** A client hub tab was shown (incl. the first one after signing in). */
   const trackClientHubTabViewed = (data: { proposal_id: string; tab: "proposal" | "agreement" | "assets" | "progress" }) => emit("client_hub_tab_viewed", data);
@@ -224,6 +225,7 @@ export const useAnalytics = () => {
     trackBriefAccessed,
     trackCapabilitiesViewed,
     trackCapabilityProofClicked,
+    trackCapabilitiesIntroCopied,
     trackProposalAgreementOpened,
     trackClientHubTabViewed,
     trackAgreementViewed,

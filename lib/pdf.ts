@@ -3,6 +3,7 @@ import puppeteer, { type Browser } from "puppeteer-core";
 import { NextResponse } from "next/server";
 import type { ProposalAcceptance, ProposalData } from "@/types/proposal";
 import { signPrintToken, type PrintPurpose } from "@/lib/pdf-token";
+import { profile } from "@/constants/profile";
 
 /**
  * Server-side proposal PDF export. A headless Chromium loads the token-gated
@@ -14,6 +15,34 @@ import { signPrintToken, type PrintPurpose } from "@/lib/pdf-token";
  * Keep `puppeteer-core` pinned to the release whose bundled Chrome revision
  * matches `@sparticuz/chromium`'s major version.
  */
+
+/**
+ * The origin headless Chromium may load, given the one a request arrived on.
+ * Callers pass `new URL(request.url).origin`, whose host comes from the Host
+ * header; behind a proxy that forwards any Host, that would let an
+ * unauthenticated caller point the browser at internal services. Only
+ * known hosts are used as given: the site (NEXT_PUBLIC_SITE_URL), this
+ * deployment's own Vercel URLs (so previews render their own pages), and
+ * localhost under `next dev`. Anything else renders against the site URL.
+ */
+export function trustedRenderOrigin(candidate: string): string {
+  const site = new URL(profile.siteUrl);
+  let requested: URL;
+  try {
+    requested = new URL(candidate);
+  } catch {
+    return site.origin;
+  }
+  const vercelHosts = [process.env.VERCEL_URL, process.env.VERCEL_BRANCH_URL, process.env.VERCEL_PROJECT_PRODUCTION_URL].filter(
+    (host): host is string => !!host
+  );
+  if (requested.host === site.host && requested.protocol === site.protocol) return requested.origin;
+  if (requested.protocol === "https:" && vercelHosts.includes(requested.host)) return requested.origin;
+  const localHosts = ["localhost", "127.0.0.1", "[::1]"];
+  if (process.env.NODE_ENV === "development" && localHosts.includes(requested.hostname)) return requested.origin;
+  if (requested.origin !== site.origin) console.warn(`PDF render: untrusted origin ${requested.host}; using the site URL instead`);
+  return site.origin;
+}
 
 const NAV_TIMEOUT_MS = 30_000;
 const ASSET_WAIT_MS = 10_000;
@@ -41,10 +70,21 @@ export const renderProposalPdf = (origin: string, proposalId: string) => renderP
 /** The executed agreement (`/proposal/[id]/agreement/print`, rendered from its signed snapshot). */
 export const renderAgreementPdf = (origin: string, proposalId: string) => renderPrintRoute(origin, proposalId, "agreement");
 
+/** The one-page capabilities statement (`/capabilities/print`, public: no token). */
+export async function renderCapabilitiesPdf(origin: string): Promise<Buffer> {
+  const url = new URL("/capabilities/print", trustedRenderOrigin(origin));
+  const bypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+  if (bypass) {
+    url.searchParams.set("x-vercel-protection-bypass", bypass);
+    url.searchParams.set("x-vercel-set-bypass-cookie", "true");
+  }
+  return renderUrlToPdf(url.toString(), { scale: 1, pageNumbers: false });
+}
+
 const PRINT_PATHS: Record<PrintPurpose, string> = { proposal: "print", agreement: "agreement/print" };
 
 async function renderPrintRoute(origin: string, proposalId: string, purpose: PrintPurpose): Promise<Buffer> {
-  const url = new URL(`/proposal/${encodeURIComponent(proposalId)}/${PRINT_PATHS[purpose]}`, origin);
+  const url = new URL(`/proposal/${encodeURIComponent(proposalId)}/${PRINT_PATHS[purpose]}`, trustedRenderOrigin(origin));
   url.searchParams.set("token", signPrintToken(proposalId, 120, purpose));
 
   // Vercel Deployment Protection on previews: pass the bypass as query params so
@@ -56,6 +96,15 @@ async function renderPrintRoute(origin: string, proposalId: string, purpose: Pri
     url.searchParams.set("x-vercel-set-bypass-cookie", "true");
   }
 
+  // Lays the page out ~880 CSS px wide so two-column (md) grids apply.
+  return renderUrlToPdf(url.toString(), { scale: 0.8, pageNumbers: true });
+}
+
+/**
+ * Loads a page in headless Chromium (light theme, every image and font
+ * loaded) and prints it with the `@page` size and margins from globals.css.
+ */
+async function renderUrlToPdf(url: string, options: { scale: number; pageNumbers: boolean }): Promise<Buffer> {
   const browser = await launchBrowser();
   try {
     const page = await browser.newPage();
@@ -71,7 +120,7 @@ async function renderPrintRoute(origin: string, proposalId: string, purpose: Pri
       }
     });
 
-    const response = await page.goto(url.toString(), { waitUntil: "networkidle0", timeout: NAV_TIMEOUT_MS });
+    const response = await page.goto(url, { waitUntil: "networkidle0", timeout: NAV_TIMEOUT_MS });
     if (!response || !response.ok()) {
       throw new Error(`Print route responded ${response?.status() ?? "without a response"}`);
     }
@@ -103,13 +152,14 @@ async function renderPrintRoute(origin: string, proposalId: string, purpose: Pri
     const pdf = await page.pdf({
       printBackground: true,
       preferCSSPageSize: true, // A4 + margins from `@page` in globals.css
-      // Lays the page out ~880 CSS px wide so two-column (md) grids apply.
-      scale: 0.8,
-      displayHeaderFooter: true,
-      headerTemplate: "<div></div>",
-      footerTemplate:
-        '<div style="width:100%;font-size:8px;color:#888;text-align:center;font-family:sans-serif;">' +
-        '<span class="pageNumber"></span> / <span class="totalPages"></span></div>',
+      scale: options.scale,
+      ...(options.pageNumbers && {
+        displayHeaderFooter: true,
+        headerTemplate: "<div></div>",
+        footerTemplate:
+          '<div style="width:100%;font-size:8px;color:#888;text-align:center;font-family:sans-serif;">' +
+          '<span class="pageNumber"></span> / <span class="totalPages"></span></div>',
+      }),
     });
     return Buffer.from(pdf);
   } finally {

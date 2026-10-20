@@ -283,24 +283,9 @@ export const projectsDetail: ProjectDetail[] = [
     lastModified: "2026-10-19",
   },
   {
-    id: "crypto-trading",
+    // The card fields (name, lines, context/problem/approach/outcome, stack) live in constants/projects.ts.
+    ...projectById("crypto-trading"),
     slug: "crypto-trading-analytics",
-    name: "Crypto Trading Analytics Backend",
-    contextLine:
-      "Performance optimization for real-time crypto analytics platform",
-    outcomeLine:
-      "Improved system performance while maintaining high availability under load",
-    status: "Production",
-    context:
-      "A crypto analytics platform served thousands of concurrent users requiring real-time insights and uninterrupted availability.",
-    problem:
-      "Performance bottlenecks and backend inefficiencies risked degraded user experience and SLA violations under peak load.",
-    approach:
-      "Led backend architecture improvements focused on data optimization, concurrency handling, and observability. Introduced monitoring and alerting to proactively detect and resolve performance issues in production.",
-    outcome:
-      "Improved system performance substantially while maintaining high availability under sustained concurrent usage.",
-    techStack: ["Node.js", "Redis", "MongoDB", "Grafana", "Sentry", "Prometheus", "Python", "React/Vue", "Telegram Bot"],
-    isExpansionLayer: false,
     fullDescription:
       "Backend performance optimization project for a crypto trading analytics platform serving real-time market data, portfolio tracking, and algorithmic trading signals to thousands of concurrent users. The work focused on identifying and eliminating performance bottlenecks, optimizing database queries, implementing caching strategies, and establishing comprehensive monitoring to maintain SLA compliance under peak load conditions.",
     challenges: [
@@ -397,8 +382,6 @@ export const projectsDetail: ProjectDetail[] = [
       }
     ],
     lastModified: "2024-08-20",
-    location: "Tallinn, Estonia",
-    logos: ["/projects/tradelink_logo"],
   },
   {
     id: "eolang-java",
@@ -518,88 +501,85 @@ export const projectsDetail: ProjectDetail[] = [
     logos: ["/projects/hse_logo", "/projects/huawei_logo"],
   },
   {
-    id: "legal-intelligence",
+    // The card fields (name, lines, context/problem/approach/outcome, stack, status) live in constants/projects.ts.
+    ...projectById("legal-intelligence"),
     slug: "legal-intelligence-platform",
-    name: "Legal Intelligence Platform",
-    contextLine: "AI-powered legal research platform for Ghanaian court rulings",
-    outcomeLine:
-      "Reduced research time while establishing foundation for legal intelligence products",
-    status: "Development",
-    context:
-      "Legal research across decades of Ghanaian court rulings required extensive manual effort and fragmented sources.",
-    problem:
-      "Unstructured legal texts made retrieval slow, inconsistent, and dependent on individual researcher experience rather than systemized access.",
-    approach:
-      "Built an AI-powered research platform using structured ingestion pipelines and agentic workflows to transform historical rulings into searchable, semantically indexed data. Designed the system to support extensibility beyond research into commercial legal tooling.",
-    outcome:
-      "Reduced legal research time dramatically while establishing a foundation for scalable legal intelligence products in emerging markets.",
-    techStack: ["Python", "LangChain", "Vector DB", "FastAPI"],
-    isExpansionLayer: true,
     fullDescription:
-      "AI-powered platform designed to modernize legal research in emerging markets by transforming decades of unstructured court rulings into semantically searchable, structured data. The system uses vector embeddings and agentic workflows to enable natural language search across historical case law, extract relevant precedents, and generate research summaries. Built with extensibility to support future commercial legal intelligence products.",
+        "E-Judgment is a legal research assistant over about 8,200 Ghanaian judgments, built so that a lawyer can trust and check every statement it makes. An ingestion pipeline turns a messy export of 8,803 records into a verified corpus of 159,000 passages, each an exact span of its judgment and tied to its source, extraction method, licence and original GhaLII link. Search fuses exact citation lookup, Postgres full-text search and pgvector embedding search with Reciprocal Rank Fusion, reranks with a cross-encoder and groups results by case, so one long judgment can't crowd out the rest. Answers come from a local LLM (Ollama, or OpenAI when explicitly enabled) as structured claims, and the server keeps only the claims it can verify against the passages; when nothing survives, the system declines. Around this sits production work: invite-only accounts with Argon2id passwords and lockout, hashed audit logs with retention, a Next.js research workspace with a side-by-side evidence panel and streamed, cancellable answers, an in-app tool for lawyers to review test questions, reproducible evaluation runs, and a Docker Compose deployment with backups, restore drills and CI gates.",
     challenges: [
       {
-        title: "Unstructured Legacy Documents",
+        title: "Untrustworthy Source Files",
         description:
-          "Court rulings existed in inconsistent formats (PDFs, scanned images, text files) with no standardized metadata or indexing.",
+            "The export saved every download as .pdf, but by file signature the files were PDFs, Word documents, scans and 553 copies of the same placeholder web page. File names were truncated citations, so some paths pointed at another judgment's file, and about 10% of judgments were re-published under different citations.",
       },
       {
-        title: "Semantic Search Complexity",
+        title: "Exact Lookup and Meaning in One Search",
         description:
-          "Legal concepts require understanding of context, precedent hierarchies, and domain-specific terminology that simple keyword search cannot capture.",
+            "Lawyers search both ways: by citation or case name, where embeddings can't reliably tell [2019] GHASC 12 from [2019] GHASC 21, and by describing a legal issue or facts, where keyword search found almost none of the right cases.",
       },
       {
-        title: "Data Quality and Validation",
+        title: "Answers That Can Be Trusted",
         description:
-          "OCR errors, incomplete documents, and inconsistent citation formats required extensive cleaning and validation pipelines.",
+            "Language models can invent cases, quotes and page numbers, and a quote that exists doesn't prove the claim built on it. Legal answers had to be checkable down to the passage, with page numbers only when they are certain.",
+      },
+      {
+        title: "Measuring Quality Honestly",
+        description:
+            "Changes to search and generation needed numbers, not impressions, but the only test questions available at first were written by an engineer rather than a lawyer, so any numbers from them had to be clearly marked as provisional.",
       },
     ],
     solutions: [
       {
-        title: "Structured Ingestion Pipeline",
+        title: "Verified Ingestion with Provenance",
         description:
-          "Built ETL pipeline that extracts text from multiple formats, normalizes structure, extracts metadata (court, date, judges, citations), and validates data quality before indexing.",
+            "Each source file is identified by its signature and hash and cross-checked against the record's text with character n-gram matching before it is used. Records that can't be trusted are quarantined with a reason code. Word files are converted and scans are OCR'd page by page with Tesseract, with confidence scores. Text is split into passages of 300–400 tokens, each an exact span of its source. Every stage is idempotent, so re-running it changes nothing.",
         impact:
-          "Processed decades of historical rulings into structured, searchable format.",
+            "Of 8,803 records, 8,242 judgments are searchable; 561 were quarantined rather than indexed (553 of them placeholder pages with no judgment text). 1,476 scanned pages were recovered by OCR.",
       },
       {
-        title: "Vector Embedding and Semantic Search",
+        title: "Hybrid Retrieval with Case-Level Results",
         description:
-          "Implemented vector database indexing using embeddings trained on legal corpus. Enables natural language queries that return semantically relevant results rather than keyword matches.",
+            "Exact citation and case-name lookup run first. Postgres full-text search and pgvector embeddings (bge-small) are fused with Reciprocal Rank Fusion and reranked by a cross-encoder. Results are grouped by case, and re-publications of the same judgment collapse into one result. Filters are strict and never silently widened, and a degraded search (e.g. a model missing) says so.",
         impact:
-          "Reduced research time from hours to minutes for complex legal queries.",
+            "On the provisional test set, correct cases appear in the top 20 for 88% of answerable questions, against 39% for keyword search alone, and citation and case-name questions score 100%.",
       },
       {
-        title: "Agentic Research Workflows",
+        title: "Verified, Server-Built Answers",
         description:
-          "Designed LangChain-based agents that decompose research questions, query multiple data sources, synthesize findings, and generate structured summaries with citations.",
+            "The model returns structured claims, each with a quote and its sources. A claim is kept only if the quote appears verbatim in a cited passage, the claim adds no citation or page number of its own, and an NLI cross-encoder judges the passage to entail it. The server builds the answer from the surviving claims and adds citations, GhaLII links and page numbers from the database, the latter only for pages it has verified. Answers stream with live progress and can be cancelled.",
         impact:
-          "Automated multi-step research workflows previously requiring manual coordination.",
+            "Answers carry no model-written citations, links or page numbers; each statement links to the exact passage behind it, and the system declines to answer when no claim survives.",
+      },
+      {
+        title: "Reproducible Evaluation and Cost Control",
+        description:
+            "Every evaluation run stores the models, settings and a fingerprint of the corpus, so results can be reproduced. Lawyers review test questions in the app, with versioned edits and history, and metrics are reported separately for approved questions. OpenAI is opt-in, with a usage ledger and a per-run budget stop, and a protocol is ready for comparing search quality with GhaLII's own site search.",
+        impact:
+            "A 20-question pilot on an OpenAI model cost under 1 cent, and every reported number is tied to a stored, reproducible run.",
       },
     ],
-    screenshots: [
+    metrics: [
       {
-        src: "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=1200&q=80",
-        alt: "Legal documents and research materials",
-        caption: "Semantic search interface for legal document discovery"
+        label: "Correct Case in Top 20",
+        value: "88%",
+        description: "Hybrid search with reranking, on the provisional 60-question test set",
       },
       {
-        src: "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=1200&q=80",
-        alt: "Data visualization and analytics dashboard",
-        caption: "Case law analytics showing citation networks and precedent relationships"
+        label: "Citation and Case-Name Lookup",
+        value: "100%",
+        description: "Exact lookups on the same test set",
       },
       {
-        src: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=1200&q=80",
-        alt: "AI-powered research assistant interface",
-        caption: "Agentic research workflow generating structured legal summaries"
+        label: "Searchable Judgments",
+        value: "8,242",
+        description: "Ghanaian court judgments from GhaLII, verified and cleaned (of 8,803 records)",
       },
       {
-        src: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1200&q=80",
-        alt: "Document processing and indexing system",
-        caption: "Vector database indexing pipeline for legal corpus"
-      }
+        label: "Passages",
+        value: "159,000",
+        description: "Indexed spans, each tied to its source and licence",
+      },
     ],
-    lastModified: "2024-09-05",
-    location: "Accra, Ghana",
+    lastModified: "2026-10-20",
   },
 ];

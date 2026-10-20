@@ -17,9 +17,9 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
 
-  // The headless PDF routes (/proposal/[id]/print and /proposal/[id]/agreement/print)
-  // render the document only, and the admin surface has its own header.
-  const isPrintRoute = /^\/proposal\/[^/]+\/(agreement\/)?print$/.test(pathname);
+  // The headless PDF routes (/proposal/[id]/print, /proposal/[id]/agreement/print
+  // and /capabilities/print) render the document only, and the admin surface has its own header.
+  const isPrintRoute = /^\/proposal\/[^/]+\/(agreement\/)?print$/.test(pathname) || pathname === "/capabilities/print";
   const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
   const isMinimalUI = MINIMAL_UI_ROUTES.includes(pathname) || isPrintRoute || isAdminRoute;
   // Client-facing pages drop the portfolio marketing chrome. The proposal hub

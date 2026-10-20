@@ -3,7 +3,7 @@ export interface Project {
   name: string;
   contextLine: string; // Collapsed state
   outcomeLine: string; // Collapsed state
-  status: "Production" | "Research" | "Deployed" | "Development" | "Open Source";
+  status: "Production" | "Research" | "Deployed" | "Development" | "Open Source" | "Experiment" | "Pilot";
   context: string;
   problem: string;
   approach: string;
@@ -70,7 +70,7 @@ export const projects: Project[] = [
       "Led backend architecture improvements focused on data optimization, concurrency handling, and observability. Introduced monitoring and alerting to proactively detect and resolve performance issues in production.",
     outcome:
       "Improved system performance substantially while maintaining high availability under sustained concurrent usage.",
-    techStack: ["Node.js", "Redis", "MongoDB", "Grafana", "Prometheus", "Python", "Telegram Bot"],
+    techStack: ["Node.js", "Redis", "MongoDB", "Grafana", "Sentry", "Prometheus", "Python", "React/Vue", "Telegram Bot"],
     isExpansionLayer: false,
     location: "Tallinn, Estonia",
     logos: ["/projects/tradelink_logo"],
@@ -97,21 +97,35 @@ export const projects: Project[] = [
   },
   {
     id: "legal-intelligence",
-    name: "Legal Intelligence Platform",
-    contextLine: "AI-powered legal research platform for Ghanaian court rulings",
+    name: "E-Judgment: Legal Research Assistant",
+    contextLine:
+        "Source-grounded AI research assistant over 8,200 Ghanaian court judgments",
     outcomeLine:
-        "Reduced research time while establishing foundation for legal intelligence products",
-    status: "Development",
+        "Hybrid search finds the right case in the top 20 for 88% of test questions, and every answer links to the passages that support it",
+    status: "Pilot",
     context:
-        "Legal research across decades of Ghanaian court rulings required extensive manual effort and fragmented sources.",
+        "Ghanaian judgments are published by GhaLII, but finding the authority for a legal issue or a set of facts still means trying keywords and reading judgments one by one. General AI chatbots answer fluently but can invent cases, quotes and page numbers, which makes them unusable for legal work.",
     problem:
-        "Unstructured legal texts made retrieval slow, inconsistent, and dependent on individual researcher experience rather than systemized access.",
+        "The source data was messy: about 8,800 records from a local export of GhaLII, with PDFs, scans, Word files and placeholder pages saved under misleading names, unreliable file paths, duplicates published under several citations, and viewer boilerplate instead of text. Lawyers need two things a plain chatbot can't give: exact lookup by citation or case name, and answers they can check against the judgment itself.",
     approach:
-        "Built an AI-powered research platform using structured ingestion pipelines and agentic workflows to transform historical rulings into searchable, semantically indexed data. Designed the system to support extensibility beyond research into commercial legal tooling.",
+        "Built a retrieval-augmented generation (RAG) system that treats evidence as the product. An offline pipeline verifies, cleans, OCRs and chunks every judgment while keeping its provenance. Search combines exact citation lookup, keyword search and meaning-based search, then reranks the results. Answers keep only the claims that quote a retrieved passage verbatim and that a local entailment model confirms the passage supports. Citations, links and page numbers come from the database, never from the model. It runs on local models by default, with the corpus used non-commercially under GhaLII's CC BY-NC 4.0 licence and GhaLII credited in every view.",
     outcome:
-        "Reduced legal research time dramatically while establishing a foundation for scalable legal intelligence products in emerging markets.",
-    techStack: ["Python", "LangChain", "Vector DB", "FastAPI"],
+        "A working pilot behind invite-only sign-in: search by citation, case name, phrase or facts, and cited answers that stream with visible progress. On a 60-question test set (engineer-drafted, pending lawyer review, so provisional), hybrid search with reranking finds a correct case in the top 20 for 88% of the questions that have one (MRR@10 0.63), and citation and case-name lookups 100%. The system declines to answer when the evidence isn't there.",
+    techStack: [
+      "Python",
+      "FastAPI",
+      "PostgreSQL + pgvector",
+      "SentenceTransformers",
+      "Ollama",
+      "OpenAI API (opt-in)",
+      "Tesseract OCR",
+      "Next.js",
+      "TypeScript",
+      "Docker Compose",
+      "Caddy",
+      "GitHub Actions",
+    ],
     isExpansionLayer: true,
-    location: "Accra, Ghana"
+    location: "Accra, Ghana",
   },
 ];
