@@ -89,7 +89,7 @@ export const CAPABILITY_GROUPS: CatalogueGroup[] = [
         examples: ["AI assistants", "Intelligent document processing", "Knowledge-base search", "Retrieval-augmented generation (RAG)", "AI workflow automation"],
         icon: "Sparkles",
         proof: [
-          { label: "E-Judgment: source-grounded legal research assistant over 8,800 Ghanaian court judgments", slug: "legal-intelligence-platform" },
+          { label: "E-Judgment: source-grounded legal research assistant over 8,200 Ghanaian court judgments", slug: "legal-intelligence-platform" },
           { label: "Proxima: open-source AI coding agent with permission-controlled tool execution", slug: "proxima" },
         ],
       },

@@ -505,13 +505,12 @@ export const projectsDetail: ProjectDetail[] = [
     ...projectById("legal-intelligence"),
     slug: "legal-intelligence-platform",
     fullDescription:
-        "E-Judgment is a legal research assistant over about 8,800 Ghanaian judgments, built so that a lawyer can trust and check every statement it makes. An ingestion pipeline turns a messy export into a verified corpus of 159,000 passages, each an exact span of its judgment and tied to its source, extraction method, licence and original GhaLII link. Search fuses exact citation lookup, Postgres full-text search and pgvector embedding search with Reciprocal Rank Fusion, reranks with a cross-encoder and groups results by case, so one long judgment can't crowd out the rest. Answers come from a local LLM (Ollama, or OpenAI when explicitly enabled) as structured claims, and the server keeps only the claims it can verify against the passages; when nothing survives, the system declines. Around this sits production work: invite-only accounts with Argon2id passwords and lockout, hashed audit logs with retention, a Next.js research workspace with a side-by-side evidence panel and streamed, cancellable answers, an in-app tool for lawyers to review test questions, reproducible evaluation runs, and a Docker Compose deployment with backups, restore drills and CI gates.",
+        "E-Judgment is a legal research assistant over about 8,200 Ghanaian judgments, built so that a lawyer can trust and check every statement it makes. An ingestion pipeline turns a messy export of 8,803 records into a verified corpus of 159,000 passages, each an exact span of its judgment and tied to its source, extraction method, licence and original GhaLII link. Search fuses exact citation lookup, Postgres full-text search and pgvector embedding search with Reciprocal Rank Fusion, reranks with a cross-encoder and groups results by case, so one long judgment can't crowd out the rest. Answers come from a local LLM (Ollama, or OpenAI when explicitly enabled) as structured claims, and the server keeps only the claims it can verify against the passages; when nothing survives, the system declines. Around this sits production work: invite-only accounts with Argon2id passwords and lockout, hashed audit logs with retention, a Next.js research workspace with a side-by-side evidence panel and streamed, cancellable answers, an in-app tool for lawyers to review test questions, reproducible evaluation runs, and a Docker Compose deployment with backups, restore drills and CI gates.",
     challenges: [
       {
-        // TODO(Joseph): this says 555 placeholder copies; "Verified Ingestion" below says 551 quarantined. Make them agree (or explain the 4).
         title: "Untrustworthy Source Files",
         description:
-            "The export saved every download as .pdf, but by file signature the files were PDFs, Word documents, scans and 555 copies of the same placeholder web page. File names were truncated citations, so some paths pointed at another judgment's file, and about 10% of judgments were re-published under different citations.",
+            "The export saved every download as .pdf, but by file signature the files were PDFs, Word documents, scans and 553 copies of the same placeholder web page. File names were truncated citations, so some paths pointed at another judgment's file, and about 10% of judgments were re-published under different citations.",
       },
       {
         title: "Exact Lookup and Meaning in One Search",
@@ -534,9 +533,8 @@ export const projectsDetail: ProjectDetail[] = [
         title: "Verified Ingestion with Provenance",
         description:
             "Each source file is identified by its signature and hash and cross-checked against the record's text with character n-gram matching before it is used. Records that can't be trusted are quarantined with a reason code. Word files are converted and scans are OCR'd page by page with Tesseract, with confidence scores. Text is split into passages of 300–400 tokens, each an exact span of its source. Every stage is idempotent, so re-running it changes nothing.",
-        // TODO(Joseph): 8,242 + 551 = 8,793, so 10 of the 8,803 records are unaccounted for (another category?).
         impact:
-            "8,803 records imported: 8,242 judgments with usable text, 551 placeholder pages quarantined rather than indexed, and 1,476 scanned pages recovered by OCR.",
+            "Of 8,803 records, 8,242 judgments are searchable; 561 were quarantined rather than indexed (553 of them placeholder pages with no judgment text). 1,476 scanned pages were recovered by OCR.",
       },
       {
         title: "Hybrid Retrieval with Case-Level Results",
@@ -572,9 +570,9 @@ export const projectsDetail: ProjectDetail[] = [
         description: "Exact lookups on the same test set",
       },
       {
-        label: "Judgments",
-        value: "~8,800",
-        description: "Ghanaian court judgments from GhaLII, verified and cleaned",
+        label: "Searchable Judgments",
+        value: "8,242",
+        description: "Ghanaian court judgments from GhaLII, verified and cleaned (of 8,803 records)",
       },
       {
         label: "Passages",

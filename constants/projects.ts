@@ -99,14 +99,14 @@ export const projects: Project[] = [
     id: "legal-intelligence",
     name: "E-Judgment: Legal Research Assistant",
     contextLine:
-        "Source-grounded AI research assistant over 8,800 Ghanaian court judgments",
+        "Source-grounded AI research assistant over 8,200 Ghanaian court judgments",
     outcomeLine:
         "Hybrid search finds the right case in the top 20 for 88% of test questions, and every answer links to the passages that support it",
     status: "Pilot",
     context:
         "Ghanaian judgments are published by GhaLII, but finding the authority for a legal issue or a set of facts still means trying keywords and reading judgments one by one. General AI chatbots answer fluently but can invent cases, quotes and page numbers, which makes them unusable for legal work.",
     problem:
-        "The source data was messy: about 8,800 judgments from a local export of GhaLII, with PDFs, scans, Word files and placeholder pages saved under misleading names, unreliable file paths, duplicates published under several citations, and viewer boilerplate instead of text. Lawyers need two things a plain chatbot can't give: exact lookup by citation or case name, and answers they can check against the judgment itself.",
+        "The source data was messy: about 8,800 records from a local export of GhaLII, with PDFs, scans, Word files and placeholder pages saved under misleading names, unreliable file paths, duplicates published under several citations, and viewer boilerplate instead of text. Lawyers need two things a plain chatbot can't give: exact lookup by citation or case name, and answers they can check against the judgment itself.",
     approach:
         "Built a retrieval-augmented generation (RAG) system that treats evidence as the product. An offline pipeline verifies, cleans, OCRs and chunks every judgment while keeping its provenance. Search combines exact citation lookup, keyword search and meaning-based search, then reranks the results. Answers keep only the claims that quote a retrieved passage verbatim and that a local entailment model confirms the passage supports. Citations, links and page numbers come from the database, never from the model. It runs on local models by default, with the corpus used non-commercially under GhaLII's CC BY-NC 4.0 licence and GhaLII credited in every view.",
     outcome:
