@@ -1,9 +1,15 @@
+/**
+ * A project's maturity. Adding a value here fails `tsc` until it is classified
+ * as delivered or not in `constants/capability-catalogue.ts` (DELIVERED).
+ */
+export type ProjectStatus = "Production" | "Research" | "Deployed" | "Development" | "Open Source" | "Experiment" | "Pilot";
+
 export interface Project {
   id: string;
   name: string;
   contextLine: string; // Collapsed state
   outcomeLine: string; // Collapsed state
-  status: "Production" | "Research" | "Deployed" | "Development" | "Open Source" | "Experiment" | "Pilot";
+  status: ProjectStatus;
   context: string;
   problem: string;
   approach: string;

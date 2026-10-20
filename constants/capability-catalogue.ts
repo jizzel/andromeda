@@ -7,15 +7,22 @@
 
 import type { CapabilityIconName } from "@/components/capabilities/icons";
 import { profile } from "@/constants/profile";
+import { projectsDetail } from "@/constants/projects-detail";
+import type { ProjectStatus } from "@/constants/projects";
 
 /** When this catalogue last changed (the sitemap's lastModified). Bump it when editing the content below. */
 export const CAPABILITIES_LAST_MODIFIED = "2026-10-20";
 
+/** Maturity of a piece of evidence: a case study's status, or one written on a proof without a case study. */
+export type ProofStatus = ProjectStatus | "Delivered" | "In use" | "In development" | "In testing";
+
 export interface CapabilityProof {
   /** What was built, in a few words. */
   label: string;
-  /** A case study on this site, when there is one. */
+  /** A case study on this site, when there is one (its status comes from the case study). */
   slug?: string;
+  /** Maturity for work without a case study, e.g. "Delivered", "In use", "In development". */
+  status?: ProofStatus;
 }
 
 export interface CatalogueItem {
@@ -50,7 +57,7 @@ export const CAPABILITY_GROUPS: CatalogueGroup[] = [
         description: "Custom web applications built around how your organisation actually works.",
         examples: ["Adding AI to an existing system", "Customer and client portals", "Dashboards", "Internal management systems", "Role-based staff tools"],
         icon: "LayoutDashboard",
-        proof: [{ label: "A client portal for proposals, e-signed agreements and project tracking" }],
+        proof: [{ label: "A client portal for proposals, e-signed agreements and project tracking", status: "In use" }],
       },
       {
         id: "process-automation",
@@ -66,7 +73,7 @@ export const CAPABILITY_GROUPS: CatalogueGroup[] = [
         description: "Platforms that take people from sign-up to check-in without lists and phone calls.",
         examples: ["Appointment scheduling", "Hotel reservations", "Event registration with QR passes and check-in", "Service booking"],
         icon: "Ticket",
-        proof: [{ label: "An event platform used at a live event: 232 registrations, QR check-in and 881 meal claims" }],
+        proof: [{ label: "An event platform used at a live event: 232 registrations, QR check-in and 881 meal claims", status: "Delivered" }],
       },
       {
         id: "e-commerce",
@@ -86,7 +93,7 @@ export const CAPABILITY_GROUPS: CatalogueGroup[] = [
         id: "ai-applications",
         title: "AI-Powered Applications",
         description: "Practical AI that works on your own documents and processes, with answers you can check.",
-        examples: ["AI assistants", "Intelligent document processing", "Knowledge-base search", "Retrieval-augmented generation (RAG)", "AI workflow automation"],
+        examples: ["AI agents and agentic workflows", "AI assistants", "Intelligent document processing", "Knowledge-base search", "Retrieval-augmented generation (RAG)", "AI workflow automation"],
         icon: "Sparkles",
         proof: [
           { label: "E-Judgment: source-grounded legal research assistant over 8,200 Ghanaian court judgments", slug: "legal-intelligence-platform" },
@@ -153,8 +160,43 @@ export const ENGAGEMENT_MODES: { title: string; description: string }[] = [
   { title: "New capabilities", description: "Adding AI, integrations or automation to software you already run." },
 ];
 
-/** Whether an item is backed by delivered work (it has "Built" proof). One rule for the page and the PDF. */
-export const isDelivered = (item: CatalogueItem): boolean => !!item.proof?.length;
+/**
+ * A proof's maturity: the case study's own status (so it can't go stale), or
+ * the status written on the proof for work without a case study.
+ */
+export function proofStatus(proof: CapabilityProof): ProofStatus | undefined {
+  if (proof.slug) return projectsDetail.find((p) => p.slug === proof.slug)?.status;
+  return proof.status;
+}
+
+/**
+ * Whether each status is delivered or shipped work (what "Built" claims).
+ * A closed, exhaustive table: an unknown status can't be written on a proof,
+ * and a new case-study status (ProjectStatus) fails `tsc` until it's
+ * classified here, so nothing counts as delivered by default.
+ */
+const DELIVERED: Record<ProofStatus, boolean> = {
+  Production: true,
+  Deployed: true,
+  "Open Source": true,
+  Research: true,
+  Pilot: true,
+  Delivered: true,
+  "In use": true,
+  Development: false,
+  Experiment: false,
+  "In development": false,
+  "In testing": false,
+};
+
+/** Whether a proof is delivered or shipped work. No status (e.g. an unknown slug) counts as not delivered. */
+export function isDeliveredProof(proof: CapabilityProof): boolean {
+  const status = proofStatus(proof);
+  return status !== undefined && DELIVERED[status];
+}
+
+/** Whether an item is backed by delivered or shipped work. One rule for the page and the PDF. */
+export const isDelivered = (item: CatalogueItem): boolean => !!item.proof?.some(isDeliveredProof);
 
 /** Technologies used in delivered work (case studies and this site). Keep it to what the projects show. */
 export const TECH_EXPERTISE: { area: string; items: string[] }[] = [

@@ -8,6 +8,9 @@ import {
   REFERRAL_INTRO,
   TECH_EXPERTISE,
   isDelivered,
+  isDeliveredProof,
+  proofStatus,
+  type CapabilityProof,
   type CatalogueItem,
 } from "@/constants/capability-catalogue";
 import { profile } from "@/constants/profile";
@@ -181,11 +184,15 @@ function CapabilityItem({ item }: { item: CatalogueItem }) {
           </li>
         ))}
       </ul>
-      {isDelivered(item) ? (
+      {item.proof?.length ? (
         <div className="mt-auto pt-4 border-t border-white/10 light:border-black/10">
-          <p className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-[var(--andromeda-accent-beige)] mb-1.5">
-            <BadgeCheck className="w-3.5 h-3.5" aria-hidden /> Built
-          </p>
+          {isDelivered(item) ? (
+            <p className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-[var(--andromeda-accent-beige)] mb-1.5">
+              <BadgeCheck className="w-3.5 h-3.5" aria-hidden /> Built
+            </p>
+          ) : (
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--andromeda-text-secondary)] mb-1.5">In progress</p>
+          )}
           <ul className="space-y-1.5">
             {item.proof!.map((proof) => (
               <li key={proof.label} className="text-sm text-[var(--andromeda-text-secondary)] leading-snug">
@@ -201,11 +208,30 @@ function CapabilityItem({ item }: { item: CatalogueItem }) {
                 ) : (
                   proof.label
                 )}
+                <StatusTag proof={proof} />
               </li>
             ))}
           </ul>
         </div>
       ) : null}
     </article>
+  );
+}
+
+/** A proof's maturity (Production, Pilot, Delivered, In development…), so evidence is never overstated. */
+function StatusTag({ proof }: { proof: CapabilityProof }) {
+  const status = proofStatus(proof);
+  if (!status) return null;
+  const delivered = isDeliveredProof(proof);
+  return (
+    <span
+      className={`mt-1 block w-fit whitespace-nowrap rounded px-1.5 py-px text-[10px] font-medium uppercase tracking-wider ${
+        delivered
+          ? "border border-[var(--andromeda-accent-beige)]/30 text-[var(--andromeda-accent-beige)]"
+          : "border border-amber-500/40 text-amber-500"
+      }`}
+    >
+      {status}
+    </span>
   );
 }
