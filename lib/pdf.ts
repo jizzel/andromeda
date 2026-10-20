@@ -3,6 +3,7 @@ import puppeteer, { type Browser } from "puppeteer-core";
 import { NextResponse } from "next/server";
 import type { ProposalAcceptance, ProposalData } from "@/types/proposal";
 import { signPrintToken, type PrintPurpose } from "@/lib/pdf-token";
+import { profile } from "@/constants/profile";
 
 /**
  * Server-side proposal PDF export. A headless Chromium loads the token-gated
@@ -14,6 +15,34 @@ import { signPrintToken, type PrintPurpose } from "@/lib/pdf-token";
  * Keep `puppeteer-core` pinned to the release whose bundled Chrome revision
  * matches `@sparticuz/chromium`'s major version.
  */
+
+/**
+ * The origin headless Chromium may load, given the one a request arrived on.
+ * Callers pass `new URL(request.url).origin`, whose host comes from the Host
+ * header; behind a proxy that forwards any Host, that would let an
+ * unauthenticated caller point the browser at internal services. Only
+ * known hosts are used as given: the site (NEXT_PUBLIC_SITE_URL), this
+ * deployment's own Vercel URLs (so previews render their own pages), and
+ * localhost under `next dev`. Anything else renders against the site URL.
+ */
+export function trustedRenderOrigin(candidate: string): string {
+  const site = new URL(profile.siteUrl);
+  let requested: URL;
+  try {
+    requested = new URL(candidate);
+  } catch {
+    return site.origin;
+  }
+  const vercelHosts = [process.env.VERCEL_URL, process.env.VERCEL_BRANCH_URL, process.env.VERCEL_PROJECT_PRODUCTION_URL].filter(
+    (host): host is string => !!host
+  );
+  if (requested.host === site.host && requested.protocol === site.protocol) return requested.origin;
+  if (requested.protocol === "https:" && vercelHosts.includes(requested.host)) return requested.origin;
+  const localHosts = ["localhost", "127.0.0.1", "[::1]"];
+  if (process.env.NODE_ENV === "development" && localHosts.includes(requested.hostname)) return requested.origin;
+  if (requested.origin !== site.origin) console.warn(`PDF render: untrusted origin ${requested.host}; using the site URL instead`);
+  return site.origin;
+}
 
 const NAV_TIMEOUT_MS = 30_000;
 const ASSET_WAIT_MS = 10_000;
@@ -43,7 +72,7 @@ export const renderAgreementPdf = (origin: string, proposalId: string) => render
 
 /** The one-page capabilities statement (`/capabilities/print`, public: no token). */
 export async function renderCapabilitiesPdf(origin: string): Promise<Buffer> {
-  const url = new URL("/capabilities/print", origin);
+  const url = new URL("/capabilities/print", trustedRenderOrigin(origin));
   const bypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
   if (bypass) {
     url.searchParams.set("x-vercel-protection-bypass", bypass);
@@ -55,7 +84,7 @@ export async function renderCapabilitiesPdf(origin: string): Promise<Buffer> {
 const PRINT_PATHS: Record<PrintPurpose, string> = { proposal: "print", agreement: "agreement/print" };
 
 async function renderPrintRoute(origin: string, proposalId: string, purpose: PrintPurpose): Promise<Buffer> {
-  const url = new URL(`/proposal/${encodeURIComponent(proposalId)}/${PRINT_PATHS[purpose]}`, origin);
+  const url = new URL(`/proposal/${encodeURIComponent(proposalId)}/${PRINT_PATHS[purpose]}`, trustedRenderOrigin(origin));
   url.searchParams.set("token", signPrintToken(proposalId, 120, purpose));
 
   // Vercel Deployment Protection on previews: pass the bypass as query params so
