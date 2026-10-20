@@ -41,6 +41,17 @@ export const renderProposalPdf = (origin: string, proposalId: string) => renderP
 /** The executed agreement (`/proposal/[id]/agreement/print`, rendered from its signed snapshot). */
 export const renderAgreementPdf = (origin: string, proposalId: string) => renderPrintRoute(origin, proposalId, "agreement");
 
+/** The one-page capabilities statement (`/capabilities/print`, public: no token). */
+export async function renderCapabilitiesPdf(origin: string): Promise<Buffer> {
+  const url = new URL("/capabilities/print", origin);
+  const bypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+  if (bypass) {
+    url.searchParams.set("x-vercel-protection-bypass", bypass);
+    url.searchParams.set("x-vercel-set-bypass-cookie", "true");
+  }
+  return renderUrlToPdf(url.toString(), { scale: 1, pageNumbers: false });
+}
+
 const PRINT_PATHS: Record<PrintPurpose, string> = { proposal: "print", agreement: "agreement/print" };
 
 async function renderPrintRoute(origin: string, proposalId: string, purpose: PrintPurpose): Promise<Buffer> {
@@ -56,6 +67,15 @@ async function renderPrintRoute(origin: string, proposalId: string, purpose: Pri
     url.searchParams.set("x-vercel-set-bypass-cookie", "true");
   }
 
+  // Lays the page out ~880 CSS px wide so two-column (md) grids apply.
+  return renderUrlToPdf(url.toString(), { scale: 0.8, pageNumbers: true });
+}
+
+/**
+ * Loads a page in headless Chromium (light theme, every image and font
+ * loaded) and prints it with the `@page` size and margins from globals.css.
+ */
+async function renderUrlToPdf(url: string, options: { scale: number; pageNumbers: boolean }): Promise<Buffer> {
   const browser = await launchBrowser();
   try {
     const page = await browser.newPage();
@@ -71,7 +91,7 @@ async function renderPrintRoute(origin: string, proposalId: string, purpose: Pri
       }
     });
 
-    const response = await page.goto(url.toString(), { waitUntil: "networkidle0", timeout: NAV_TIMEOUT_MS });
+    const response = await page.goto(url, { waitUntil: "networkidle0", timeout: NAV_TIMEOUT_MS });
     if (!response || !response.ok()) {
       throw new Error(`Print route responded ${response?.status() ?? "without a response"}`);
     }
@@ -103,13 +123,14 @@ async function renderPrintRoute(origin: string, proposalId: string, purpose: Pri
     const pdf = await page.pdf({
       printBackground: true,
       preferCSSPageSize: true, // A4 + margins from `@page` in globals.css
-      // Lays the page out ~880 CSS px wide so two-column (md) grids apply.
-      scale: 0.8,
-      displayHeaderFooter: true,
-      headerTemplate: "<div></div>",
-      footerTemplate:
-        '<div style="width:100%;font-size:8px;color:#888;text-align:center;font-family:sans-serif;">' +
-        '<span class="pageNumber"></span> / <span class="totalPages"></span></div>',
+      scale: options.scale,
+      ...(options.pageNumbers && {
+        displayHeaderFooter: true,
+        headerTemplate: "<div></div>",
+        footerTemplate:
+          '<div style="width:100%;font-size:8px;color:#888;text-align:center;font-family:sans-serif;">' +
+          '<span class="pageNumber"></span> / <span class="totalPages"></span></div>',
+      }),
     });
     return Buffer.from(pdf);
   } finally {

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { Calendar, Mail, UserPlus } from "lucide-react";
+import { Calendar, Check, Copy, Download, Mail, UserPlus } from "lucide-react";
 import { profile } from "@/constants/profile";
 import { openCalendlyPopup } from "@/lib/calendly";
 import { useAnalytics } from "@/lib/hooks/useAnalytics";
@@ -40,7 +40,7 @@ export function ProofLink({ capabilityId, slug, className, children }: { capabil
   );
 }
 
-/** Book a call, email, save contact. */
+/** Book a call, email, save contact, download the PDF. */
 export function CapabilitiesCta() {
   const { trackCTAClicked } = useAnalytics();
   return (
@@ -61,6 +61,51 @@ export function CapabilitiesCta() {
       <Link href="/connect" onClick={() => trackCTAClicked({ type: "connect", location: "capabilities_page" })} className={secondaryButtonClass}>
         <UserPlus className="w-4 h-4" /> Save my contact
       </Link>
+      <StatementDownloadLink className={secondaryButtonClass}>
+        <Download className="w-4 h-4" /> Download one-page PDF
+      </StatementDownloadLink>
     </div>
+  );
+}
+
+/** Downloads the one-page PDF statement. */
+export function StatementDownloadLink({ className, children }: { className?: string; children: ReactNode }) {
+  const { trackCTAClicked } = useAnalytics();
+  return (
+    <a href="/api/capabilities/pdf" download onClick={() => trackCTAClicked({ type: "download", location: "capabilities_page" })} className={className}>
+      {children}
+    </a>
+  );
+}
+
+/** Copies the referral introduction to the clipboard. */
+export function CopyIntroButton({ text }: { text: string }) {
+  const { trackCapabilitiesIntroCopied } = useAnalytics();
+  const [copied, setCopied] = useState(false);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    if (!copied) return;
+    const timer = setTimeout(() => setCopied(false), 2500);
+    return () => clearTimeout(timer);
+  }, [copied]);
+  return (
+    <button
+      type="button"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(text);
+          setFailed(false);
+          setCopied(true);
+          trackCapabilitiesIntroCopied();
+        } catch {
+          setFailed(true);
+        }
+      }}
+      className={`${buttonClass} bg-[var(--andromeda-accent-beige)] text-[var(--andromeda-primary)] hover:bg-[var(--andromeda-accent-beige)]/90`}
+      aria-live="polite"
+    >
+      {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+      {copied ? "Copied" : failed ? "Copy failed: select the text instead" : "Copy introduction"}
+    </button>
   );
 }
