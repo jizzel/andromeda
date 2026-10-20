@@ -584,6 +584,46 @@ async function getAssetsSheetId(sheets: ReturnType<typeof getGoogleSheetsClient>
   return getSheetId(sheets, ASSETS_SHEET_NAME, assetsSheetIdCache);
 }
 
+/**
+ * Adds rows below a tab's last used row, inserting new rows (never
+ * overwriting). Plain `values.append` writes directly after the "table" it
+ * detects, overwriting by default: on 2026-10-06 the ProjectTracker tab's
+ * Sheets Table covered only its header row, so a new tracker's rows were
+ * written over another proposal's milestones. Anchoring the append below the
+ * real last row, with INSERT_ROWS, can't land on existing data even if the
+ * tab's Table, blank rows or a concurrent writer confuse the detection.
+ * The range starts on the row *after* the last used row. Tested against the
+ * live API (2026-10-20): this lands at the bottom even with a header-only
+ * Table, and when the grid is exactly full Sheets grows it rather than
+ * rejecting the range. Starting *at* the last used row looks safer but isn't:
+ * Sheets then snaps to the Table and inserts at row 2, shifting every row
+ * (tracker rows are addressed by row number).
+ * `knownLastRow` (1-based, header included) skips the extra read when the
+ * caller has just read the tab.
+ */
+async function appendRowsAtEnd(
+  tab: string,
+  lastColumn: string,
+  values: string[][],
+  options: { knownLastRow?: number; requestOptions?: { timeout: number } } = {}
+): Promise<void> {
+  const sheets = getGoogleSheetsClient();
+  let lastRow = options.knownLastRow;
+  if (lastRow === undefined) {
+    const used = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${tab}!A:${lastColumn}` });
+    lastRow = used.data.values?.length ?? 0;
+  }
+  const request = {
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${tab}!A${Math.max(lastRow, 1) + 1}:${lastColumn}`,
+    valueInputOption: "RAW",
+    insertDataOption: "INSERT_ROWS",
+    requestBody: { values },
+  };
+  if (options.requestOptions) await sheets.spreadsheets.values.append(request, options.requestOptions);
+  else await sheets.spreadsheets.values.append(request);
+}
+
 export async function setAssetItemChecked(
   proposalId: string,
   itemId: string,
@@ -603,14 +643,8 @@ export async function setAssetItemChecked(
 
   if (checked) {
     if (rowIndex !== -1) return; // Already exists — skip to avoid duplicates
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${ASSETS_SHEET_NAME}!A:D`,
-      valueInputOption: "RAW",
-      requestBody: {
-        values: [[proposalId, itemId, "true", new Date().toISOString()]],
-      },
-    });
+    // Rows read from A2: the last used row is rows.length + 1 (the header).
+    await appendRowsAtEnd(ASSETS_SHEET_NAME, "D", [[proposalId, itemId, "true", new Date().toISOString()]], { knownLastRow: rows.length + 1 });
   } else {
     if (rowIndex === -1) return; // Already gone — nothing to delete
 
@@ -1456,15 +1490,10 @@ export async function saveProposalSnapshot(
   }
 
   lock?.assertHeld();
-  await sheets.spreadsheets.values.append(
-    {
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${SNAPSHOT_SHEET_NAME}!A:Z`,
-      valueInputOption: "RAW",
-      requestBody: { values: [[proposalId, proposalVersion, new Date().toISOString(), reason, ...parts]] },
-    },
-    lock?.requestOptions
-  );
+  await appendRowsAtEnd(SNAPSHOT_SHEET_NAME, "Z", [[proposalId, proposalVersion, new Date().toISOString(), reason, ...parts]], {
+    knownLastRow: rows.length + 1,
+    requestOptions: lock?.requestOptions,
+  });
   return result;
 }
 
@@ -1626,6 +1655,28 @@ function trackerStateToRow(proposalId: string, state: TrackerMilestoneState, not
   ];
 }
 
+/** The ProjectTracker rows (from row 2) and the tab's last used row (1-based, header included). Throws on read failure. */
+async function readTrackerRows(): Promise<{ rows: string[][]; lastRow: number }> {
+  const sheets = getGoogleSheetsClient();
+  const response = await sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${TRACKER_SHEET_NAME}!A2:I` });
+  const rows = (response.data.values || []) as string[][];
+  return { rows, lastRow: rows.length + 1 };
+}
+
+/**
+ * One proposal's tracker states plus the tab's last used row, for seeding
+ * (`getOrSeedTracker`). Unlike `getTrackerStates` it throws when the read
+ * fails: treating a failed read as "no tracker yet" would append a duplicate
+ * set of milestones.
+ */
+export async function readTrackerForSeed(proposalId: string): Promise<{ states: TrackerMilestoneState[]; lastRow: number }> {
+  const { rows, lastRow } = await readTrackerRows();
+  return {
+    states: rows.filter((row) => row[0]?.trim() === proposalId).map(rowToTrackerState).filter((s) => s.phaseId && s.milestoneId),
+    lastRow,
+  };
+}
+
 export async function getTrackerStates(proposalId: string): Promise<TrackerMilestoneState[]> {
   try {
     const sheets = getGoogleSheetsClient();
@@ -1684,40 +1735,41 @@ export async function getTrackerRow(
   phaseId: string,
   milestoneId: string
 ): Promise<{ rowIndex: number; state: TrackerMilestoneState; notifiedAt: string } | null> {
-  const sheets = getGoogleSheetsClient();
-  const response = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${TRACKER_SHEET_NAME}!A2:I`,
-  });
-  const rows = response.data.values || [];
+  return (await findTrackerRow(proposalId, phaseId, milestoneId)).match;
+}
+
+/** `getTrackerRow` plus the tab's last used row, so an append right after needs no second read. */
+async function findTrackerRow(
+  proposalId: string,
+  phaseId: string,
+  milestoneId: string
+): Promise<{ match: { rowIndex: number; state: TrackerMilestoneState; notifiedAt: string } | null; lastRow: number }> {
+  const { rows, lastRow } = await readTrackerRows();
   const idx = rows.findIndex(
     (row) =>
       row[0]?.trim() === proposalId &&
       row[1]?.trim() === phaseId &&
       row[2]?.trim() === milestoneId
   );
-  if (idx === -1) return null;
+  if (idx === -1) return { match: null, lastRow };
   return {
-    rowIndex: idx + 2,
-    state: rowToTrackerState(rows[idx]),
-    notifiedAt: rows[idx][8]?.trim() || "",
+    match: {
+      rowIndex: idx + 2,
+      state: rowToTrackerState(rows[idx]),
+      notifiedAt: rows[idx][8]?.trim() || "",
+    },
+    lastRow,
   };
 }
 
 export async function appendTrackerRows(
   proposalId: string,
-  states: TrackerMilestoneState[]
+  states: TrackerMilestoneState[],
+  /** The tab's last used row from a read just made (`readTrackerForSeed`), so no second read is needed. */
+  knownLastRow?: number
 ): Promise<void> {
   if (states.length === 0) return;
-  const sheets = getGoogleSheetsClient();
-  await sheets.spreadsheets.values.append({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${TRACKER_SHEET_NAME}!A:I`,
-    valueInputOption: "RAW",
-    requestBody: {
-      values: states.map((s) => trackerStateToRow(proposalId, s)),
-    },
-  });
+  await appendRowsAtEnd(TRACKER_SHEET_NAME, "I", states.map((s) => trackerStateToRow(proposalId, s)), { knownLastRow });
 }
 
 export async function setTrackerMilestone(
@@ -1727,7 +1779,7 @@ export async function setTrackerMilestone(
   patch: Partial<Pick<TrackerMilestoneState, "status" | "startedAt" | "completedAt" | "note">>
 ): Promise<void> {
   const sheets = getGoogleSheetsClient();
-  const existing = await getTrackerRow(proposalId, phaseId, milestoneId);
+  const { match: existing, lastRow } = await findTrackerRow(proposalId, phaseId, milestoneId);
   const now = new Date().toISOString();
 
   const merged: TrackerMilestoneState = {
@@ -1757,14 +1809,7 @@ export async function setTrackerMilestone(
       },
     });
   } else {
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${TRACKER_SHEET_NAME}!A:I`,
-      valueInputOption: "RAW",
-      requestBody: {
-        values: [trackerStateToRow(proposalId, merged)],
-      },
-    });
+    await appendRowsAtEnd(TRACKER_SHEET_NAME, "I", [trackerStateToRow(proposalId, merged)], { knownLastRow: lastRow });
   }
 }
 
@@ -1866,14 +1911,17 @@ export async function markWeeklyUpdateSent(
   proposalId: string,
   weekEndingDate: string
 ): Promise<void> {
+  // A plain whole-column append, but inserting (never overwriting). No read
+  // first: this stamp follows an email that has already gone out, so it must
+  // not depend on a read that could fail. Row order in this log doesn't
+  // matter, and nothing writes to its rows by number.
   const sheets = getGoogleSheetsClient();
   await sheets.spreadsheets.values.append({
     spreadsheetId: SPREADSHEET_ID,
     range: `${WEEKLY_SENT_SHEET_NAME}!A:C`,
     valueInputOption: "RAW",
-    requestBody: {
-      values: [[proposalId, weekEndingDate, new Date().toISOString()]],
-    },
+    insertDataOption: "INSERT_ROWS",
+    requestBody: { values: [[proposalId, weekEndingDate, new Date().toISOString()]] },
   });
 }
 

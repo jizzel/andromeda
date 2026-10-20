@@ -17,7 +17,14 @@ export async function GET(request: NextRequest) {
   }
 
   const phases = resolveTrackerPhases(proposal.tracker);
-  const states = await getOrSeedTracker(proposalId, proposal.tracker, proposal);
+  let states;
+  try {
+    states = await getOrSeedTracker(proposalId, proposal.tracker, proposal);
+  } catch (error) {
+    // The tracker couldn't be read; never seed from a failed read (it would duplicate milestones).
+    console.error(`Tracker for ${proposalId} unavailable:`, error);
+    return NextResponse.json({ success: false, error: "Couldn't load the project tracker. Please try again in a moment." }, { status: 503 });
+  }
 
   return NextResponse.json({
     success: true,

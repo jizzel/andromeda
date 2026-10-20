@@ -2,7 +2,7 @@ import { resolveTrackerPhases } from "@/constants/tracker-templates";
 import {
   appendTrackerRows,
   getProposalAcceptance,
-  getTrackerStates,
+  readTrackerForSeed,
   readAgreement,
   readEngagementState,
 } from "@/lib/google-sheets";
@@ -30,7 +30,8 @@ export async function getOrSeedTracker(
   const phases = resolveTrackerPhases(config);
   if (phases.length === 0) return [];
 
-  const existing = await getTrackerStates(proposalId);
+  // A strict read (throws on failure): a failed read must not look like "no tracker yet".
+  const { states: existing, lastRow } = await readTrackerForSeed(proposalId);
   const existingKeys = new Set(existing.map((s) => milestoneKey(s.phaseId, s.milestoneId)));
   const isFirstSeed = existing.length === 0;
 
@@ -61,7 +62,7 @@ export async function getOrSeedTracker(
 
   if (missing.length === 0) return existing;
 
-  await appendTrackerRows(proposalId, missing);
+  await appendTrackerRows(proposalId, missing, lastRow);
   return [...existing, ...missing];
 }
 
