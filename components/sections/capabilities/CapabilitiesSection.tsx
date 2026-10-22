@@ -50,7 +50,7 @@ export function CapabilitiesSection() {
               onClick={() => trackCTAClicked({ type: "capabilities", location: "home_capabilities" })}
               className="inline-flex items-center gap-2 px-6 py-3 text-base font-medium text-[var(--andromeda-text-primary)] border border-[var(--andromeda-text-secondary)]/30 rounded hover:bg-[var(--andromeda-primary)] hover:border-[var(--andromeda-accent-beige)]/50 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--andromeda-accent-beige)]"
             >
-              See everything I build <ArrowRight className="w-4 h-4" aria-hidden />
+              See what I do <ArrowRight className="w-4 h-4" aria-hidden />
             </Link>
           </div>
         </ScrollReveal>
