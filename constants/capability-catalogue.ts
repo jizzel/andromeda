@@ -314,4 +314,4 @@ export const STATEMENT_TITLE = "Software Engineering & Solutions Capabilities St
 
 /** A ready-to-forward introduction for people referring Joseph (copied from the page). */
 export const REFERRAL_INTRO =
-  `${profile.name} is a software engineer who helps organisations work out what software they need, builds it, and puts it to work: advising on technology choices, designing and delivering systems (including AI-powered tools), leading technical work and training the people who use it. He can advise on its own, deliver a complete system end to end, build a specific module, or join an existing team. His capabilities and past work: ${profile.siteUrl}/capabilities`;
+  `${profile.name} is a software engineer who helps organisations work out what software they need, builds it, and puts it to work: advising on technology choices, designing and delivering systems (including AI-powered tools), leading technical work and training the people who use it. He can be engaged for advice alone, deliver a complete system end to end, build a specific module, or join or lead an existing team. His capabilities and past work: ${profile.siteUrl}/capabilities`;
