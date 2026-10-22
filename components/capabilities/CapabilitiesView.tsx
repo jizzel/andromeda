@@ -2,16 +2,21 @@ import { ArrowRight, BadgeCheck, Download } from "lucide-react";
 import { ScrollReveal } from "@/components/animations/ScrollReveal";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import {
+  BUILD_HEADING,
+  BUILD_INTRO,
   CAPABILITIES_INTRO,
-  CAPABILITY_GROUPS,
   ENGAGEMENT_MODES,
+  evidenceLabel,
+  groupsInStage,
   REFERRAL_INTRO,
   TECH_EXPERTISE,
   isDelivered,
   isDeliveredProof,
   proofStatus,
   type CapabilityProof,
+  type CatalogueGroup,
   type CatalogueItem,
+  type CatalogueStage,
 } from "@/constants/capability-catalogue";
 import { profile } from "@/constants/profile";
 import { CapabilitiesCta, CapabilitiesViewTracker, CopyIntroButton, ProofLink, StatementDownloadLink } from "./CapabilitiesClient";
@@ -19,9 +24,10 @@ import { CAPABILITY_ICONS } from "./icons";
 import { cardClass, pillClass, secondaryButtonClass } from "./styles";
 
 /**
- * "What I Build" (/capabilities): every kind of software Joseph takes on,
- * grouped, with proof from real projects and how to engage him. Made to be
- * shared as a link; content lives in `constants/capability-catalogue.ts`.
+ * "What I Do" (/capabilities): advising and design, the software Joseph
+ * builds ("What I Build"), and putting it to work, each with evidence from
+ * real projects, plus how to engage him. Made to be shared as a link;
+ * content lives in `constants/capability-catalogue.ts`.
  * Rendered on the server; only tracking, proof links and the CTA are client
  * components (`CapabilitiesClient.tsx`).
  */
@@ -36,13 +42,14 @@ export function CapabilitiesView() {
         <ScrollReveal>
           <header className="max-w-3xl mb-12">
             <p className="text-xs font-semibold uppercase tracking-widest text-[var(--andromeda-accent-beige)] mb-3">Capabilities</p>
-            <h1 className="text-4xl md:text-5xl font-bold text-[var(--andromeda-text-primary)] mb-5">What I Build</h1>
+            <h1 className="text-4xl md:text-5xl font-bold text-[var(--andromeda-text-primary)] mb-5">What I Do</h1>
             <p className="text-lg text-[var(--andromeda-text-secondary)] leading-relaxed">{CAPABILITIES_INTRO}</p>
             <p className="mt-4 flex items-start gap-2 text-sm text-[var(--andromeda-text-secondary)]">
               <BadgeCheck className="w-4 h-4 mt-0.5 shrink-0 text-[var(--andromeda-accent-beige)]" aria-hidden />
               <span>
-                <strong className="font-semibold text-[var(--andromeda-text-primary)]">Built</strong> marks work I&apos;ve delivered or shipped; the rest are
-                areas I&apos;m equipped to take on.
+                <strong className="font-semibold text-[var(--andromeda-text-primary)]">Built</strong> and{" "}
+                <strong className="font-semibold text-[var(--andromeda-text-primary)]">Track record</strong> mark work I&apos;ve delivered; the rest are areas
+                I&apos;m equipped to take on.
               </span>
             </p>
             <div className="mt-6 print:hidden">
@@ -55,7 +62,15 @@ export function CapabilitiesView() {
 
         {/* Jump links */}
         <nav aria-label="Capability groups" className="flex flex-wrap gap-2 mb-16 print:hidden">
-          {CAPABILITY_GROUPS.map((group) => (
+          {groupsInStage("advise").map((group) => (
+            <a key={group.id} href={`#${group.id}`} className={pillClass}>
+              {group.title}
+            </a>
+          ))}
+          <a href="#build" className={pillClass}>
+            {BUILD_HEADING}
+          </a>
+          {groupsInStage("adopt").map((group) => (
             <a key={group.id} href={`#${group.id}`} className={pillClass}>
               {group.title}
             </a>
@@ -70,22 +85,27 @@ export function CapabilitiesView() {
 
         {/* Groups */}
         <div className="space-y-20">
-          {CAPABILITY_GROUPS.map((group) => (
-            <section key={group.id} id={group.id} aria-labelledby={`${group.id}-heading`} className="scroll-mt-24">
-              <ScrollReveal>
-                <h2 id={`${group.id}-heading`} className="text-2xl md:text-3xl font-bold text-[var(--andromeda-text-primary)] mb-2">
-                  {group.title}
-                </h2>
-                <p className="text-[var(--andromeda-text-secondary)] mb-8">{group.intro}</p>
-              </ScrollReveal>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {group.items.map((item, index) => (
-                  <ScrollReveal key={item.id} delay={index * 0.05} threshold={0.1} className="h-full">
-                    <CapabilityItem item={item} />
-                  </ScrollReveal>
-                ))}
-              </div>
-            </section>
+          {/* Advise & design */}
+          {groupsInStage("advise").map((group) => (
+            <GroupSection key={group.id} group={group} level="h2" />
+          ))}
+
+          {/* What I Build: the software, in three groups */}
+          <section id="build" aria-labelledby="build-heading" className="scroll-mt-24 space-y-14">
+            <ScrollReveal>
+              <h2 id="build-heading" className="text-2xl md:text-3xl font-bold text-[var(--andromeda-text-primary)] mb-2">
+                {BUILD_HEADING}
+              </h2>
+              <p className="text-[var(--andromeda-text-secondary)]">{BUILD_INTRO}</p>
+            </ScrollReveal>
+            {groupsInStage("build").map((group) => (
+              <GroupSection key={group.id} group={group} level="h3" />
+            ))}
+          </section>
+
+          {/* Put it to work */}
+          {groupsInStage("adopt").map((group) => (
+            <GroupSection key={group.id} group={group} level="h2" />
           ))}
 
           {/* Technical expertise */}
@@ -123,7 +143,7 @@ export function CapabilitiesView() {
               </h2>
               <p className="text-[var(--andromeda-text-secondary)] mb-8">From a complete system to a single piece of a larger one.</p>
             </ScrollReveal>
-            <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {ENGAGEMENT_MODES.map((mode) => (
                 <li key={mode.title} className={`${cardClass} p-5 print-avoid-break`}>
                   <p className="font-semibold text-[var(--andromeda-text-primary)] mb-1">{mode.title}</p>
@@ -167,12 +187,39 @@ export function CapabilitiesView() {
   );
 }
 
-function CapabilityItem({ item }: { item: CatalogueItem }) {
+/** One group of cards: a top-level section (advise, adopt) or a sub-group of "What I Build". */
+function GroupSection({ group, level }: { group: CatalogueGroup; level: "h2" | "h3" }) {
+  const Heading = level;
+  return (
+    <section id={group.id} aria-labelledby={`${group.id}-heading`} className="scroll-mt-24">
+      <ScrollReveal>
+        <Heading
+          id={`${group.id}-heading`}
+          className={`${level === "h2" ? "text-2xl md:text-3xl" : "text-xl md:text-2xl"} font-bold text-[var(--andromeda-text-primary)] mb-2`}
+        >
+          {group.title}
+        </Heading>
+        <p className="text-[var(--andromeda-text-secondary)] mb-8">{group.intro}</p>
+      </ScrollReveal>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {group.items.map((item, index) => (
+          <ScrollReveal key={item.id} delay={index * 0.05} threshold={0.1} className="h-full">
+            <CapabilityItem item={item} stage={group.stage} heading={level === "h2" ? "h3" : "h4"} />
+          </ScrollReveal>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/** A capability card. `heading` is one level below its group's heading (h3 under an h2 group, h4 under a build sub-group). */
+function CapabilityItem({ item, stage, heading }: { item: CatalogueItem; stage: CatalogueStage; heading: "h3" | "h4" }) {
   const Icon = CAPABILITY_ICONS[item.icon];
+  const Title = heading;
   return (
     <article className={`${cardClass} p-6 h-full flex flex-col print-avoid-break`} style={{ boxShadow: "var(--shadow-1)" }}>
       <Icon size={26} strokeWidth={1.5} className="mb-4 text-[var(--andromeda-accent-beige)]" aria-hidden />
-      <h3 className="text-lg font-bold text-[var(--andromeda-text-primary)] mb-2">{item.title}</h3>
+      <Title className="text-lg font-bold text-[var(--andromeda-text-primary)] mb-2">{item.title}</Title>
       <p className="text-sm text-[var(--andromeda-text-secondary)] leading-relaxed mb-4">{item.description}</p>
       <ul className="flex flex-wrap gap-1.5 mb-4" aria-label="Examples">
         {item.examples.map((example) => (
@@ -188,7 +235,7 @@ function CapabilityItem({ item }: { item: CatalogueItem }) {
         <div className="mt-auto pt-4 border-t border-white/10 light:border-black/10">
           {isDelivered(item) ? (
             <p className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-[var(--andromeda-accent-beige)] mb-1.5">
-              <BadgeCheck className="w-3.5 h-3.5" aria-hidden /> Built
+              <BadgeCheck className="w-3.5 h-3.5" aria-hidden /> {evidenceLabel(stage)}
             </p>
           ) : (
             <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--andromeda-text-secondary)] mb-1.5">In progress</p>
