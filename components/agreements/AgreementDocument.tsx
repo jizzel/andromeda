@@ -7,6 +7,7 @@ import type { AgreementTemplate } from "@/lib/agreement-templates";
 import { fillTemplate } from "@/lib/agreement-templates";
 import { providerAffiliation } from "@/lib/agreements";
 import { shortVersion } from "@/lib/proposal-version-label";
+import { priceWithDiscount } from "@/lib/package-price";
 
 interface AgreementDocumentProps {
   record: AgreementRecord;
@@ -119,7 +120,7 @@ export async function AgreementDocument({ record, template, proposal, acceptance
             <>
               <dt>Package</dt>
               <dd className="text-[var(--andromeda-text-primary)]">
-                {pkg.name}: {pkg.totalPrice}
+                {pkg.name}: {priceWithDiscount(pkg)}
               </dd>
             </>
           )}

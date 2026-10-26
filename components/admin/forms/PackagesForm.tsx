@@ -73,6 +73,23 @@ export function PackagesForm({ data, issues, onChange, acceptance, requestDelete
                 error={issues.at(`${path}.totalPrice`)}
                 placeholder="GH₵ 12,000"
               />
+              <TextField
+                label="Original price (optional)"
+                path={`${path}.originalPrice`}
+                value={pkg.originalPrice ?? ""}
+                onChange={(v) => set(index, { originalPrice: v.trim() ? v : undefined })}
+                error={issues.at(`${path}.originalPrice`)}
+                hint="Before a discount. Shown struck through, with the amount and percentage saved."
+                placeholder="GH₵ 15,000"
+              />
+              <TextField
+                label="Discount label (optional)"
+                path={`${path}.discountLabel`}
+                value={pkg.discountLabel ?? ""}
+                onChange={(v) => set(index, { discountLabel: v.trim() ? v : undefined })}
+                error={issues.at(`${path}.discountLabel`)}
+                placeholder="Community discount"
+              />
             </div>
             <Field label="Recommended" error={issues.at(`${path}.recommended`)}>
               <Toggle checked={!!pkg.recommended} onChange={(v) => set(index, { recommended: v })} on="Highlighted as recommended" off="Not highlighted" />
