@@ -50,6 +50,14 @@ export interface ProposalPackage {
   totalPrice: string;
   includes: string[];
   comment: string;
+  /**
+   * The price before a discount ("GH₵8,000"): shown struck through beside
+   * `totalPrice`, with the amount and percentage saved worked out from the
+   * two (lib/package-price.ts). Must be a single amount higher than the price.
+   */
+  originalPrice?: string;
+  /** Names the discount under the price, e.g. "PIWC Tema development discount". */
+  discountLabel?: string;
 }
 
 export interface PaymentMilestone {

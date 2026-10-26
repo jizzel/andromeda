@@ -1,5 +1,6 @@
 "use client";
 
+import { priceWithDiscount } from "@/lib/package-price";
 import { useEffect, useState } from "react";
 import { useProposalDocument } from "./ProposalDocumentContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -217,7 +218,7 @@ export function ProposalAcceptance({
                           <Package className="w-4 h-4 text-[var(--andromeda-accent-beige)] shrink-0" />
                           <span className="text-[var(--andromeda-text-secondary)]">Package:</span>
                           <span className="font-medium text-[var(--andromeda-text-primary)]">{recordedPackage.name}</span>
-                          <span className="text-[var(--andromeda-text-secondary)] ml-auto">{recordedPackage.totalPrice}</span>
+                          <span className="text-[var(--andromeda-text-secondary)] ml-auto">{priceWithDiscount(recordedPackage)}</span>
                         </div>
                       )}
                       {recordedPlan && (

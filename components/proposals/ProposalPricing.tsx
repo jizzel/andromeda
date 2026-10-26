@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Check, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useProposalDocument } from "./ProposalDocumentContext";
+import { packageDiscount } from "@/lib/package-price";
 
 interface Package {
   id: string;
@@ -13,6 +14,8 @@ interface Package {
   totalPrice: string;
   includes: string[];
   comment: string;
+  originalPrice?: string;
+  discountLabel?: string;
 }
 
 interface ProposalPricingProps {
@@ -103,12 +106,29 @@ export function ProposalPricing({ packages, selectedId: liveSelectedId, onSelect
                     {pkg.name}
                   </h3>
 
-                  {/* Price */}
-                  <div className="mb-6">
-                    <span className="text-4xl font-bold text-[var(--andromeda-accent-beige)]">
-                      {pkg.totalPrice}
-                    </span>
-                  </div>
+                  {/* Price, with the pre-discount price struck through and the discount named */}
+                  {(() => {
+                    const discount = packageDiscount(pkg);
+                    return (
+                      <div className="mb-6">
+                        {discount && (
+                          <p className="mb-1 text-lg text-[var(--andromeda-text-secondary)]">
+                            <span className="sr-only">Was </span>
+                            <s className="decoration-2">{discount.original}</s>
+                          </p>
+                        )}
+                        <span className="text-4xl font-bold text-[var(--andromeda-accent-beige)]">
+                          {discount && <span className="sr-only">Now </span>}
+                          {pkg.totalPrice}
+                        </span>
+                        {discount && (
+                          <p className="mt-2 inline-block rounded px-2 py-0.5 text-xs font-medium border border-[var(--andromeda-accent-beige)]/30 text-[var(--andromeda-accent-beige)]">
+                            {discount.label ?? "Discount"}: {discount.amount} ({discount.percent}%)
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {/* Includes */}
                   <div className="mb-6">

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { packageDiscount, parseAmount, sameUnit } from "@/lib/package-price";
 import type { ProposalData, ProposalDataChurch, ProposalDataSocial } from "@/types/proposal";
 
 /**
@@ -56,6 +57,8 @@ const pkg = z.strictObject({
   totalPrice: str,
   includes: strList,
   comment: str,
+  originalPrice: str.optional(),
+  discountLabel: str.optional(),
 });
 
 const paymentMilestone = z.strictObject({ milestone: str, percentage: str.nullable(), amount: str.nullable() });
@@ -394,6 +397,38 @@ function duplicateIdErrors(data: Record<string, unknown>): ProposalIssue[] {
  * every package needs at least one — acceptance requires a plan, so a package
  * without one couldn't be accepted.
  */
+/**
+ * A package's `originalPrice` must be a single amount higher than its price
+ * (otherwise the struck-through price and the percentage would be wrong).
+ * `discountLabel` only makes sense with an original price.
+ */
+function packageDiscountErrors(data: Record<string, unknown>): ProposalIssue[] {
+  if (!LAYOUT_SECTIONS[layoutOf(data)].packages) return [];
+  const packages = Array.isArray(data.packages) ? data.packages : [];
+  const errors: ProposalIssue[] = [];
+  packages.forEach((raw, index) => {
+    const pkg = (raw ?? {}) as { totalPrice?: unknown; originalPrice?: unknown; discountLabel?: unknown };
+    if (typeof pkg.originalPrice === "string" && pkg.originalPrice.trim() && typeof pkg.totalPrice === "string") {
+      if (!packageDiscount({ totalPrice: pkg.totalPrice, originalPrice: pkg.originalPrice })) {
+        if (parseAmount(pkg.totalPrice) === null) {
+          // The price itself is what needs fixing: point the form at it.
+          errors.push({ path: `packages[${index}].totalPrice`, message: "The price must be a single amount (e.g. GH₵5,500) to show a discount" });
+        } else if (parseAmount(pkg.originalPrice) !== null && !sameUnit(pkg.totalPrice, pkg.originalPrice)) {
+          errors.push({
+            path: `packages[${index}].originalPrice`,
+            message: "The original price must use the same currency and terms as the price (e.g. GH₵8,000)",
+          });
+        } else {
+          errors.push({ path: `packages[${index}].originalPrice`, message: "The original price must be a single amount higher than the price (e.g. GH₵8,000)" });
+        }
+      }
+    } else if (typeof pkg.discountLabel === "string" && pkg.discountLabel.trim()) {
+      errors.push({ path: `packages[${index}].discountLabel`, message: "A discount label needs an original price to show against" });
+    }
+  });
+  return errors;
+}
+
 function planPackageErrors(data: Record<string, unknown>): ProposalIssue[] {
   if (!LAYOUT_SECTIONS[layoutOf(data)].paymentPlans) return [];
   const packages = Array.isArray(data.packages) ? data.packages : [];
@@ -457,6 +492,7 @@ export function validateProposal(data: unknown): ProposalValidation {
 
   errors.push(...duplicateIdErrors(data as Record<string, unknown>));
   errors.push(...planPackageErrors(data as Record<string, unknown>));
+  errors.push(...packageDiscountErrors(data as Record<string, unknown>));
 
   const size = JSON.stringify(data).length;
   if (size > MAX_PROPOSAL_JSON_CHARS) {
