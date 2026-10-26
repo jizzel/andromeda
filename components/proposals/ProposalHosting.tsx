@@ -31,7 +31,7 @@ export function ProposalHosting({ hosting }: ProposalHostingProps) {
               id="hosting-heading"
               className="text-3xl md:text-4xl font-bold text-[var(--andromeda-text-primary)]"
             >
-              Hosting & Infrastructure
+              Managed Hosting & Infrastructure
             </h2>
           </div>
           <p className="text-lg text-[var(--andromeda-text-secondary)] text-center mb-12 max-w-2xl mx-auto">
